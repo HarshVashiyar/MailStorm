@@ -1,41 +1,41 @@
-const ScheduledEmail = require("../models/scheduledEmailDB");
+const ScheduledMail = require("../models/scheduledMailDB");
 const cron = require("node-cron");
-const { sendScheduledEmail } = require("../utilities/mailUtil");
+const { sendScheduledMail } = require("../utilities/mailUtil");
 const moment = require("moment-timezone");
 
 cron.schedule("* * * * *", async () => {
   const now = new Date();
-  const emailsToSend = await ScheduledEmail.find({
+  const mailsToSend = await ScheduledMail.find({
     sendAt: { $lte: now },
     status: "pending",
   });
 
-  emailsToSend.forEach(async (email, index) => {
+  mailsToSend.forEach(async (mail, index) => {
     try {
-      const emailContent = {
-        to: email.to,
-        subject: email.subject,
-        recipientPeople: email.recipientPeople ? email.recipientPeople : null,
-        text: email.text || null,
-        html: email.html || null,
-        signature: email.signature || null,
-        attachments: email.attachments.map((att) => ({
+      const mailContent = {
+        to: mail.to,
+        subject: mail.subject,
+        recipientPeople: mail.recipientPeople ? mail.recipientPeople : null,
+        text: mail.text || null,
+        html: mail.html || null,
+        signature: mail.signature || null,
+        attachments: mail.attachments.map((att) => ({
           filename: att.filename,
           path: att.path,
           contentType: att.contentType,
         })),
-        mState: email.mState,
+        mState: mail.mState,
       };
-      await sendScheduledEmail(emailContent);
-      email.status = "sent";
-      await email.save();
+      await sendScheduledMail(mailContent);
+      mail.status = "sent";
+      await mail.save();
     } catch (err) {
-      console.error("Email sending failed:", err);
+      console.error("Mail sending failed:", err);
     }
   });
 });
 
-const handleAddScheduledEmail = async (req, res) => {
+const handleAddScheduledMail = async (req, res) => {
   try {
     const {
       to,
@@ -68,8 +68,8 @@ const handleAddScheduledEmail = async (req, res) => {
         .status(400)
         .json({ message: 'Missing required fields: "to" and "subject".' });
     }
-    
-    const newScheduledEmail = await ScheduledEmail.create({
+
+    const newScheduledMail = await ScheduledMail.create({
       from: mState
         ? "dynamictechnocast@gmail.com"
         : "sales@dynamicpreicisionindustries.com",
@@ -87,39 +87,39 @@ const handleAddScheduledEmail = async (req, res) => {
 
     res
       .status(201)
-      .json({ message: "Email scheduled successfully.", newScheduledEmail });
+      .json({ message: "Mail scheduled successfully.", newScheduledMail });
   } catch (error) {
-    console.error("Error in handleAddScheduledEmail:", error);
+    console.error("Error in handleAddScheduledMail:", error);
     res.status(500).json({ message: error.message });
   }
 };
 
-const handleGetScheduledEmails = async (req, res) => {
+const handleGetScheduledMails = async (req, res) => {
   try {
-    const scheduledEmails = await ScheduledEmail.find();
-    res.status(200).json(scheduledEmails);
+    const scheduledMails = await ScheduledMail.find();
+    res.status(200).json(scheduledMails);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
-const handleDeleteScheduledEmails = async (req, res) => {
+const handleDeleteScheduledMails = async (req, res) => {
   try {
     const { ids } = req.body;
     if (!ids || ids.length === 0) {
-      return res.status(400).json({ message: "No scheduled emails selected" });
+      return res.status(400).json({ message: "No scheduled mails selected" });
     }
 
-    const deletedScheduledEmails = await ScheduledEmail.deleteMany({
+    const deletedScheduledMails = await ScheduledMail.deleteMany({
       _id: { $in: ids },
     });
 
-    if (deletedScheduledEmails.deletedCount > 0) {
+    if (deletedScheduledMails.deletedCount > 0) {
       return res
         .status(200)
-        .json({ message: "Scheduled emails deleted successfully" });
+        .json({ message: "Scheduled mails deleted successfully" });
     } else {
-      return res.status(404).json({ message: "No emails found to delete" });
+      return res.status(404).json({ message: "No mails found to delete" });
     }
   } catch (err) {
     console.error("Remove lists error:", err);
@@ -130,7 +130,7 @@ const handleDeleteScheduledEmails = async (req, res) => {
 };
 
 module.exports = {
-  handleAddScheduledEmail,
-  handleGetScheduledEmails,
-  handleDeleteScheduledEmails,
+  handleAddScheduledMail,
+  handleGetScheduledMails,
+  handleDeleteScheduledMails,
 };

@@ -1,29 +1,39 @@
 const express = require("express");
 const app = express.Router();
 const {
-  handleGetAllUsers,
-  handleGetUserByID,
+  handleCheckAuthStatus,
   handleUserSignUp,
   handleUserSignIn,
-  handleUserSignOut,
-  handleRemoveUsers,
+  handleGetAllUsers,
+  handleGetUserById,
+  handleUpdateUser,
+  handleDeleteUser,
+  handleLogout,
 } = require("../controllers/userController");
-const { checkForAuthorizationHeader, checkAdmin } = require("../utilities/userUtil");
+const {
+  authenticateUser,
+  authorizeAdmin,
+  loginLimiter,
+} = require("../utilities/userUtil");
 
 app.get("/", (req, res) => {
-  res.send("User router");
+  res.send("Welcome to user router!");
 });
 
-app.get("/getall", checkForAuthorizationHeader, checkAdmin, handleGetAllUsers);
-
-app.get("/:id", handleGetUserByID);
+app.get("/checkauth", authenticateUser, handleCheckAuthStatus);
 
 app.post("/signup", handleUserSignUp);
 
 app.post("/signin", handleUserSignIn);
 
-app.post("/signout", handleUserSignOut);
+app.get("/getall", authenticateUser, authorizeAdmin, handleGetAllUsers);
 
-app.delete("/remove", checkForAuthorizationHeader, checkAdmin, handleRemoveUsers);
+app.get("/getuser", authenticateUser, handleGetUserById);
+
+app.put("/updateuser", authenticateUser, handleUpdateUser);
+
+app.delete("/deleteuser", authenticateUser, handleDeleteUser);
+
+app.post("/logout", authenticateUser, handleLogout);
 
 module.exports = app;

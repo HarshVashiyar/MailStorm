@@ -1,17 +1,37 @@
-const mongoose = require("mongoose");
-const { createHmac, randomBytes } = require("node:crypto");
-const { createTokenForUser, setAuthCookie } = require("../utilities/userUtil");
+const mongoose = require('mongoose');
+const bcrypt = require("bcrypt");
+const { createTokenForUser } = require('../utilities/userUtil');
 
 const userSchema = new mongoose.Schema(
   {
     fullName: {
       type: String,
-      required: false,
+      required: true,
+      trim: true,
+      minLength: 3,
+      maxLength: 30,
+      validate: {
+        validator: function (v) {
+          return /^[a-zA-Z_]{3,}$/.test(v);
+        },
+        message: (props) => `"${props.value}" is not a valid name! At least 3 alphabets and underscores are allowed. (Spaces are not permitted.)`,
+      }
     },
-    userName: {
+    email: {
       type: String,
       required: true,
       unique: true,
+      trim: true,
+      validate: {
+        validator: function (v) {
+          return /^[a-zA-z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(v);
+        },
+        message: (props) => `\"${props.value}\" is not a valid email! Email should be in the format of aB7@gmail.com`,
+      }
+    },
+    password: {
+      type: String,
+      required: true,
     },
     role: {
       type: String,
@@ -19,39 +39,42 @@ const userSchema = new mongoose.Schema(
       enum: ["User", "Admin"],
       default: "User",
     },
-    email: {
-      type: String,
-      required: true,
+    dob: {
+      type: Date,
+      //required: true,
+      //default: DateTime.now,
     },
-    password: {
+    pathToProfilePhoto: {
       type: String,
-      required: true,
+      required: false,
+      trim: true,
+      // validate: {
+      //     validator: function(v) {
+      //         return /^https?:\/\/.*\.(jpg|jpeg|png|gif)$/.test(v);
+      //     },
+      //     message: (props) => `${props.value} is not a valid URL! It should point to an image file.`,
+      // }
+      default: ''
     },
-    salt: {
-      type: String,
-    },
-  },
-  { timestamps: true }
+  }, { timestamps: true }
 );
 
-userSchema.pre("save", function (next) {
+userSchema.pre('save', async function (next) {
   const user = this;
   if (!user.isModified("password")) {
     return next();
   }
-
-  const salt = randomBytes(16).toString("hex");
-  const hashedPassword = createHmac("sha256", salt)
-    .update(user.password)
-    .digest("hex");
-
-  user.password = hashedPassword;
-  user.salt = salt;
-  next();
+  try {
+    const saltRounds = 12;
+    this.password = await bcrypt.hash(this.password, saltRounds);
+    next();
+  } catch (err) {
+    next(err);
+  }
 });
 
 userSchema.static(
-  "matchPasswordAndGenerateToken",
+  'matchPasswordAndGenerateToken',
   async function (email, password) {
     const user = await this.findOne({ email });
 
@@ -61,20 +84,21 @@ userSchema.static(
       throw error;
     }
 
-    if (!user.salt) throw new Error("Salt is missing for the user");
+    const isPasswordMatch = await bcrypt.compare(
+      password,
+      user.password
+    );
 
-    const userProvidedHash = createHmac("sha256", user.salt)
-      .update(password)
-      .digest("hex");
-
-    if (user.password !== userProvidedHash)
-      throw new Error("Incorrect Password");
+    if (!isPasswordMatch) {
+      const error = new Error("Incorrect Password");
+      error.statusCode = 401;
+      throw error;
+    }
 
     const token = createTokenForUser(user);
     return token;
   }
 );
 
-const User = mongoose.model("User", userSchema);
-
+const User = mongoose.model('User', userSchema);
 module.exports = User;

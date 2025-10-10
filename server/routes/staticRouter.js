@@ -4,21 +4,20 @@ const userRouter = require("./userRouter");
 const mailRouter = require("./mailRouter");
 const companyRouter = require("./companyRouter");
 const listRouter = require("./listRouter");
-const scheduledEmailRouter = require("./scheduledEmailRouter");
-const { checkForAuthorizationHeader, checkAdmin } = require("../utilities/userUtil");
+const scheduledMailRouter = require("./scheduledMailRouter");
 
 app.get("/", (req, res) => {
-  res.send("Static router");
+  res.send("Welcome to Static Router!");
 });
 
 app.use("/user", userRouter);
 
 app.use("/mail", mailRouter);
 
-app.use("/company", checkForAuthorizationHeader, checkAdmin, companyRouter);
+app.use("/company", companyRouter);
 
-app.use("/list", checkForAuthorizationHeader, checkAdmin, listRouter);
+app.use("/list", listRouter);
 
-app.use("/scheduled", checkForAuthorizationHeader, checkAdmin, scheduledEmailRouter);
+app.use("/scheduled", scheduledMailRouter);
 
 module.exports = app;

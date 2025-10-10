@@ -11,21 +11,18 @@ const path = require("path");
 app.use(
   cors({
     origin: [
-      "https://admin-func-front-vashiyarharshs-projects.vercel.app/",
-      "https://admin-func-front-git-main-vashiyarharshs-projects.vercel.app/",
-      "https://admin-func-front.vercel.app",
       "http://localhost:5173",
     ],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
-// app.use(cors());
+
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "public/uploads")));
 app.use("/api", staticRouter);
 app.get("/", (req, res) => {
-  res.send("Hello World");
+  res.send("Welcome to Main Backend Server!");
 });
 
 mongoose

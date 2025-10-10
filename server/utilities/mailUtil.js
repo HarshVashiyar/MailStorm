@@ -1,9 +1,69 @@
 require("dotenv").config();
-const { sign } = require("crypto");
+// const { sign } = require("crypto");
 const nodemailer = require("nodemailer");
-const path = require("path");
+// const path = require("path");
 
-const sendScheduledEmail = async ({
+const otpStorage = {};
+
+const generateOTP = () => {
+  const otp = Math.floor(100000 + Math.random() * 900000);
+  return otp;
+}
+
+const sendOTP = async (mail) => {
+  const otp = generateOTP();
+  const expirationTime = Date.now() + 150 * 1000;
+  otpStorage[mail] = { otp, expirationTime };
+
+  const content = {
+    to: mail,
+    subject: 'Your One-Time Password (OTP) for Email Verification',
+    html: `
+            <div style="font-family: Arial, sans-serif; text-align: center; padding: 40px; background: #f9f9f9;">
+                <h2 style="color: #333;">Email Verification</h2>
+                <p style="font-size: 18px; color: #555;">Use the following OTP to verify your email address:</p>
+                <div style="margin: 30px auto; display: inline-block; background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); padding: 30px 50px;">
+                    <span style="font-size: 48px; letter-spacing: 12px; font-weight: bold; color: #2d8cf0;">${otp}</span>
+                </div>
+                <p style="color: #888; font-size: 14px; margin-top: 30px;">This OTP will expire in 150 seconds.</p>
+            </div>
+        `,
+  };
+
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.ADMIN_MAIL,
+      pass: process.env.ADMIN_MAIL_PASSWORD,
+    },
+  });
+
+  try {
+    const response = await transporter.sendMail(content);
+    return { expirationTime };
+  } catch (error) {
+    console.error(`Error sending OTP to ${mail}:`, error);
+    throw new Error('Failed to send OTP');
+  }
+}
+
+const verifyOTP = (mail, otp) => {
+  const otpData = otpStorage[mail];
+  if (!otpData) {
+    return { success: false, message: "OTP not found!" };
+  }
+  if (Date.now() > otpData.expirationTime) {
+    delete otpStorage[mail];
+    return { success: false, message: "OTP expired!" };
+  }
+  if (otpData.otp != otp) {
+    return { success: false, message: "Invalid OTP!" };
+  }
+  delete otpStorage[mail];
+  return { success: true, message: "OTP verified successfully" };
+};
+
+const sendScheduledMail = async ({
   to,
   recipientPeople,
   subject,
@@ -50,7 +110,7 @@ const sendScheduledEmail = async ({
         </div>`;
 
     if (typeof to[0] === "string") {
-      to = to[0].split(",").map((email) => email.trim());
+      to = to[0].split(",").map((mail) => mail.trim());
     }
 
     if (to.length !== recipientPeople.length) {
@@ -62,11 +122,11 @@ const sendScheduledEmail = async ({
       auth: { user: MAIL_USER, pass: MAIL_PASS },
     });
 
-    const promises = to.map((email, index) => {
+    const promises = to.map((mail, index) => {
       const recipientName = recipientPeople[index] || "User";
       return transporter.sendMail({
         from: `${MAIL_FROM} <${MAIL_USER}>`,
-        to: email,
+        to: mail,
         subject,
         html: `
     <p>Dear ${recipientName},</p>
@@ -78,17 +138,17 @@ const sendScheduledEmail = async ({
     });
 
     await Promise.all(promises);
-    return { success: true, message: "Email(s) sent successfully!" };
+    return { success: true, message: "Mail(s) sent successfully!" };
   } catch (error) {
-    console.error("Error sending email:", error);
+    console.error("Error sending mail:", error);
     return {
       success: false,
-      message: "Failed to send emails. Please try again later.",
+      message: "Failed to send mails. Please try again later.",
     };
   }
 };
 
-const sendEmail = async ({
+const sendMail = async ({
   to,
   recipientPeople,
   subject,
@@ -141,11 +201,11 @@ const sendEmail = async ({
       },
     });
 
-    const promises = to.map((email, index) => {
+    const promises = to.map((mail, index) => {
       const recipientName = recipientPeople[index] || "User";
       return transporter.sendMail({
         from: `${MAIL_FROM} <${MAIL_USER}>`,
-        to: email,
+        to: mail,
         subject,
         html: `
     <p>Dear ${recipientName},</p>
@@ -157,58 +217,19 @@ const sendEmail = async ({
     });
 
     await Promise.all(promises);
-    return { success: true, message: "Email(s) sent successfully!" };
+    return { success: true, message: "Mail(s) sent successfully!" };
   } catch (error) {
-    console.error("Error sending email:", error);
+    console.error("Error sending mail:", error);
     return {
       success: false,
-      message: "Failed to send emails. Please try again later.",
+      message: "Failed to send mails. Please try again later.",
     };
   }
 };
 
-const otpStorage = {};
-
-const generateOTP = () => `${Math.floor(100000 + Math.random() * 900000)}`;
-
-const sendOTP = async (email) => {
-  const otp = generateOTP();
-  const otpExpiration = Date.now() + 2 * 60 * 1000;
-  otpStorage[email] = { otp, otpExpiration };
-
-  const emailContent = {
-    to: [email],
-    subject: "Your OTP Code",
-    text: `Your OTP is ${otp}. It is valid for 2 minutes.`,
-    html: `<b>Your OTP is ${otp}</b>. It is valid for 2 minutes.`,
-  };
-
-  const response = await sendEmail(emailContent);
-  if (response.success) {
-    response.otp = otp;
-  }
-  return response;
-};
-
-const verifyOTP = (email, otp) => {
-  const otpData = otpStorage[email];
-  if (!otpData) {
-    return { success: false, message: "OTP not found!" };
-  }
-  if (Date.now() > otpData.otpExpiration) {
-    delete otpStorage[email];
-    return { success: false, message: "OTP expired!" };
-  }
-  if (otpData.otp !== otp) {
-    return { success: false, message: "Invalid OTP!" };
-  }
-  delete otpStorage[email];
-  return { success: true, message: "OTP verified successfully" };
-};
-
 module.exports = {
-  sendEmail,
   sendOTP,
   verifyOTP,
-  sendScheduledEmail,
-};
+  sendScheduledMail,
+  sendMail,
+}

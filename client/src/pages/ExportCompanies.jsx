@@ -1,8 +1,11 @@
-import React from "react";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 
 const ExportCompanies = ({ companies }) => {
-  const handleExport = () => {
+  const handleExport = async () => {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Companies');
+
+    // Format product group array to string
     const dataForExport = companies.map((company) => ({
       ...company,
       companyProductGroup: Array.isArray(company.companyProductGroup)
@@ -10,11 +13,24 @@ const ExportCompanies = ({ companies }) => {
         : company.companyProductGroup,
     }));
 
-    const worksheet = XLSX.utils.json_to_sheet(dataForExport);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Companies");
+    // Add headers
+    const headers = Object.keys(dataForExport[0] || {});
+    worksheet.addRow(headers);
 
-    XLSX.writeFile(workbook, "companies.xlsx");
+    // Add data rows
+    dataForExport.forEach(company => {
+      worksheet.addRow(Object.values(company));
+    });
+
+    // Generate and download file
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'companies.xlsx';
+    a.click();
+    window.URL.revokeObjectURL(url);
   };
 
   return (

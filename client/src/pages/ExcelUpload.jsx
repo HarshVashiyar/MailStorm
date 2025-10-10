@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import axios from "axios";
 import { toast } from "react-toastify";
 
@@ -10,7 +10,7 @@ const ExcelUpload = () => {
     setFile(e.target.files[0]);
   };
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (!file) {
       return toast.error("Please select a file to import.");
     }
@@ -29,59 +29,58 @@ const ExcelUpload = () => {
     ];
 
     const ext = file.name.split('.').pop().toLowerCase();
-    const reader = new FileReader();
-
-    reader.onload = (evt) => {
-      let workbook;
+    const workbook = new ExcelJS.Workbook();
+    
+    try {
       if (ext === "csv") {
-        workbook = XLSX.read(evt.target.result, { type: "string" });
+        await workbook.csv.readFile(file);
       } else {
-        const data = new Uint8Array(evt.target.result);
-        workbook = XLSX.read(data, { type: "array" });
+        await workbook.xlsx.load(await file.arrayBuffer());
       }
 
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      let jsonData = XLSX.utils.sheet_to_json(worksheet);
+      const worksheet = workbook.worksheets[0];
+      const jsonData = [];
 
-      const filteredData = jsonData.map((row) => {
-        let filteredRow = {};
-        allowedFields.forEach((field) => {
-          if (row.hasOwnProperty(field)) {
-            filteredRow[field] = row[field];
-          }
-        });
-        return filteredRow;
+      // Get headers
+      const headers = [];
+      worksheet.getRow(1).eachCell((cell) => {
+        headers.push(cell.value);
       });
 
-      axios
-        .post(
-          `${import.meta.env.VITE_BACKEND_BASE_URL}${import.meta.env.VITE_BACKEND_IMPORT_EXCEL_ROUTE}`,
-          filteredData,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }
-        )
-        .then((response) => {
-          if (response.status === 201) {
-            toast.success("Companies imported successfully!");
-          } else {
-            toast.error("Import failed.");
-          }
-        })
-        .catch((error) => {
-          toast.error(
-            error.response?.data?.message ||
-              "An error occurred while importing companies."
-          );
-        });
-    };
+      // Get data
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber > 1) { // Skip header row
+          const rowData = {};
+          row.eachCell((cell, colNumber) => {
+            const header = headers[colNumber - 1];
+            if (allowedFields.includes(header)) {
+              rowData[header] = cell.value;
+            }
+          });
+          jsonData.push(rowData);
+        }
+      });
 
-    if (ext === "csv") {
-      reader.readAsText(file);
-    } else {
-      reader.readAsArrayBuffer(file);
+      const response = await axios.post(
+        `${import.meta.env.VITE_BACKEND_BASE_URL}${import.meta.env.VITE_BACKEND_IMPORT_EXCEL_ROUTE}`,
+        jsonData,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      if (response.status === 201) {
+        toast.success("Companies imported successfully!");
+      } else {
+        toast.error("Import failed.");
+      }
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message ||
+        "An error occurred while importing companies."
+      );
     }
   };
 

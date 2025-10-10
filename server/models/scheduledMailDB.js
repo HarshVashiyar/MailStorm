@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const scheduledEmailSchema = new mongoose.Schema(
+const scheduledMailSchema = new mongoose.Schema(
     {
         from: {
             type: String,
@@ -50,9 +50,9 @@ const scheduledEmailSchema = new mongoose.Schema(
             type: Date,
             required: true,
         },
-        status: { 
-            type: String, 
-            default: 'pending' 
+        status: {
+            type: String,
+            default: 'pending'
         },
         mState: {
             type: Boolean,
@@ -63,5 +63,5 @@ const scheduledEmailSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
-const ScheduledEmail = mongoose.model("ScheduledEmail", scheduledEmailSchema);
-module.exports = ScheduledEmail;
+const ScheduledMail = mongoose.model("ScheduledMail", scheduledMailSchema);
+module.exports = ScheduledMail;
