@@ -1,6 +1,8 @@
 const {
   sendOTP,
-  verifyOTP
+  verifyOTP,
+  sendMail,
+  sendUserMail
 } = require("../utilities/mailUtil");
 
 const User = require("../models/userDB");
@@ -100,9 +102,26 @@ const handleSendMail = async (req, res) => {
   }
 }
 
+const handleSendUserMail = async (req, res) => {
+  try {
+    const { providerId, to, subject, html } = req.body;
+    const userId = req.user.id;
+
+    if (!providerId || !to || !subject || !html)
+      return res.status(400).json({ success: false, message: "Missing fields" });
+
+    const response = await sendUserMail(userId, providerId, { to, subject, html });
+    res.status(200).json(response);
+  } catch (err) {
+    console.error("Error sending user mail:", err);
+    res.status(500).json({ success: false, message: "Mail sending failed" });
+  }
+};
+
 module.exports = {
   handleSendOTP,
   handleVerifyOTP,
   handleResetPassword,
-  handleSendMail
+  handleSendMail,
+  handleSendUserMail
 }

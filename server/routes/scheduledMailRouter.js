@@ -8,7 +8,7 @@ const {
 const { scheduledUpload, processFiles } = require("../middlewares/storeFiles");
 
 app.get("/", (req, res) => {
-  res.send("Welcome to Scheduled Mails Router!");
+  res.send("Welcome to Scheduled Mail(s) Router!");
 });
 
 app.get("/getall", handleGetScheduledMails);

@@ -6,143 +6,118 @@ import "react-toastify/dist/ReactToastify.css";
 
 const ResetPassword = () => {
   const location = useLocation();
-  const email = location.state?.email;
   const navigate = useNavigate();
+  const email = location.state?.email || "";
 
-  const [formData, setFormData] = useState({
-    resetPassword: "",
-    confirmPassword: "",
-  });
-
-  const [errors, setErrors] = useState({
-    resetPassword: "",
-    confirmPassword: "",
-  });
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
-  };
-
-  const validateForm = () => {
-    let valid = true;
-    let errors = {};
-
-    // Password validation
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\W).{8,}$/;
-    if (!passwordRegex.test(formData.resetPassword)) {
-      valid = false;
-      errors.resetPassword =
-        "Password must be at least 8 characters, include an uppercase letter, a lowercase letter, and a special character.";
-    }
-
-    if (formData.resetPassword !== formData.confirmPassword) {
-      valid = false;
-      errors.confirmPassword = "Passwords do not match.";
-    }
-
-    setErrors(errors);
-    return valid;
-  };
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (validateForm()) {
-      try {
-        const response = await axios.post(
-          `${import.meta.env.VITE_BACKEND_BASE_URL}${
-            import.meta.env.VITE_BACKEND_RESETPASSWORD_ROUTE
-          }`,
-          {
-            email,
-            newPassword: formData.resetPassword,
-          },
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
-
-        if (response.status === 200) {
-          toast.success("Password reset successfully!");
-          setFormData({ resetPassword: "", confirmPassword: "" });
-          navigate("/");
-        } else {
-          toast.error("An error occurred while resetting the password.");
-        }
-      } catch (error) {
-        toast.error(
-          error.response?.data?.message ||
-            "Failed to reset password. Please try again."
-        );
+    if (!newPassword || !confirmPassword) {
+      setError("Please fill in all fields.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+    setError("");
+    setIsLoading(true);
+    const toastId = toast.loading("Resetting password...");
+    try {
+      const response = await axios.post(
+        `${import.meta.env.VITE_BASE_URL}${
+          import.meta.env.VITE_RESET_PASSWORD_ROUTE
+        }`,
+        { email, newPassword, confirmPassword }
+      );
+      toast.dismiss(toastId);
+      setIsLoading(false);
+      if (response.data?.success === true) {
+        toast.success("Password reset successfully!");
+        setTimeout(() => {
+          navigate("/signin");
+        }, 700);
+      } else {
+        toast.error(response.data?.message || "Failed to reset password.");
       }
+    } catch (error) {
+      toast.dismiss(toastId);
+      setIsLoading(false);
+      if (error?.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else {
+        toast.error("Something went wrong!");
+      }
+      console.error(error);
     }
   };
 
   return (
     <div className="flex flex-col min-h-screen">
       <div className="flex items-center justify-center flex-grow py-12">
-        <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
-          <h2 className="text-2xl font-bold mb-6 text-center">
-            Reset Password
-          </h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label
-                htmlFor="resetPassword"
-                className="block text-sm font-medium text-gray-700"
-              >
-                New Password
-              </label>
-              <input
-                type="password"
-                id="resetPassword"
-                name="resetPassword"
-                value={formData.resetPassword}
-                onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-                required
-              />
-              {errors.resetPassword && (
-                <p className="text-red-500 text-sm mt-1">
-                  {errors.resetPassword}
-                </p>
-              )}
-            </div>
-            <div>
-              <label
-                htmlFor="confirmPassword"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Confirm Password
-              </label>
-              <input
-                type="password"
-                id="confirmPassword"
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-                required
-              />
-              {errors.confirmPassword && (
-                <p className="text-red-500 text-sm mt-1">
-                  {errors.confirmPassword}
-                </p>
-              )}
-            </div>
-            <button
-              type="submit"
-              className="w-full bg-blue-500 text-white p-2 rounded-md"
-            >
+        <div className="bg-dark-800/20 backdrop-blur-xl border border-white/10 rounded-2xl shadow-glass p-8 w-full max-w-md relative overflow-hidden group">
+          {/* Animated background gradient */}
+          <div className="absolute inset-0 bg-gradient-to-br from-primary-500/10 via-accent-500/5 to-primary-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+          
+          <div className="relative z-10">
+            <h2 className="text-2xl font-bold mb-6 text-center bg-gradient-to-r from-primary-400 to-accent-400 bg-clip-text text-transparent">
               Reset Password
-            </button>
-          </form>
+            </h2>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label
+                  htmlFor="resetPassword"
+                  className="block text-sm font-medium text-gray-300"
+                >
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  id="resetPassword"
+                  name="resetPassword"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="mt-1 block w-full bg-dark-800/50 text-white placeholder-gray-400 border border-white/10 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-400/40 focus:border-primary-400/40 backdrop-blur-sm transition-all duration-300"
+                  required
+                />
+                {error.resetPassword && (
+                  <p className="text-red-500 text-xs mt-1">{error.resetPassword}</p>
+                )}
+              </div>
+              <div>
+                <label
+                  htmlFor="confirmPassword"
+                  className="block text-sm font-medium text-gray-300"
+                >
+                  Confirm Password
+                </label>
+                <input
+                  type="password"
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="mt-1 block w-full bg-dark-800/50 text-white placeholder-gray-400 border border-white/10 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-400/40 focus:border-primary-400/40 backdrop-blur-sm transition-all duration-300"
+                  required
+                />
+                {error.confirmPassword && (
+                  <p className="text-red-500 text-xs mt-1">{error.confirmPassword}</p>
+                )}
+              </div>
+              <div>
+                <button
+                  type="submit"
+                  className="w-full bg-gradient-to-r from-primary-500 to-accent-500 text-white py-2 px-4 rounded-lg hover:from-primary-600 hover:to-accent-600 transition-all duration-300 shadow-md hover:shadow-glow"
+                >
+                  Reset Password
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
     </div>

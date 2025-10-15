@@ -46,7 +46,7 @@ const handleUserSignIn = async (req, res) => {
     try {
         const user = await User.findOne({ email });
         if (!user) {
-            return res.status(401).json({ success: false, message: "Email or Password is incorrect." });
+            return res.status(401).json({ success: false, message: "User with the provided email not found." });
         }
         const token = await User.matchPasswordAndGenerateToken(email, password);
         if (!token) {

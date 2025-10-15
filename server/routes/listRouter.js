@@ -7,19 +7,20 @@ const {
     handleUpdateList,
     handleRemoveLists
 } = require('../controllers/listController');
+const { authenticateUser } = require("../utilities/userUtil");
 
 app.get('/', (req, res) => {
-    res.send('List Router');
+    res.send('Welcome to List Router!');
 });
 
-app.get('/getall', handleGetAllLists);
+app.get('/getall', authenticateUser, handleGetAllLists);
 
-app.get('/:id', handleGetListByID);
+app.get('/:id', authenticateUser, handleGetListByID);
 
-app.post('/add', handleAddList);
+app.post('/add', authenticateUser, handleAddList);
 
-app.put('/update', handleUpdateList);
+app.put('/update', authenticateUser, handleUpdateList);
 
-app.delete('/remove', handleRemoveLists);
+app.delete('/remove', authenticateUser, handleRemoveLists);
 
 module.exports = app;

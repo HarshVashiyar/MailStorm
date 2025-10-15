@@ -10,7 +10,7 @@ const { authenticateUser, authorizeAdmin } = require("../utilities/userUtil");
 const { upload } = require("../middlewares/storeFiles");
 
 app.get("/", (req, res) => {
-  res.send('Welcome to mail router');
+  res.send('Welcome to Mail Router');
 });
 
 app.post("/sendotp", handleSendOTP);

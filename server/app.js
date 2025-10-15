@@ -7,14 +7,18 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const staticRouter = require("./routes/staticRouter");
 const path = require("path");
+const cookieParser = require("cookie-parser");
+
+app.use(cookieParser());
 
 app.use(
   cors({
     origin: [
-      "http://localhost:5173",
+      'http://localhost:5173'
     ],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
   })
 );
 

@@ -2,6 +2,9 @@ require("dotenv").config();
 // const { sign } = require("crypto");
 const nodemailer = require("nodemailer");
 // const path = require("path");
+const { google } = require("googleapis");
+const EmailProvider = require("../models/mailProviderDB");
+const bcrypt = require("bcrypt");
 
 const otpStorage = {};
 
@@ -227,9 +230,66 @@ const sendMail = async ({
   }
 };
 
+const getUserTransporter = async (userId, providerId) => {
+  const provider = await EmailProvider.findOne({ _id: providerId, userId });
+  if (!provider) throw new Error("Email provider not found");
+
+  // If Gmail OAuth2:
+  if (provider.providerName === "gmail" && provider.oauth?.refreshToken) {
+    const oAuth2Client = new google.auth.OAuth2(
+      provider.oauth.clientId,
+      provider.oauth.clientSecret
+    );
+    oAuth2Client.setCredentials({ refresh_token: provider.oauth.refreshToken });
+
+    const { token, res } = await oAuth2Client.getAccessToken();
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        type: "OAuth2",
+        user: provider.emailAddress,
+        clientId: provider.oauth.clientId,
+        clientSecret: provider.oauth.clientSecret,
+        refreshToken: provider.oauth.refreshToken,
+        accessToken: token,
+      },
+    });
+    return transporter;
+  }
+
+  // Else fallback to SMTP
+  const passwordMatch = provider.encryptedPassword
+    ? await bcrypt.compare(process.env.DEFAULT_SMTP_PASS, provider.encryptedPassword)
+    : false;
+
+  if (!passwordMatch && provider.encryptedPassword) {
+    throw new Error("Invalid SMTP password (decryption not possible in demo)");
+  }
+
+  const transporter = nodemailer.createTransport({
+    host: provider.smtpHost,
+    port: provider.smtpPort || 587,
+    secure: provider.smtpPort === 465,
+    auth: {
+      user: provider.emailAddress,
+      pass: process.env.DEFAULT_SMTP_PASS, // decrypted dynamically in production
+    },
+  });
+  return transporter;
+};
+
+// Smart sendMail using user provider
+const sendUserMail = async (userId, providerId, { to, subject, html, attachments }) => {
+  const transporter = await getUserTransporter(userId, providerId);
+  const mailOptions = { from: transporter.options.auth.user, to, subject, html, attachments };
+  await transporter.sendMail(mailOptions);
+  return { success: true, message: "Mail sent successfully!" };
+};
+
 module.exports = {
   sendOTP,
   verifyOTP,
   sendScheduledMail,
   sendMail,
+  sendUserMail
 }

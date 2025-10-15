@@ -13,11 +13,11 @@ const {
 const {
   authenticateUser,
   authorizeAdmin,
-  loginLimiter,
+  // loginLimiter,
 } = require("../utilities/userUtil");
 
 app.get("/", (req, res) => {
-  res.send("Welcome to user router!");
+  res.send("Welcome to User Router!");
 });
 
 app.get("/checkauth", authenticateUser, handleCheckAuthStatus);

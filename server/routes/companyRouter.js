@@ -9,24 +9,24 @@ const {
     handleUpdateCompanyNote,
     handleImportCompanies
 } = require('../controllers/companyController');
-const { checkForAuthorizationHeader, checkAdmin } = require("../utilities/userUtil");
+const { authenticateUser } = require("../utilities/userUtil");
 
 app.get('/', (req, res) => {
-    res.send('Company router');
+    res.send('Welcome to Company Router!');
 });
 
-app.get('/getall', handleGetAllCompanies);
+app.get('/getall', authenticateUser, handleGetAllCompanies);
 
-app.get('/:id', handleGetCompanyByID);
+app.get('/getcompany', authenticateUser, handleGetCompanyByID);
 
-app.post('/add', handleAddCompany);
+app.post('/add', authenticateUser, handleAddCompany);
 
-app.put('/update', handleUpdateCompany);
+app.put('/update', authenticateUser, handleUpdateCompany);
 
-app.put('/note', handleUpdateCompanyNote);
+app.put('/note', authenticateUser, handleUpdateCompanyNote);
 
-app.delete('/remove', handleRemoveCompanies);
+app.delete('/remove', authenticateUser, handleRemoveCompanies);
 
-app.post('/import', handleImportCompanies);
+app.post('/import', authenticateUser, handleImportCompanies);
 
 module.exports = app;

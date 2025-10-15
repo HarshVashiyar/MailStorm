@@ -11,7 +11,7 @@ const handleGetAllCompanies = async (req, res) => {
 }
 
 const handleGetCompanyByID = async (req, res) => {
-    const { id } = req.params;
+    const { id } = req.query;
     try {
         const company = await Company.findById(id);
         if (!company) return res.status(404).send("Company not found");
