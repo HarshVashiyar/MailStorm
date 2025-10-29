@@ -44,14 +44,7 @@ const handleUserSignIn = async (req, res) => {
         return res.status(400).json({ success: false, message: "All fields are required" });
     }
     try {
-        const user = await User.findOne({ email });
-        if (!user) {
-            return res.status(401).json({ success: false, message: "User with the provided email not found." });
-        }
         const token = await User.matchPasswordAndGenerateToken(email, password);
-        if (!token) {
-            return res.status(401).json({ success: false, message: "Email or Password is incorrect." });
-        }
         res.cookie("token", token, {
             httpOnly: true,
             //secure: process.env.NODE_ENV === "production",
@@ -64,7 +57,7 @@ const handleUserSignIn = async (req, res) => {
     catch (error) {
         console.error("Error signing in user:", error);
         if (error.statusCode === 401 || error.statusCode === 404) {
-            return res.status(error.statusCode).json({ success: false, message: "Email or Password is incorrect." });
+            return res.status(401).json({ success: false, message: "Email or Password is incorrect." });
         }
         return res.status(500).json({ success: false, message: "Internal server error" });
     }
@@ -114,6 +107,9 @@ const handleGetUserById = async (req, res) => {
     }
     catch (error) {
         console.error("Error fetching user:", error);
+        if (error.name === "CastError") {
+            return res.status(400).json({ success: false, message: "Invalid user ID" });
+        }
         return res.status(500).json({ success: false, message: "Internal server error" });
     }
 }
@@ -126,16 +122,26 @@ const handleUpdateUser = async (req, res) => {
         if (!user) {
             return res.status(404).json({ success: false, message: "User not found" });
         }
-        user.fullName = fullName || user.fullName;
-        user.email = email || user.email;
-        user.password = password || user.password;
-        user.dob = dob || user.dob;
-        user.pathToProfilePhoto = pathToProfilePhoto || user.pathToProfilePhoto;
+        if (fullName) user.fullName = fullName;
+        if (email) user.email = email;
+        if (password) user.password = password;
+        if (dob) user.dob = dob;
+        if (pathToProfilePhoto !== undefined) user.pathToProfilePhoto = pathToProfilePhoto;
         await user.save();
         return res.status(200).json({ success: true, message: "User updated successfully" });
     }
     catch (error) {
         console.error("Error updating user:", error);
+        if (error.name === "ValidationError") {
+            const messages = Object.values(error.errors).map(val => val.message);
+            return res.status(400).json({ success: false, message: messages.join(", ") });
+        }
+        if (error.code === 11000) {
+            return res.status(400).json({ success: false, message: "Email already exists" });
+        }
+        if (error.name === "CastError") {
+            return res.status(400).json({ success: false, message: "Invalid user ID" });
+        }
         return res.status(500).json({ success: false, message: "Internal server error" });
     }
 }
@@ -147,10 +153,14 @@ const handleDeleteUser = async (req, res) => {
         if (!user) {
             return res.status(404).json({ success: false, message: "User not found" });
         }
+        res.clearCookie("token");
         return res.status(200).json({ success: true, message: "User deleted successfully" });
     }
     catch (error) {
         console.error("Error deleting user:", error);
+        if (error.name === "CastError") {
+            return res.status(400).json({ success: false, message: "Invalid user ID" });
+        }
         return res.status(500).json({ success: false, message: "Internal server error" });
     }
 }

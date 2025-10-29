@@ -58,6 +58,11 @@ const scheduledMailSchema = new mongoose.Schema(
             type: Boolean,
             required: true,
             default: true,
+        },
+        createdBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            required: true,
         }
     },
     { timestamps: true }

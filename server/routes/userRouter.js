@@ -13,7 +13,7 @@ const {
 const {
   authenticateUser,
   authorizeAdmin,
-  // loginLimiter,
+  loginLimiter,
 } = require("../utilities/userUtil");
 
 app.get("/", (req, res) => {
@@ -24,7 +24,7 @@ app.get("/checkauth", authenticateUser, handleCheckAuthStatus);
 
 app.post("/signup", handleUserSignUp);
 
-app.post("/signin", handleUserSignIn);
+app.post("/signin", loginLimiter, handleUserSignIn);
 
 app.get("/getall", authenticateUser, authorizeAdmin, handleGetAllUsers);
 

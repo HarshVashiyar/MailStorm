@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const MouseGradient = () => {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });

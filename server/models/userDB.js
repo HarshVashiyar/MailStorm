@@ -12,9 +12,16 @@ const userSchema = new mongoose.Schema(
       maxLength: 30,
       validate: {
         validator: function (v) {
-          return /^[a-zA-Z_]{3,}$/.test(v);
+          // Allow only letters and spaces
+          if (!/^[A-Za-z ]+$/.test(v)) return false;
+          // At most two spaces
+          const spaces = (v.match(/ /g) || []).length;
+          if (spaces > 2) return false;
+          // At least 3 letters
+          const letters = (v.match(/[A-Za-z]/g) || []).length;
+          return letters >= 3;
         },
-        message: (props) => `"${props.value}" is not a valid name! At least 3 alphabets and underscores are allowed. (Spaces are not permitted.)`,
+        message: (props) => `"${props.value}" is not a valid name! Only letters and up to two spaces allowed; at least 3 letters required.`,
       }
     },
     email: {
@@ -26,12 +33,18 @@ const userSchema = new mongoose.Schema(
         validator: function (v) {
           return /^[a-zA-z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(v);
         },
-        message: (props) => `\"${props.value}\" is not a valid email! Email should be in the format of aB7@gmail.com`,
+        message: (props) => `\"${props.value}\" is not a valid email address!`,
       }
     },
     password: {
       type: String,
       required: true,
+      validate: {
+        validator: function (v) {
+          return /^(?=.*[0-9])(?=.*[!@#$%^&*])(?=.*[a-zA-Z])[a-zA-Z0-9!@#$%^&*]{8,}$/.test(v);
+        },
+        message: "Password must be at least 8 characters long, contain a number and a special character"
+      }
     },
     role: {
       type: String,

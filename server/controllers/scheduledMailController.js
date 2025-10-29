@@ -21,7 +21,7 @@ cron.schedule("* * * * *", async () => {
         signature: mail.signature || null,
         attachments: mail.attachments.map((att) => ({
           filename: att.filename,
-          path: att.path,
+          path: att.path, // Cloudinary URL - will be fetched by Nodemailer
           contentType: att.contentType,
         })),
         mState: mail.mState,
@@ -36,6 +36,7 @@ cron.schedule("* * * * *", async () => {
 });
 
 const handleAddScheduledMail = async (req, res) => {
+  const user = req.user;
   try {
     const {
       to,
@@ -83,6 +84,7 @@ const handleAddScheduledMail = async (req, res) => {
       sendAt: utcSendAt,
       status,
       mState,
+      createdBy: user.id,
     });
 
     res
@@ -95,8 +97,9 @@ const handleAddScheduledMail = async (req, res) => {
 };
 
 const handleGetScheduledMails = async (req, res) => {
+  const user = req.user;
   try {
-    const scheduledMails = await ScheduledMail.find();
+    const scheduledMails = await ScheduledMail.find({ createdBy: user.id });
     res.status(200).json(scheduledMails);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -104,6 +107,7 @@ const handleGetScheduledMails = async (req, res) => {
 };
 
 const handleDeleteScheduledMails = async (req, res) => {
+  const user = req.user;
   try {
     const { ids } = req.body;
     if (!ids || ids.length === 0) {
@@ -112,6 +116,7 @@ const handleDeleteScheduledMails = async (req, res) => {
 
     const deletedScheduledMails = await ScheduledMail.deleteMany({
       _id: { $in: ids },
+      createdBy: user.id,
     });
 
     if (deletedScheduledMails.deletedCount > 0) {

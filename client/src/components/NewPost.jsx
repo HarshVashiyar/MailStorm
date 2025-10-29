@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import Tiptap from "./TipTap";
-import ShowPost from "./ShowPost";
+// import ShowPost from "./ShowPost";
 
 const NewPost = ({ setHtml }) => {
   const [htmlContent, setHtmlContent] = useState("");

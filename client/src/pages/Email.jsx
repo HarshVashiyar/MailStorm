@@ -3,6 +3,19 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import NewPost from "../components/NewPost";
+import {
+  FaEnvelope,
+  FaCalendarAlt,
+  FaEdit,
+  FaPaperclip,
+  FaClock,
+  FaGlobeAmericas,
+  FaUsers,
+  FaPaperPlane,
+  FaTimes,
+  FaTrashAlt,
+  // FaSparkles
+} from 'react-icons/fa';
 
 const EmailForm = ({
   setTypedEmail,
@@ -93,7 +106,6 @@ const EmailForm = ({
   };
 
   const handleSendMail = async () => {
-    resetEmailForm();
     const toastID = toast.loading(
       "Please wait while the email(s) are being sent..."
     );
@@ -101,6 +113,7 @@ const EmailForm = ({
     const recipientEmails = getRecipientEmails();
 
     if (recipientEmails.length === 0) {
+      toast.dismiss(toastID);
       toast.error("No recipients specified.");
       return;
     }
@@ -118,27 +131,26 @@ const EmailForm = ({
 
     try {
       const response = await axios.post(
-        `${import.meta.env.VITE_BACKEND_BASE_URL}${import.meta.env.VITE_BACKEND_SENDMAIL_ROUTE}`,
+        `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_SEND_MAIL_ROUTE}`,
         formData,
         {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
+          withCredentials: true
         }
       );
       toast.dismiss(toastID);
       toast.success(response.data.message);
+      // Only reset and close on success
+      resetEmailForm();
     } catch (error) {
       toast.dismiss(toastID);
       console.error("Error sending email:", error);
       toast.error(error.response?.data?.message || "Failed to send email.");
+      // Don't close modal on error - keep state so user can retry
     }
   };
 
   const postScheduledEmail = async () => {
     console.log(timeZone);
-    resetEmailForm();
     const toastID = toast.loading(
       "Please wait while the email is being scheduled..."
     );
@@ -146,6 +158,7 @@ const EmailForm = ({
     const recipientEmails = getRecipientEmails();
 
     if (recipientEmails.length === 0) {
+      toast.dismiss(toastID);
       toast.error("No recipients specified.");
       return;
     }
@@ -168,24 +181,23 @@ const EmailForm = ({
 
     try {
       const response = await axios.post(
-        `${import.meta.env.VITE_BACKEND_BASE_URL}${import.meta.env.VITE_BACKEND_ADDSCHEDULEDEMAIL_ROUTE}`,
+        `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_ADD_SCHEDULED_EMAIL_ROUTE}`,
         formData,
         {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
+          withCredentials: true
         }
       );
       toast.dismiss(toastID);
-      setScheduledDateTime("");
       toast.success(response.data.message);
+      // Only reset and close on success
+      resetEmailForm();
     } catch (error) {
-      console.error("Error sending email:", error);
+      console.error("Error scheduling email:", error);
       toast.dismiss(toastID);
       toast.error(
         error.response?.data?.message || "An unexpected error occurred."
       );
+      // Don't close modal on error - keep state so user can retry
     }
   };
 
@@ -202,100 +214,168 @@ const EmailForm = ({
 
   return (
     <div
-      className="absolute top-0 left-0 w-full min-h-screen bg-gray-800 bg-opacity-80 flex items-start justify-center z-40"
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 pt-24"
       style={{ zIndex: 1100 }}
     >
-      <div className="bg-gray-700 p-6 rounded-lg shadow-md w-4/5 max-w-7xl max-h-[95vh] overflow-y-auto mt-4">
-        <div className="mb-4">
-          {/* <label className="text-gray-50">Subject:</label> */}
-          <input
-            type="text"
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-            placeholder="Enter email subject"
-            className="w-full px-3 py-2 rounded mt-2 text-slate-300 bg-slate-900"
-          />
+      <div className="bg-white/10 backdrop-blur-lg p-6 rounded-3xl shadow-2xl w-full max-w-6xl max-h-[85vh] overflow-hidden border border-white/20 flex flex-col mt-4">
+        {/* Header */}
+        <div className="mb-6">
+          <h3 className="text-3xl font-bold text-white flex items-center space-x-3 mb-2">
+            <span className="text-white">{schedule ? <FaCalendarAlt /> : <FaEnvelope />}</span>
+            <span>{schedule ? 'Schedule Email' : 'Compose Email'}</span>
+          </h3>
+          <p className="text-gray-300 text-sm">
+            {schedule ? 'Schedule your email to be sent at a specific time' : 'Create and send your email to selected recipients'}
+          </p>
+          <div className="mt-3 flex items-center space-x-4 text-sm text-blue-300">
+            <span className="flex items-center space-x-1">
+              <FaUsers />
+              <span>{getRecipientEmails().length} recipients</span>
+            </span>
+            <span className="flex items-center space-x-1">
+              <FaPaperclip />
+              <span>{getRecipientPeople().length} contacts</span>
+            </span>
+          </div>
         </div>
 
-        <div className="mb-4">
-          {/* <label className="text-gray-50">Text Content:</label> */}
-          {/* <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Enter plain text content"
-            className="w-full min-h-[20rem] px-3 py-2 rounded mt-2 text-slate-300 bg-slate-900"
-          /> */}
-          <NewPost setHtml={setHtml} />
-        </div>
-
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex-1 overflow-y-auto space-y-6">
+          {/* Subject Input */}
           <div>
-            <label className="text-gray-50">Attachments:</label>
-            <input type="file" multiple onChange={handleFileChange} className="ml-2" />
+            <label className="block text-white font-medium mb-3 flex items-center space-x-2">
+              <FaEdit className="text-blue-400" />
+              <span>Subject Line:</span>
+            </label>
+            <input
+              type="text"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              placeholder="Enter your email subject..."
+              className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+            />
           </div>
 
-          {schedule && (
-            <div className="flex items-center gap-4">
-              <div>
-                <label className="text-gray-50">Time Zone:</label>
-                <input
-                  type="text"
-                  value={timeZone}
-                  disabled
-                  className="w-full px-3 py-2 rounded mt-2 bg-slate-900 text-slate-300"
-                />
+          {/* Email Content Editor */}
+          <div>
+            <label className="block text-white font-medium mb-3 flex items-center space-x-2">
+              <FaEdit className="text-green-400" />
+              <span>Email Content:</span>
+            </label>
+            <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 overflow-hidden">
+              <NewPost setHtml={setHtml} />
+            </div>
+          </div>
+
+          {/* Attachments Section */}
+          <div>
+            <label className="block text-white font-medium mb-3 flex items-center space-x-2">
+              <FaPaperclip className="text-orange-400" />
+              <span>Attachments:</span>
+            </label>
+            <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-4">
+              <div className="flex items-center justify-between mb-4">
+                <label className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white px-4 py-2 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg cursor-pointer flex items-center space-x-2">
+                  <FaPaperclip />
+                  <span>Choose Files</span>
+                  <input type="file" multiple onChange={handleFileChange} className="hidden" />
+                </label>
+                <span className="text-gray-400 text-sm flex items-center space-x-1">
+                  <FaPaperclip />
+                  <span>{attachments.length} file(s) selected</span>
+                </span>
               </div>
-              <div>
-                <label className="text-gray-50">Schedule Date and Time:</label>
-                <input
-                  type="datetime-local"
-                  onChange={(e) => setScheduledDateTime(e.target.value)}
-                  className="w-full px-3 py-2 rounded mt-2"
-                />
+              
+              {attachments.length > 0 && (
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {attachments.map((file, index) => (
+                    <div key={index} className="bg-white/10 backdrop-blur-sm rounded-xl p-3 flex items-center justify-between border border-white/10">
+                      <div className="flex items-center space-x-3">
+                        <FaPaperclip className="text-blue-300" />
+                        <span className="text-white font-medium truncate">{file.name}</span>
+                        <span className="text-gray-400 text-sm">({(file.size / 1024).toFixed(1)} KB)</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeFile(index)}
+                        className="bg-red-500/20 hover:bg-red-500/40 text-red-300 px-3 py-1 rounded-lg transition-all duration-300 transform hover:scale-105 flex items-center space-x-1"
+                      >
+                        <FaTrashAlt />
+                        <span>Remove</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Schedule Section */}
+          {schedule && (
+            <div>
+              <label className="block text-white font-medium mb-3 flex items-center space-x-2">
+                <FaClock className="text-purple-400" />
+                <span>Schedule Settings:</span>
+              </label>
+              <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-gray-300 font-medium mb-2 flex items-center space-x-2">
+                      <FaGlobeAmericas className="text-cyan-400" />
+                      <span>Time Zone:</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={timeZone}
+                      disabled
+                      className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-gray-300 transition-all duration-300"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-300 font-medium mb-2 flex items-center space-x-2">
+                      <FaCalendarAlt className="text-pink-400" />
+                      <span>Schedule Date & Time:</span>
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={scheduledDateTime}
+                      onChange={(e) => setScheduledDateTime(e.target.value)}
+                      className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           )}
-
-          <div className="flex gap-4">
-            {schedule ? (
-              <button
-                onClick={postScheduledEmail}
-                className="bg-green-500 text-white py-2 px-4 rounded ml-3 hover:bg-green-600"
-              >
-                Schedule Email
-              </button>
-            ) : (
-              <button
-                onClick={handleSendMail}
-                className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
-              >
-                Send Email
-              </button>
-            )}
-
-            <button
-              onClick={resetEmailForm}
-              className="bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600"
-            >
-              Cancel
-            </button>
-          </div>
         </div>
 
-        <ul className="mt-4 max-h-28 overflow-y-auto text-slate-300 bg-slate-900 px-2 py-1 rounded">
-          {attachments.map((file, index) => (
-            <li key={index} className="text-gray-50 flex justify-between">
-              {file.name}
-              <button
-                type="button"
-                onClick={() => removeFile(index)}
-                className="text-red-500 ml-4"
-              >
-                Remove
-              </button>
-            </li>
-          ))}
-        </ul>
+        {/* Action Buttons */}
+        <div className="flex justify-between gap-4 pt-6 border-t border-white/10">
+          <button
+            onClick={resetEmailForm}
+            className="flex-1 bg-white/10 hover:bg-white/20 text-white py-3 px-6 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 backdrop-blur-sm border border-white/20 flex items-center justify-center space-x-2"
+          >
+            <FaTimes />
+            <span>Cancel</span>
+          </button>
+          
+          {schedule ? (
+            <button
+              onClick={postScheduledEmail}
+              className="flex-1 bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700 text-white py-3 px-6 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2"
+            >
+              <FaCalendarAlt />
+              <span>Schedule Email</span>
+            </button>
+          ) : (
+            <button
+              onClick={handleSendMail}
+              className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white py-3 px-6 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2"
+            >
+              {/* <FaSparkles /> */}
+              <span>Send Email</span>
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

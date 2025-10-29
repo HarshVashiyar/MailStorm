@@ -19,15 +19,23 @@ const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: "scheduled-emails", // Folder in Cloudinary
-    format: async (req, file) => "png", // You can change this to a dynamic format
-    public_id: (req, file) => file.originalname, // Use the file's original name as the public ID
-    //allowed_formats: ["jpg", "jpeg", "png", "pdf", "docx", "txt"], // Allow only specific file types
+    resource_type: "auto", // Auto-detect resource type (image, video, raw for PDFs/docs)
+    public_id: (req, file) => `${Date.now()}-${file.originalname.replace(/\.[^/.]+$/, "")}`, // Unique filename without extension
+    // Removed allowed_formats to allow all file types
   },
 });
 
 const scheduledUpload = multer({ storage });
 
 const processFiles = (req, res, next) => {
+  console.log('=== Process Files ===');
+  console.log('Number of files:', req.files ? req.files.length : 0);
+  if (req.files) {
+    req.files.forEach((file, index) => {
+      console.log(`File ${index + 1}:`, file.originalname, file.mimetype);
+    });
+  }
+  
   // Process uploaded files and attach them to req.body
   // if (!req.files || req.files.length === 0) {
   //   return res.status(400).json({ message: "No files uploaded." });
@@ -42,6 +50,7 @@ const processFiles = (req, res, next) => {
   // Attach uploaded files to the request body
   req.body.uploadedFiles = uploadedFiles;
 
+  console.log('Files processed successfully');
   // Proceed to the controller
   next();
 }

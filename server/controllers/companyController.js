@@ -1,110 +1,198 @@
 const Company = require("../models/companyDB");
 
 const handleGetAllCompanies = async (req, res) => {
+    const user = req.user;
     try {
-        const companies = await Company.find();
-        return res.status(200).send(companies);
+        const companies = await Company.find({ createdBy: user.id });
+        return res.status(200).json({ success: true, data: companies });
     } catch (err) {
         console.error("Get all companies error:", err);
-        return res.status(500).send("Internal Server Error: " + err.message);
+        return res.status(500).json({ success: false, message: "Internal server error" });
     }
 }
 
 const handleGetCompanyByID = async (req, res) => {
     const { id } = req.query;
+    const user = req.user;
+    if (!id) {
+        return res.status(400).json({ success: false, message: "Company ID is required" });
+    }
     try {
         const company = await Company.findById(id);
-        if (!company) return res.status(404).send("Company not found");
-        return res.status(200).send(company);
+        if (!company) {
+            return res.status(404).json({ success: false, message: "Company not found" });
+        }
+        return res.status(200).json({ success: true, data: company });
     } catch (err) {
         console.error("Get company by ID error:", err);
-        return res.status(500).send("Internal Server Error: " + err.message);
+        if (err.name === "CastError") {
+            return res.status(400).json({ success: false, message: "Invalid company ID" });
+        }
+        return res.status(500).json({ success: false, message: "Internal server error" });
     }
 }
 
 const handleAddCompany = async (req, res) => {
     const { companyName, companyWebsite, companyCountry, companyAddress, companyEmail, companyPhone, companyProductGroup, companyContactPersonName, companyContactPersonPhone } = req.body;
-    if(!companyName) return res.status(400).send("Company name is required");
+    const user = req.user;
+    if (!companyName) {
+        return res.status(400).json({ success: false, message: "Company name is required" });
+    }
     try {
-        const existingCompany = await Company.findOne({ companyEmail });
-        if (existingCompany) return res.status(400).send("Company already exists!");
-        const newCompany = await Company.create({ companyName, companyWebsite, companyCountry, companyAddress, companyEmail, companyPhone, companyProductGroup, companyContactPersonName, companyContactPersonPhone });
-        return res.status(201).send(newCompany);
+        if (companyEmail) {
+            const existingCompany = await Company.findOne({ companyEmail });
+            if (existingCompany) {
+                return res.status(400).json({ success: false, message: "Company with this email already exists" });
+            }
+        }
+        const newCompany = await Company.create({
+            companyName,
+            companyWebsite,
+            companyCountry,
+            companyAddress,
+            companyEmail,
+            companyPhone,
+            companyProductGroup,
+            companyContactPersonName,
+            companyContactPersonPhone,
+            createdBy: user.id
+        });
+        return res.status(201).json({ success: true, message: "Company added successfully", data: newCompany });
     } catch (err) {
         console.error("Add company error:", err);
-        return res.status(500).send("Internal Server Error: " + err.message);
+        if (err.name === "ValidationError") {
+            const messages = Object.values(err.errors).map(val => val.message);
+            return res.status(400).json({ success: false, message: messages.join(", ") });
+        }
+        if (err.code === 11000) {
+            return res.status(400).json({ success: false, message: "Company with this information already exists" });
+        }
+        return res.status(500).json({ success: false, message: "Internal server error" });
     }
 }
 
 const handleUpdateCompany = async (req, res) => {
     const { id, companyName, companyWebsite, companyCountry, companyAddress, companyEmail, companyPhone, companyProductGroup, companyContactPersonName, companyContactPersonPhone } = req.body;
+    const user = req.user;
+    if (!id) {
+        return res.status(400).json({ success: false, message: "Company ID is required" });
+    }
     try {
         const updatedCompany = await Company.findById(id);
-        if (!updatedCompany) return res.status(404).send("Company not found");
-        updatedCompany.companyName = companyName;
-        updatedCompany.companyWebsite = companyWebsite;
-        updatedCompany.companyCountry = companyCountry;
-        updatedCompany.companyAddress = companyAddress;
-        updatedCompany.companyEmail = companyEmail;
-        updatedCompany.companyPhone = companyPhone;
-        updatedCompany.companyProductGroup = companyProductGroup;
-        updatedCompany.companyContactPersonName = companyContactPersonName;
-        updatedCompany.companyContactPersonPhone = companyContactPersonPhone;
+        if (!updatedCompany) {
+            return res.status(404).json({ success: false, message: "Company not found" });
+        }
+        if (companyName) updatedCompany.companyName = companyName;
+        if (companyWebsite !== undefined) updatedCompany.companyWebsite = companyWebsite;
+        if (companyCountry !== undefined) updatedCompany.companyCountry = companyCountry;
+        if (companyAddress !== undefined) updatedCompany.companyAddress = companyAddress;
+        if (companyEmail !== undefined) updatedCompany.companyEmail = companyEmail;
+        if (companyPhone !== undefined) updatedCompany.companyPhone = companyPhone;
+        if (companyProductGroup !== undefined) updatedCompany.companyProductGroup = companyProductGroup;
+        if (companyContactPersonName !== undefined) updatedCompany.companyContactPersonName = companyContactPersonName;
+        if (companyContactPersonPhone !== undefined) updatedCompany.companyContactPersonPhone = companyContactPersonPhone;
         await updatedCompany.save();
-        return res.status(200).send(updatedCompany);
+        return res.status(200).json({ success: true, message: "Company updated successfully", data: updatedCompany });
     } catch (err) {
         console.error("Update company error:", err);
-        return res.status(500).send("Internal Server Error: " + err.message);
+        if (err.name === "ValidationError") {
+            const messages = Object.values(err.errors).map(val => val.message);
+            return res.status(400).json({ success: false, message: messages.join(", ") });
+        }
+        if (err.code === 11000) {
+            return res.status(400).json({ success: false, message: "Company with this email already exists" });
+        }
+        if (err.name === "CastError") {
+            return res.status(400).json({ success: false, message: "Invalid company ID" });
+        }
+        return res.status(500).json({ success: false, message: "Internal server error" });
     }
 }
 
 const handleUpdateCompanyNote = async (req, res) => {
     const { id, companyNote } = req.body;
+    if (!id) {
+        return res.status(400).json({ success: false, message: "Company ID is required" });
+    }
     try {
         const updatedCompany = await Company.findById(id);
-        if (!updatedCompany) return res.status(404).send("Company not found");
-        updatedCompany.companyNotes = companyNote;
+        if (!updatedCompany) {
+            return res.status(404).json({ success: false, message: "Company not found" });
+        }
+        updatedCompany.companyNotes = companyNote || "";
         await updatedCompany.save();
-        return res.status(200).send(updatedCompany);
+        return res.status(200).json({ success: true, message: "Company note updated successfully", data: updatedCompany });
     } catch (err) {
         console.error("Update company note error:", err);
-        return res.status(500).send("Internal Server Error: " + err.message);
+        if (err.name === "CastError") {
+            return res.status(400).json({ success: false, message: "Invalid company ID" });
+        }
+        return res.status(500).json({ success: false, message: "Internal server error" });
     }
 }
 
 const handleRemoveCompanies = async (req, res) => {
     try {
         const { companyIds } = req.body;
-        if (!companyIds || companyIds.length === 0) {
-            return res.status(400).json({ message: "No companies selected" });
+        if (!companyIds || !Array.isArray(companyIds) || companyIds.length === 0) {
+            return res.status(400).json({ success: false, message: "No companies selected" });
         }
-        const deletedCompanies = await Company.deleteMany({ _id: { $in: companyIds } });
-        return res.status(200).send(deletedCompanies);
+        const result = await Company.deleteMany({ _id: { $in: companyIds } });
+        return res.status(200).json({ success: true, message: `${result.deletedCount} company(ies) deleted successfully`, data: result });
     } catch (err) {
         console.error("Remove companies error:", err);
-        return res.status(500).send("Internal Server Error: " + err.message);
+        if (err.name === "CastError") {
+            return res.status(400).json({ success: false, message: "Invalid company ID format" });
+        }
+        return res.status(500).json({ success: false, message: "Internal server error" });
     }
 }
 
 const handleImportCompanies = async (req, res) => {
     const companiesData = req.body;
+    const user = req.user;
+    
     if (!companiesData || companiesData.length === 0) {
-      return res.status(400).json({ message: "No companies data found" });
+      return res.status(400).json({ success: false, message: "No companies data found" });
     }
-    if(!Array.isArray(companiesData)) {
-      return res.status(400).json({ message: "Invalid data format" });
+    if (!Array.isArray(companiesData)) {
+      return res.status(400).json({ success: false, message: "Invalid data format" });
     }
-    if(!companiesData.every(company => company.companyName)) {
-      return res.status(400).json({ message: "Company name is required" });
+    if (!companiesData.every(company => company.companyName)) {
+      return res.status(400).json({ success: false, message: "All companies must have a company name" });
     }
+    
     try {
-      const insertedCompanies = await Company.insertMany(companiesData);
-      return res
-        .status(201)
-        .json({ message: "Companies imported successfully", data: insertedCompanies });
+      // Add createdBy to each company object
+      const companiesWithCreator = companiesData.map(company => ({
+        ...company,
+        createdBy: user.id
+      }));
+      const insertedCompanies = await Company.insertMany(companiesWithCreator, { ordered: false });
+      
+      return res.status(201).json({ 
+        success: true, 
+        message: `${insertedCompanies.length} company(ies) imported successfully`, 
+        data: insertedCompanies 
+      });
     } catch (err) {
       console.error("Import companies error:", err);
-      return res.status(500).json({ message: "Internal server error", error: err.message });
+      console.error("Error name:", err.name);
+      console.error("Error code:", err.code);
+      
+      if (err.name === "ValidationError") {
+        const errorMessages = Object.values(err.errors).map(e => e.message).join(", ");
+        return res.status(400).json({ success: false, message: `Validation error: ${errorMessages}` });
+      }
+      if (err.code === 11000) {
+        const inserted = err.insertedDocs ? err.insertedDocs.length : 0;
+        return res.status(207).json({ 
+          success: true, 
+          message: `${inserted} company(ies) imported, some duplicates were skipped`, 
+          data: err.insertedDocs || [] 
+        });
+      }
+      return res.status(500).json({ success: false, message: "Internal server error: " + err.message });
     }
 };
 

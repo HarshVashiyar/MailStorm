@@ -365,11 +365,15 @@ const Admin = () => {
   };
 
   const updateUserNote = (id, updatedNote) => {
-    setUsers((prevUsers) =>
-      prevUsers.map((user) =>
+    console.log('updateUserNote called with:', { id, updatedNote });
+    setUsers((prevUsers) => {
+      console.log('Previous users:', prevUsers);
+      const newUsers = prevUsers.map((user) =>
         user._id === id ? { ...user, companyNotes: updatedNote } : user
-      )
-    );
+      );
+      console.log('New users:', newUsers);
+      return newUsers;
+    });
   };
 
   // Search Functionality
@@ -827,12 +831,17 @@ const Admin = () => {
                       {show ? (
                         ""
                       ) : (
-                        <button
-                          onClick={() => handleNote(user._id, user.companyNote)}
-                          className="px-2 bg-yellow-600 hover:bg-yellow-700"
-                        >
-                          ✎
-                        </button>
+                        <div className="flex items-center justify-center gap-2">
+                          <span className="text-gray-300 text-sm truncate max-w-[200px]">
+                            {user.companyNotes || "No notes"}
+                          </span>
+                          <button
+                            onClick={() => handleNote(user._id, user.companyNotes)}
+                            className="px-2 bg-yellow-600 hover:bg-yellow-700 rounded"
+                          >
+                            ✎
+                          </button>
+                        </div>
                       )}
                     </td>
                     <td className="py-2 px-4 text-center">
