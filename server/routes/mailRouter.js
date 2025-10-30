@@ -6,7 +6,7 @@ const {
   handleResetPassword,
   handleSendMail,
 } = require("../controllers/mailController");
-const { authenticateUser, authorizeAdmin } = require("../utilities/userUtil");
+const { authenticateUser } = require("../utilities/userUtil");
 const { upload } = require("../middlewares/storeFiles");
 
 app.get("/", (req, res) => {
@@ -19,6 +19,6 @@ app.post("/verifyotp", handleVerifyOTP);
 
 app.post("/resetpassword", handleResetPassword);
 
-app.post("/sendmail", authenticateUser, authorizeAdmin, upload.array("files"), handleSendMail);
+app.post("/sendmail", authenticateUser, upload.array("files"), handleSendMail);
 
 module.exports = app;

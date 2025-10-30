@@ -14,13 +14,6 @@ app.get("/", (req, res) => {
 
 app.get("/getall", authenticateUser,handleGetScheduledMails);
 
-// Debug middleware
-const debugFormData = (req, res, next) => {
-  console.log('=== Form Data Debug ===');
-  console.log('Content-Type:', req.headers['content-type']);
-  next();
-};
-
 // Error handling middleware
 const multerErrorHandler = (err, req, res, next) => {
   console.log('=== Multer Error ===');

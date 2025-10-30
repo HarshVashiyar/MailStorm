@@ -51,7 +51,7 @@ export default function App() {
             <Route path="/ResetPassword" element={<ResetPassword />} />
             <Route path="/Admin" element={<AdminRefactored />} />
             <Route path="/Profile" element={<Profile />} />
-            <Route path="Scheduled" element={<Scheduled />} />
+            <Route path="/Scheduled" element={<Scheduled />} />
           </Routes>
         </main>
         <Footer />

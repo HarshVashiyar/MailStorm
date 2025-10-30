@@ -2,7 +2,7 @@ import { useState } from "react";
 import Tiptap from "./TipTap";
 // import ShowPost from "./ShowPost";
 
-const NewPost = ({ setHtml }) => {
+const NewPost = ({ setHtml, initialContent = '' }) => {
   const [htmlContent, setHtmlContent] = useState("");
 
   const handleEditorContentSave = (html) => {
@@ -12,7 +12,7 @@ const NewPost = ({ setHtml }) => {
 
   return (
     <>
-      <Tiptap onEditorContentSave={handleEditorContentSave} />
+      <Tiptap onEditorContentSave={handleEditorContentSave} initialContent={initialContent} />
       <hr/>
       {/* <ShowPost htmlContent={htmlContent} /> */}
     </>

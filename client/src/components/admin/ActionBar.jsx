@@ -1,17 +1,15 @@
-// import { useNavigate } from 'react-router-dom';
-// import { exportCompaniesToExcel } from '../../pages/ExportCompanies';
+import { exportCompaniesToExcel } from '../../pages/ExportCompanies';
 
 const ActionBar = ({
   show,
   toggleView,
-  openAddCompanyModal,
   fetchSavedLists,
   goToScheduled,
-  handleExport,
+  fetchSavedTemplates,
   searchTerm,
   setSearchTerm,
+  users,
 }) => {
-  // const navigate = useNavigate();
 
   return (
     <div className="flex items-center gap-2">
@@ -41,17 +39,6 @@ const ActionBar = ({
           </div>
         </button>
         
-        {/* Add Company */}
-        <button
-          onClick={openAddCompanyModal}
-          className="group bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white flex-1 py-2 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg border border-emerald-400/30"
-        >
-          <div className="text-center">
-            <div className="text-lg mb-0.5">➕</div>
-            <div className="text-xs font-medium whitespace-nowrap">Add</div>
-          </div>
-        </button>
-        
         {/* Schedule */}
         <button
           onClick={goToScheduled}
@@ -59,14 +46,25 @@ const ActionBar = ({
         >
           <div className="text-center">
             <div className="text-lg mb-0.5">⏰</div>
-            <div className="text-xs font-medium whitespace-nowrap">Schedule</div>
+            <div className="text-xs font-medium whitespace-nowrap">Scheduled</div>
           </div>
         </button>
 
-        {/* Export Companies */}
+        {/* Templates */}
         <button
-          onClick={handleExport}
-          className="group bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white flex-1 py-2 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg border border-orange-400/30"
+          onClick={fetchSavedTemplates}
+          className="group bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white flex-1 py-2 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg border border-orange-400/30"
+        >
+          <div className="text-center">
+            <div className="text-lg mb-0.5">📝</div>
+            <div className="text-xs font-medium whitespace-nowrap">Templates</div>
+          </div>
+        </button>
+        
+        {/* Export */}
+        <button
+          onClick={() => exportCompaniesToExcel(users)}
+          className="group bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white flex-1 py-2 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg border border-emerald-400/30"
         >
           <div className="text-center">
             <div className="text-lg mb-0.5">📊</div>

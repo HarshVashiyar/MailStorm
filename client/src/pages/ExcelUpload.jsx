@@ -3,7 +3,7 @@ import ExcelJS from "exceljs";
 import axios from "axios";
 import { toast } from "react-toastify";
 
-const ExcelUpload = () => {
+const ExcelUpload = ({ setUsers }) => {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -93,6 +93,12 @@ const ExcelUpload = () => {
 
       if (response.status === 201 || response.status === 207) {
         toast.success(response.data?.message || "Companies imported successfully!");
+        
+        // Update the users list with newly imported companies
+        if (response.data?.data && Array.isArray(response.data.data) && setUsers) {
+          setUsers(prevUsers => [...prevUsers, ...response.data.data]);
+        }
+        
         setFile(null); // Reset file input
         // Reset the file input element
         const fileInput = document.querySelector('input[type="file"]');

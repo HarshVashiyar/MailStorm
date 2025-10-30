@@ -11,11 +11,13 @@ import SelectedItemsActionBar from '../components/admin/SelectedItemsActionBar';
 import DataTable from '../components/admin/DataTable';
 import ManualListFormModal from '../components/admin/modals/ManualListFormModal';
 import SavedListsModal from '../components/admin/modals/SavedListsModal';
-import { exportCompaniesToExcel } from './ExportCompanies';
+import SavedTemplatesModal from '../components/admin/modals/SavedTemplatesModal';
+import ManualTemplateFormModal from '../components/admin/modals/ManualTemplateFormModal';
 
 // Hooks
 import { useUsers } from '../hooks/useUsers';
 import { useSavedLists } from '../hooks/useSavedLists';
+import { useSavedTemplates } from '../hooks/useSavedTemplates';
 
 const AdminRefactored = () => {
   const navigate = useNavigate();
@@ -52,6 +54,22 @@ const AdminRefactored = () => {
     createNewList,
     mailSavedList,
   } = useSavedLists();
+
+  const {
+    savedTemplates,
+    selectedSavedTemplates,
+    showSavedTemplatesTable,
+    showManualTemplateForm,
+    editingTemplate,
+    fetchSavedTemplates,
+    toggleSavedTemplateSelection,
+    closeSavedTemplatesTable,
+    toggleManualTemplateForm,
+    editSavedTemplate,
+    saveTemplate,
+    deleteSavedTemplate,
+    closeManualTemplateForm,
+  } = useSavedTemplates();
 
   // Modal states
   const [showAddCompanyModal, setShowAddCompanyModal] = useState(false);
@@ -177,10 +195,6 @@ const AdminRefactored = () => {
     navigate('/Scheduled');
   };
 
-  const handleExport = () => {
-    exportCompaniesToExcel(users);
-  };
-
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-dark-900 via-dark-800 to-dark-900">
       {/* Background glow effects */}
@@ -219,26 +233,40 @@ const AdminRefactored = () => {
             <ActionBar
               show={show}
               toggleView={toggleView}
-              openAddCompanyModal={openAddCompanyModal}
               fetchSavedLists={fetchSavedLists}
               goToScheduled={goToScheduled}
-              handleExport={handleExport}
+              fetchSavedTemplates={fetchSavedTemplates}
               searchTerm={searchTerm}
               setSearchTerm={setSearchTerm}
+              users={users}
             />
           </div>
 
-          {/* Selected Items Action Bar - Compact */}
-          <div className="h-16 mt-2">
-            <SelectedItemsActionBar
-              selectedUsers={selectedUsers}
-              show={show}
-              handleUpdateCompany={handleUpdateCompany}
-              deleteSelectedUsers={deleteSelectedUsers}
-              mailSelectedUsers={mailSelectedUsers}
-              handleScheduleEmail={handleScheduleEmail}
-              handleSaveList={handleSaveList}
-            />
+          {/* Add Button & Selected Items Action Bar - Fixed Height Container */}
+          <div className="h-20 mt-2">
+            <div className="flex flex-wrap gap-2 items-start">
+              {/* Add Button - Always visible, matches wrapper height */}
+              <button
+                onClick={openAddCompanyModal}
+                className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-6 rounded-2xl font-medium transition-all duration-300 transform hover:scale-105 shadow-2xl shadow-emerald-500/25 hover:shadow-emerald-500/40 border border-emerald-400/30 flex items-center justify-center space-x-2 text-sm min-h-[52px]"
+              >
+                <span className="text-lg">➕</span>
+                <span className="font-semibold">Add {show ? 'User' : 'Company'}</span>
+              </button>
+              
+              {/* Action buttons - Only visible when items are selected */}
+              {selectedUsers.length > 0 && (
+                <SelectedItemsActionBar
+                  selectedUsers={selectedUsers}
+                  show={show}
+                  handleUpdateCompany={handleUpdateCompany}
+                  deleteSelectedUsers={deleteSelectedUsers}
+                  mailSelectedUsers={mailSelectedUsers}
+                  handleScheduleEmail={handleScheduleEmail}
+                  handleSaveList={handleSaveList}
+                />
+              )}
+            </div>
           </div>
         </div>
 
@@ -308,6 +336,26 @@ const AdminRefactored = () => {
           setPrefilledListName('');
           setPrefilledContactNames('');
         }}
+      />
+
+      <SavedTemplatesModal
+        showSavedTemplatesTable={showSavedTemplatesTable}
+        savedTemplates={savedTemplates}
+        selectedSavedTemplates={selectedSavedTemplates}
+        toggleSavedTemplateSelection={toggleSavedTemplateSelection}
+        toggleManualTemplateForm={toggleManualTemplateForm}
+        editSavedTemplate={editSavedTemplate}
+        deleteSavedTemplate={deleteSavedTemplate}
+        closeSavedTemplatesTable={closeSavedTemplatesTable}
+      />
+
+      <ManualTemplateFormModal
+        showManualTemplateForm={showManualTemplateForm}
+        initialTemplateName={editingTemplate?.templateName || ''}
+        initialTemplateSubject={editingTemplate?.templateSubject || ''}
+        initialTemplateContent={editingTemplate?.templateContent || ''}
+        onSave={saveTemplate}
+        onClose={closeManualTemplateForm}
       />
     </div>
   );

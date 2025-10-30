@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
@@ -59,13 +59,13 @@ const extensions = [
   TextAlign.configure({ types: ["heading", "paragraph"] }),
 ];
 
-const Tiptap = ({ onEditorContentSave }) => {
+const Tiptap = ({ onEditorContentSave, initialContent = '' }) => {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [wordCount, setWordCount] = useState(0);
 
   const editor = useEditor({
     extensions,
-    content: '',
+    content: initialContent,
     onUpdate: ({ editor }) => {
       const html = editor.getHTML();
       const text = editor.getText();
@@ -79,6 +79,17 @@ const Tiptap = ({ onEditorContentSave }) => {
       },
     },
   });
+
+  // Update editor content when initialContent changes
+  useEffect(() => {
+    if (editor && initialContent !== undefined) {
+      const currentContent = editor.getHTML();
+      // Only update if content is different to avoid infinite loops
+      if (initialContent !== currentContent) {
+        editor.commands.setContent(initialContent || '');
+      }
+    }
+  }, [editor, initialContent]);
 
   const setLink = useCallback(() => {
     if (!editor) return;
@@ -113,9 +124,9 @@ const Tiptap = ({ onEditorContentSave }) => {
   };
 
   return (
-    <div className="bg-gray-900/80 backdrop-blur-lg rounded-2xl border border-orange-500/20 shadow-2xl shadow-orange-500/10 overflow-hidden flex flex-col max-h-[450px]">
+    <div className="bg-gray-900/80 backdrop-blur-lg rounded-2xl border border-orange-500/20 shadow-2xl shadow-orange-500/10 flex flex-col max-h-[450px]">
       {/* Sticky Toolbar */}
-      <div className="sticky top-0 z-10 bg-gradient-to-r from-gray-800/95 to-gray-700/95 backdrop-blur-md p-4 border-b border-orange-500/20 rounded-t-2xl">
+      <div className="flex-shrink-0 bg-gradient-to-r from-gray-800/95 to-gray-700/95 backdrop-blur-md p-4 border-b border-orange-500/20 rounded-t-2xl">
         {/* Primary Formatting Tools */}
         <div className="flex flex-wrap gap-2 mb-3">
           {/* Text Formatting Group */}
@@ -293,15 +304,15 @@ const Tiptap = ({ onEditorContentSave }) => {
       </div>
 
       {/* Scrollable Editor Content */}
-      <div className="flex-1 bg-gray-800/40 backdrop-blur-sm overflow-hidden">
+      <div className="flex-1 bg-gray-800/40 backdrop-blur-sm overflow-y-auto">
         <EditorContent 
           editor={editor} 
-          className="h-full min-h-[280px] overflow-y-auto text-white p-2"
+          className="min-h-[280px] text-white p-2"
         />
       </div>
 
       {/* Custom Styles for Editor Content */}
-      <style jsx global>{`
+      <style>{`
         .ProseMirror {
           outline: none;
           color: white;

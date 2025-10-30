@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -16,6 +16,7 @@ import {
   FaTrashAlt,
   // FaSparkles
 } from 'react-icons/fa';
+import { MdDescription } from 'react-icons/md';
 
 const EmailForm = ({
   setTypedEmail,
@@ -38,6 +39,52 @@ const EmailForm = ({
   const [timeZone, setTimeZone] = useState(
     Intl.DateTimeFormat().resolvedOptions().timeZone
   );
+
+  const [availableTemplates, setAvailableTemplates] = useState([]);
+  const [selectedTemplate, setSelectedTemplate] = useState("");
+
+  // Fetch available templates on mount
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        const response = await axios.get(
+          `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_ALL_TEMPLATES_ROUTE}`,
+          { withCredentials: true }
+        );
+        const data = response.data.data || [];
+        setAvailableTemplates(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error('Error fetching templates:', error);
+      }
+    };
+    fetchTemplates();
+  }, []);
+
+  // Handle template selection
+  const handleTemplateSelect = async (templateName) => {
+    if (!templateName) {
+      setSelectedTemplate("");
+      return;
+    }
+
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_GET_TEMPLATE_ROUTE}?templateName=${encodeURIComponent(templateName)}`,
+        { withCredentials: true }
+      );
+      const template = response.data.data;
+    
+      if (template) {
+        setSubject(template.templateSubject);
+        setHtml(template.templateContent);
+        setSelectedTemplate(templateName);
+        toast.success(`✅ Template "${templateName}" loaded!`);
+      }
+    } catch (error) {
+      console.error('Error loading template:', error);
+      toast.error('Failed to load template');
+    }
+  };
 
   const handleChange = (e) => {
     setManualEmails(e.target.value);
@@ -220,13 +267,44 @@ const EmailForm = ({
       <div className="bg-white/10 backdrop-blur-lg p-6 rounded-3xl shadow-2xl w-full max-w-6xl max-h-[85vh] overflow-hidden border border-white/20 flex flex-col mt-4">
         {/* Header */}
         <div className="mb-6">
-          <h3 className="text-3xl font-bold text-white flex items-center space-x-3 mb-2">
-            <span className="text-white">{schedule ? <FaCalendarAlt /> : <FaEnvelope />}</span>
-            <span>{schedule ? 'Schedule Email' : 'Compose Email'}</span>
-          </h3>
-          <p className="text-gray-300 text-sm">
-            {schedule ? 'Schedule your email to be sent at a specific time' : 'Create and send your email to selected recipients'}
-          </p>
+          <div className="flex items-start justify-between mb-2">
+            <div className="flex-1">
+              <h3 className="text-3xl font-bold text-white flex items-center space-x-3 mb-2">
+                <span className="text-white">{schedule ? <FaCalendarAlt /> : <FaEnvelope />}</span>
+                <span>{schedule ? 'Schedule Email' : 'Compose Email'}</span>
+              </h3>
+              <p className="text-gray-300 text-sm">
+                {schedule ? 'Schedule your email to be sent at a specific time' : 'Create and send your email to selected recipients'}
+              </p>
+            </div>
+
+            {/* Template Selector - Compact */}
+            <div className="w-80">
+              <label className="block text-white text-xs font-medium mb-2 flex items-center space-x-1">
+                <MdDescription className="text-orange-400" />
+                <span>Load Template:</span>
+              </label>
+              <select
+                value={selectedTemplate}
+                onChange={(e) => handleTemplateSelect(e.target.value)}
+                className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300"
+                disabled={availableTemplates.length === 0}
+              >
+                {availableTemplates.length === 0 ? (
+                  <option value="" className="bg-gray-800">No Templates Found</option>
+                ) : (
+                  <>
+                    <option value="" className="bg-gray-800">Select a template...</option>
+                    {availableTemplates.map((template) => (
+                      <option key={template.templateName} value={template.templateName} className="bg-gray-800">
+                        {template.templateName} - {template.templateSubject}
+                      </option>
+                    ))}
+                  </>
+                )}
+              </select>
+            </div>
+          </div>
           <div className="mt-3 flex items-center space-x-4 text-sm text-blue-300">
             <span className="flex items-center space-x-1">
               <FaUsers />
@@ -262,7 +340,7 @@ const EmailForm = ({
               <span>Email Content:</span>
             </label>
             <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 overflow-hidden">
-              <NewPost setHtml={setHtml} />
+              <NewPost setHtml={setHtml} initialContent={html} />
             </div>
           </div>
 
@@ -284,7 +362,7 @@ const EmailForm = ({
                   <span>{attachments.length} file(s) selected</span>
                 </span>
               </div>
-              
+
               {attachments.length > 0 && (
                 <div className="space-y-2 max-h-32 overflow-y-auto">
                   {attachments.map((file, index) => (
@@ -357,7 +435,7 @@ const EmailForm = ({
             <FaTimes />
             <span>Cancel</span>
           </button>
-          
+
           {schedule ? (
             <button
               onClick={postScheduledEmail}

@@ -426,7 +426,7 @@ const AddCompany = ({
                   <FaChartBar className="text-teal-400" />
                   <span>Bulk Import</span>
                 </h4>
-                <ExcelUpload />
+                <ExcelUpload setUsers={setUsers} />
               </div>
             </div>
           </form>

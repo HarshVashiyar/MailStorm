@@ -15,14 +15,26 @@ const upload = multer({ storage: multer.memoryStorage() });
 //   },
 // });
 
+// const storage = new CloudinaryStorage({
+//   cloudinary: cloudinary,
+//   params: {
+//     folder: "scheduled-emails", // Folder in Cloudinary
+//     resource_type: "auto", // Auto-detect resource type (image, video, raw for PDFs/docs)
+//     public_id: (req, file) => `${Date.now()}-${file.originalname.replace(/\.[^/.]+$/, "")}`, // Unique filename without extension
+//     // Removed allowed_formats to allow all file types
+//   },
+// });
+
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
-  params: {
-    folder: "scheduled-emails", // Folder in Cloudinary
-    resource_type: "auto", // Auto-detect resource type (image, video, raw for PDFs/docs)
-    public_id: (req, file) => `${Date.now()}-${file.originalname.replace(/\.[^/.]+$/, "")}`, // Unique filename without extension
-    // Removed allowed_formats to allow all file types
-  },
+  params: async (req, file) => ({
+    folder: "scheduled-emails",
+    resource_type:
+      file.mimetype.startsWith("image/")
+        ? "image"
+        : "raw", // ✅ Makes non-images (PDF, XLSX, etc.) accessible
+    public_id: `${Date.now()}-${file.originalname.replace(/\.[^/.]+$/, "")}`,
+  }),
 });
 
 const scheduledUpload = multer({ storage });
