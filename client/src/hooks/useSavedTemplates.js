@@ -8,24 +8,37 @@ export const useSavedTemplates = () => {
   const [showSavedTemplatesTable, setShowSavedTemplatesTable] = useState(false);
   const [showManualTemplateForm, setShowManualTemplateForm] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  // Fetch templates from API
   const fetchSavedTemplates = async () => {
-    // Always show the table, even if empty
     setShowSavedTemplatesTable(true);
-    
+    const toastID = toast.loading("Fetching templates...");
+    setLoading(true);
     try {
       const response = await axios.get(
         `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_ALL_TEMPLATES_ROUTE}`,
         { withCredentials: true }
       );
-      const data = response.data.data || [];
-      setSavedTemplates(Array.isArray(data) ? data : []);
+      if (response.data?.success === true) {
+        toast.dismiss(toastID);
+        setLoading(false);
+        const data = response.data.data || [];
+        setSavedTemplates(Array.isArray(data) ? data : []);
+      } else {
+        toast.dismiss(toastID);
+        setLoading(false);
+        toast.error(response.data?.message || "Update failed.");
+      }
     } catch (error) {
-      console.error('Error fetching templates:', error);
-      // Set empty array so the modal shows "no templates found" message
-      setSavedTemplates([]);
-      toast.error('Failed to load templates');
+      toast.dismiss(toastID);
+      setLoading(false);
+      if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else if (error.response?.data) {
+        toast.error(typeof error.response.data === 'string' ? error.response.data : "An error occurred.");
+      } else {
+        toast.error("Something went wrong. Please try again.");
+      }
     }
   };
 
@@ -56,28 +69,41 @@ export const useSavedTemplates = () => {
       toast.error('⚠️ Select exactly one template to edit!');
       return;
     }
-    
+
     const templateName = selectedSavedTemplates[0];
-    
+    const toastID = toast.loading("Fetching template...");
+    setLoading(true);
     try {
-      // Fetch full template content from API
       const response = await axios.get(
         `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_GET_TEMPLATE_ROUTE}?templateName=${encodeURIComponent(templateName)}`,
         { withCredentials: true }
       );
-      const template = response.data.data;
-      
-      if (template) {
-        setEditingTemplate(template);
-        setShowManualTemplateForm(true);
+      if (response.data?.success === true) {
+        toast.dismiss(toastID);
+        setLoading(false);
+        const template = response.data.data;
+        if (template) {
+          setEditingTemplate(template);
+          setShowManualTemplateForm(true);
+        }
+      } else {
+        toast.dismiss(toastID);
+        setLoading(false);
+        toast.error(response.data?.message || "Update failed.");
       }
     } catch (error) {
-      console.error('Error fetching template:', error);
-      toast.error('Failed to load template for editing');
+      toast.dismiss(toastID);
+      setLoading(false);
+      if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else if (error.response?.data) {
+        toast.error(typeof error.response.data === 'string' ? error.response.data : "An error occurred.");
+      } else {
+        toast.error("Something went wrong. Please try again.");
+      }
     }
   };
 
-  // Save template (create or update)
   const saveTemplate = async (templateName, templateSubject, templateContent) => {
     if (!templateName.trim() || !templateSubject.trim() || !templateContent.trim()) {
       toast.error('⚠️ All fields are required!');
@@ -90,43 +116,78 @@ export const useSavedTemplates = () => {
       templateContent: templateContent.trim(),
     };
 
-    try {
-      if (editingTemplate) {
-        // Update existing template
-        await axios.put(
+    if (editingTemplate) {
+      const toastID = toast.loading("Updating template...");
+      setLoading(true);
+      try {
+        const response = await axios.put(
           `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_UPDATE_TEMPLATE_ROUTE}`,
           templateData,
           { withCredentials: true }
         );
-        
-        // Update local state
-        setSavedTemplates(prev =>
-          prev.map(t =>
-            t.templateName === editingTemplate.templateName ? { ...t, ...templateData } : t
-          )
-        );
-        toast.success('✅ Template updated successfully!');
-      } else {
-        // Create new template
-        await axios.post(
+        if (response.data?.success === true) {
+          toast.dismiss(toastID);
+          setLoading(false);
+          setSavedTemplates(prev =>
+            prev.map(t =>
+              t.templateName === editingTemplate.templateName ? { ...t, ...templateData } : t
+            )
+          );
+          setShowManualTemplateForm(false);
+          setEditingTemplate(null);
+          setSelectedSavedTemplates([]);
+          toast.success('✅ Template updated successfully!');
+          return true;
+        } else {
+          toast.dismiss(toastID);
+          setLoading(false);
+          toast.error(response.data?.message || "Update failed.");
+        }
+      } catch (error) {
+        toast.dismiss(toastID);
+        setLoading(false);
+        if (error.response?.data?.message) {
+          toast.error(error.response.data.message);
+        } else if (error.response?.data) {
+          toast.error(typeof error.response.data === 'string' ? error.response.data : "An error occurred.");
+        } else {
+          toast.error("Something went wrong. Please try again.");
+        }
+      }
+    } else {
+      const toastID = toast.loading("Creating template...");
+      setLoading(true);
+      try {
+        const response = await axios.post(
           `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_ADD_TEMPLATE_ROUTE}`,
           templateData,
           { withCredentials: true }
         );
-        
-        // Add to local state
-        setSavedTemplates(prev => [...prev, templateData]);
-        toast.success('✅ Template created successfully!');
+        if (response.data?.success === true) {
+          toast.dismiss(toastID);
+          setLoading(false);
+          setSavedTemplates(prev => [...prev, templateData]);
+          setShowManualTemplateForm(false);
+          setEditingTemplate(null);
+          setSelectedSavedTemplates([]);
+          toast.success('✅ Template created successfully!');
+          return true;
+        } else {
+          toast.dismiss(toastID);
+          setLoading(false);
+          toast.error(response.data?.message || "Update failed.");
+        }
+      } catch (error) {
+        toast.dismiss(toastID);
+        setLoading(false);
+        if (error.response?.data?.message) {
+          toast.error(error.response.data.message);
+        } else if (error.response?.data) {
+          toast.error(typeof error.response.data === 'string' ? error.response.data : "An error occurred.");
+        } else {
+          toast.error("Something went wrong. Please try again.");
+        }
       }
-
-      setShowManualTemplateForm(false);
-      setEditingTemplate(null);
-      setSelectedSavedTemplates([]);
-      return true;
-    } catch (error) {
-      console.error('Error saving template:', error);
-      toast.error(error.response?.data?.message || 'Failed to save template');
-      return false;
     }
   };
 
@@ -140,27 +201,42 @@ export const useSavedTemplates = () => {
     const confirmDelete = window.confirm(
       `Are you sure you want to delete ${selectedSavedTemplates.length} template(s)?`
     );
-    
+
     if (!confirmDelete) return;
 
+    const toastID = toast.loading("Deleting template(s)...");
+    setLoading(true);
     try {
-      await axios.delete(
+      const response = await axios.delete(
         `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_REMOVE_TEMPLATES_ROUTE}`,
         {
           data: { templateNames: selectedSavedTemplates },
           withCredentials: true
         }
       );
-
-      // Update local state
-      setSavedTemplates(prev =>
-        prev.filter(t => !selectedSavedTemplates.includes(t.templateName))
-      );
-      setSelectedSavedTemplates([]);
-      toast.success('🗑️ Templates deleted successfully!');
+      if (response.data?.success === true) {
+        toast.dismiss(toastID);
+        setLoading(false);
+        setSavedTemplates(prev =>
+          prev.filter(t => !selectedSavedTemplates.includes(t.templateName))
+        );
+        setSelectedSavedTemplates([]);
+        toast.success('🗑️ Templates deleted successfully!');
+      } else {
+        toast.dismiss(toastID);
+        setLoading(false);
+        toast.error(response.data?.message || "Update failed.");
+      }
     } catch (error) {
-      console.error('Error deleting templates:', error);
-      toast.error(error.response?.data?.message || 'Failed to delete templates');
+      toast.dismiss(toastID);
+      setLoading(false);
+      if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else if (error.response?.data) {
+        toast.error(typeof error.response.data === 'string' ? error.response.data : "An error occurred.");
+      } else {
+        toast.error("Something went wrong. Please try again.");
+      }
     }
   };
 

@@ -39,16 +39,21 @@ const SignIn = () => {
         setTimeout(() => {
           navigate("/profile");
         }, 700);
+      } else {
+        toast.dismiss(toastId);
+        setIsLoading(false);
+        toast.error(response.data?.message || "Update failed.");
       }
     } catch (error) {
+      toast.dismiss(toastId);
       setIsLoading(false);
-      if (error?.response?.data?.message) {
-        toast.dismiss(toastId);
+      if (error.response?.data?.message) {
         toast.error(error.response.data.message);
+      } else if (error.response?.data) {
+        toast.error(typeof error.response.data === 'string' ? error.response.data : "An error occurred.");
       } else {
-        toast.error("Something went wrong!");
+        toast.error("Something went wrong. Please try again.");
       }
-      console.error(error);
     }
   };
 

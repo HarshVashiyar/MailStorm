@@ -20,7 +20,7 @@ const ResetPassword = () => {
       setError("Please fill in all fields.");
       return;
     }
-    if (newPassword !== confirmPassword) {
+    if (newPassword != confirmPassword) {
       setError("Passwords do not match.");
       return;
     }
@@ -29,30 +29,32 @@ const ResetPassword = () => {
     const toastId = toast.loading("Resetting password...");
     try {
       const response = await axios.post(
-        `${import.meta.env.VITE_BASE_URL}${
-          import.meta.env.VITE_RESET_PASSWORD_ROUTE
+        `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_RESET_PASSWORD_ROUTE
         }`,
         { email, newPassword, confirmPassword }
       );
-      toast.dismiss(toastId);
-      setIsLoading(false);
       if (response.data?.success === true) {
+        toast.dismiss(toastId);
+        setIsLoading(false);
         toast.success("Password reset successfully!");
         setTimeout(() => {
           navigate("/signin");
         }, 700);
       } else {
-        toast.error(response.data?.message || "Failed to reset password.");
+        toast.dismiss(toastId);
+        setIsLoading(false);
+        toast.error(response.data?.message || "Update failed.");
       }
     } catch (error) {
       toast.dismiss(toastId);
       setIsLoading(false);
-      if (error?.response?.data?.message) {
+      if (error.response?.data?.message) {
         toast.error(error.response.data.message);
+      } else if (error.response?.data) {
+        toast.error(typeof error.response.data === 'string' ? error.response.data : "An error occurred.");
       } else {
-        toast.error("Something went wrong!");
+        toast.error("Something went wrong. Please try again.");
       }
-      console.error(error);
     }
   };
 
@@ -62,7 +64,7 @@ const ResetPassword = () => {
         <div className="bg-dark-800/20 backdrop-blur-xl border border-white/10 rounded-2xl shadow-glass p-8 w-full max-w-md relative overflow-hidden group">
           {/* Animated background gradient */}
           <div className="absolute inset-0 bg-gradient-to-br from-primary-500/10 via-accent-500/5 to-primary-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-          
+
           <div className="relative z-10">
             <h2 className="text-2xl font-bold mb-6 text-center bg-gradient-to-r from-primary-400 to-accent-400 bg-clip-text text-transparent">
               Reset Password

@@ -138,12 +138,12 @@ export const useUsers = () => {
   const deleteSelectedUsers = async () => {
     if (isUsingDummyData) {
       // Handle locally for demo mode
-      setUsers(prevUsers => 
+      setUsers(prevUsers =>
         prevUsers.filter(user => !selectedUsers.includes(user._id))
       );
       setSelectedUsers([]);
       toast.success('🗑️ Demo: Items deleted locally', {
-        style: { 
+        style: {
           background: 'linear-gradient(135deg, rgba(255, 107, 53, 0.1), rgba(255, 107, 53, 0.05))',
           backdropFilter: 'blur(10px)',
           border: '1px solid rgba(255, 107, 53, 0.2)',
@@ -167,13 +167,23 @@ export const useUsers = () => {
           withCredentials: true
         }
       );
-      setUsers(prevUsers =>
-        prevUsers.filter(user => !selectedUsers.includes(user._id))
-      );
-      setSelectedUsers([]);
-      toast.success(response.data.message);
+      if (response.data?.success === true) {
+        setUsers(prevUsers =>
+          prevUsers.filter(user => !selectedUsers.includes(user._id))
+        );
+        setSelectedUsers([]);
+        toast.success(response.data.message);
+      } else {
+        toast.error(response.data?.message || "Update failed.");
+      }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Error deleting items');
+      if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else if (error.response?.data) {
+        toast.error(typeof error.response.data === 'string' ? error.response.data : "An error occurred.");
+      } else {
+        toast.error("Something went wrong. Please try again.");
+      }
     }
   };
 
@@ -189,20 +199,20 @@ export const useUsers = () => {
   // Filter users based on search term
   const filteredUsers = (users || []).filter((user) => {
     if (!user) return false;
-    
+
     const searchFields = show
       ? [user.fullName, user.userName, user.email]
       : [
-          user.companyName,
-          user.companyContactPersonName,
-          user.companyAddress,
-          user.companyCountry,
-          user.companyEmail,
-          user.companyPhone,
-          user.companyContactPersonPhone,
-          user.companyWebsite,
-          ...(user.companyProductGroup || []),
-        ];
+        user.companyName,
+        user.companyContactPersonName,
+        user.companyAddress,
+        user.companyCountry,
+        user.companyEmail,
+        user.companyPhone,
+        user.companyContactPersonPhone,
+        user.companyWebsite,
+        ...(user.companyProductGroup || []),
+      ];
 
     return searchFields.some((field) =>
       field && String(field).toLowerCase().includes(searchTerm.toLowerCase())

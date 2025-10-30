@@ -39,22 +39,38 @@ const EmailForm = ({
   const [timeZone, setTimeZone] = useState(
     Intl.DateTimeFormat().resolvedOptions().timeZone
   );
-
+  const [loading, setLoading] = useState(false);
   const [availableTemplates, setAvailableTemplates] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState("");
 
   // Fetch available templates on mount
   useEffect(() => {
     const fetchTemplates = async () => {
+      const toastId = toast.loading("Fetching email templates...");
+      setLoading(true);
       try {
         const response = await axios.get(
           `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_ALL_TEMPLATES_ROUTE}`,
           { withCredentials: true }
         );
-        const data = response.data.data || [];
-        setAvailableTemplates(Array.isArray(data) ? data : []);
+        if (response.data?.success === true) {
+          toast.dismiss(toastId);
+          setLoading(false);
+          const data = response.data.data || [];
+          setAvailableTemplates(Array.isArray(data) ? data : []);
+        } else {
+          toast.error(response.data?.message || "Update failed.");
+        }
       } catch (error) {
-        console.error('Error fetching templates:', error);
+        toast.dismiss(toastId);
+        setLoading(false);
+        if (error.response?.data?.message) {
+          toast.error(error.response.data.message);
+        } else if (error.response?.data) {
+          toast.error(typeof error.response.data === 'string' ? error.response.data : "An error occurred.");
+        } else {
+          toast.error("Something went wrong. Please try again.");
+        }
       }
     };
     fetchTemplates();
@@ -67,22 +83,38 @@ const EmailForm = ({
       return;
     }
 
+    const toastId = toast.loading("Loading email template...");
+    setLoading(true);
     try {
       const response = await axios.get(
         `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_GET_TEMPLATE_ROUTE}?templateName=${encodeURIComponent(templateName)}`,
         { withCredentials: true }
       );
-      const template = response.data.data;
-    
-      if (template) {
-        setSubject(template.templateSubject);
-        setHtml(template.templateContent);
-        setSelectedTemplate(templateName);
-        toast.success(`✅ Template "${templateName}" loaded!`);
+      if (response.data?.success === true) {
+        const template = response.data.data;
+        toast.dismiss(toastId);
+        setLoading(false);
+        if (template) {
+          setSubject(template.templateSubject);
+          setHtml(template.templateContent);
+          setSelectedTemplate(templateName);
+          toast.success(`✅ Template "${templateName}" loaded!`);
+        }
+      } else {
+        toast.dismiss(toastId);
+        setLoading(false);
+        toast.error(response.data?.message || "Update failed.");
       }
     } catch (error) {
-      console.error('Error loading template:', error);
-      toast.error('Failed to load template');
+      toast.dismiss(toastId);
+      setLoading(false);
+      if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else if (error.response?.data) {
+        toast.error(typeof error.response.data === 'string' ? error.response.data : "An error occurred.");
+      } else {
+        toast.error("Something went wrong. Please try again.");
+      }
     }
   };
 
@@ -156,6 +188,7 @@ const EmailForm = ({
     const toastID = toast.loading(
       "Please wait while the email(s) are being sent..."
     );
+    setLoading(true);
     const recipientPeople = getRecipientPeople();
     const recipientEmails = getRecipientEmails();
 
@@ -184,23 +217,34 @@ const EmailForm = ({
           withCredentials: true
         }
       );
-      toast.dismiss(toastID);
-      toast.success(response.data.message);
-      // Only reset and close on success
-      resetEmailForm();
+      if (response.data.success === true) {
+        toast.dismiss(toastID);
+        setLoading(false);
+        toast.success(response.data.message);
+        resetEmailForm();
+      } else {
+        toast.dismiss(toastID);
+        setLoading(false);
+        toast.error(response.data?.message || "Update failed.");
+      }
     } catch (error) {
       toast.dismiss(toastID);
-      console.error("Error sending email:", error);
-      toast.error(error.response?.data?.message || "Failed to send email.");
-      // Don't close modal on error - keep state so user can retry
+      setLoading(false);
+      if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else if (error.response?.data) {
+        toast.error(typeof error.response.data === 'string' ? error.response.data : "An error occurred.");
+      } else {
+        toast.error("Something went wrong. Please try again.");
+      }
     }
   };
 
   const postScheduledEmail = async () => {
-    console.log(timeZone);
     const toastID = toast.loading(
       "Please wait while the email is being scheduled..."
     );
+    setLoading(true);
     const recipientPeople = getRecipientPeople();
     const recipientEmails = getRecipientEmails();
 
@@ -218,11 +262,9 @@ const EmailForm = ({
     formData.append("html", html);
     formData.append("signature", signature);
     formData.append("sendAt", scheduledDateTime);
-    formData.append("status", "pending");
+    formData.append("status", "Pending");
     formData.append("mState", mState);
     formData.append("timeZone", timeZone);
-
-    console.log(scheduledDateTime);
 
     attachments.forEach((file) => formData.append("files", file));
 
@@ -234,17 +276,26 @@ const EmailForm = ({
           withCredentials: true
         }
       );
-      toast.dismiss(toastID);
-      toast.success(response.data.message);
-      // Only reset and close on success
-      resetEmailForm();
+      if (response.data.success === true) {
+        toast.dismiss(toastID);
+        setLoading(false);
+        toast.success(response.data.message);
+        resetEmailForm();
+      } else {
+        toast.dismiss(toastID);
+        setLoading(false);
+        toast.error(response.data?.message || "Update failed.");
+      }
     } catch (error) {
-      console.error("Error scheduling email:", error);
       toast.dismiss(toastID);
-      toast.error(
-        error.response?.data?.message || "An unexpected error occurred."
-      );
-      // Don't close modal on error - keep state so user can retry
+      setLoading(false);
+      if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else if (error.response?.data) {
+        toast.error(typeof error.response.data === 'string' ? error.response.data : "An error occurred.");
+      } else {
+        toast.error("Something went wrong. Please try again.");
+      }
     }
   };
 

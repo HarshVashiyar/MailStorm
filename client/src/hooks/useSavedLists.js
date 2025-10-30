@@ -45,24 +45,22 @@ export const useSavedLists = () => {
           withCredentials: true
         }
       );
-      // Handle empty response gracefully
-      const data = response.data || [];
-      setSavedLists(Array.isArray(data) ? data : []);
-      setShowSavedListsTable(true);
-      setIsUsingDummyData(false);
+      if (response.data?.success === true) {
+        const data = response.data.data || [];
+        setSavedLists(Array.isArray(data) ? data : []);
+        setShowSavedListsTable(true);
+        setIsUsingDummyData(false);
+      } else {
+        toast.error(response.data?.message || "Update failed.");
+      }
     } catch (error) {
-      console.warn('API call failed, using dummy saved lists:', error);
-      setSavedLists(dummySavedLists);
-      setShowSavedListsTable(true);
-      setIsUsingDummyData(true);
-      toast.info('📝 Using demo lists - API unavailable', {
-        style: { 
-          background: 'linear-gradient(135deg, rgba(255, 107, 53, 0.1), rgba(255, 107, 53, 0.05))',
-          backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(255, 107, 53, 0.2)',
-          color: '#fff'
-        }
-      });
+      if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else if (error.response?.data) {
+        toast.error(typeof error.response.data === 'string' ? error.response.data : "An error occurred.");
+      } else {
+        toast.error("Something went wrong. Please try again.");
+      }
     }
   };
 
@@ -95,7 +93,7 @@ export const useSavedLists = () => {
       );
       setSelectedSavedLists([]);
       toast.success('🗑️ Demo: List deleted locally', {
-        style: { 
+        style: {
           background: 'linear-gradient(135deg, rgba(255, 107, 53, 0.1), rgba(255, 107, 53, 0.05))',
           backdropFilter: 'blur(10px)',
           border: '1px solid rgba(255, 107, 53, 0.2)',
@@ -104,7 +102,7 @@ export const useSavedLists = () => {
       });
       return;
     }
-
+    
     try {
       const response = await axios.delete(
         `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_REMOVE_LISTS_ROUTE}`,
@@ -113,16 +111,23 @@ export const useSavedLists = () => {
           withCredentials: true
         }
       );
-
-      setSavedLists(prevLists =>
-        prevLists.filter(list => list._id !== selectedSavedLists[0])
-      );
-      setSelectedSavedLists([]);
-      toast.success(response.data.message || 'List deleted successfully!');
+      if (response.data?.success === true) {
+        setSavedLists(prevLists =>
+          prevLists.filter(list => list._id !== selectedSavedLists[0])
+        );
+        setSelectedSavedLists([]);
+        toast.success(response.data.message || 'List deleted successfully!');
+      } else {
+        toast.error(response.data?.message || "Update failed.");
+      }
     } catch (error) {
-      toast.error(
-        error.response?.data?.message || 'Failed to delete the list.'
-      );
+      if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else if (error.response?.data) {
+        toast.error(typeof error.response.data === 'string' ? error.response.data : "An error occurred.");
+      } else {
+        toast.error("Something went wrong. Please try again.");
+      }
     }
   };
 
@@ -157,7 +162,7 @@ export const useSavedLists = () => {
         )
       );
       toast.success('➕ Demo: Items added to list locally', {
-        style: { 
+        style: {
           background: 'linear-gradient(135deg, rgba(255, 107, 53, 0.1), rgba(255, 107, 53, 0.05))',
           backdropFilter: 'blur(10px)',
           border: '1px solid rgba(255, 107, 53, 0.2)',
@@ -168,7 +173,7 @@ export const useSavedLists = () => {
     }
 
     const existingList = savedLists.find(list => list._id === listId);
-    const combinedListItems = existingList 
+    const combinedListItems = existingList
       ? [...existingList.listItems, ...newListItems]
       : newListItems;
 
@@ -180,25 +185,30 @@ export const useSavedLists = () => {
           withCredentials: true
         }
       );
+      if (response.data?.success === true) {
+        setSavedLists(prevLists =>
+          prevLists.map(list =>
+            list._id === listId
+              ? { ...list, listItems: combinedListItems }
+              : list
+          )
+        );
 
-      setSavedLists(prevLists =>
-        prevLists.map(list =>
-          list._id === listId
-            ? { ...list, listItems: combinedListItems }
-            : list
-        )
-      );
-
-      toast.success(
-        response.data.message || 'Items added to the list successfully!'
-      );
-      return true;
+        toast.success(
+          response.data.message || 'Items added to the list successfully!'
+        );
+        return true;
+      } else {
+        toast.error(response.data?.message || "Update failed.");
+      }
     } catch (error) {
-      console.error('Error adding items to the list:', error);
-      toast.error(
-        error.response?.data?.message || 'Failed to add items to the list.'
-      );
-      return false;
+      if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else if (error.response?.data) {
+        toast.error(typeof error.response.data === 'string' ? error.response.data : "An error occurred.");
+      } else {
+        toast.error("Something went wrong. Please try again.");
+      }
     }
   };
 
@@ -227,7 +237,7 @@ export const useSavedLists = () => {
       };
       setSavedLists(prevLists => [...prevLists, newList]);
       toast.success('✨ Demo: List created locally', {
-        style: { 
+        style: {
           background: 'linear-gradient(135deg, rgba(255, 107, 53, 0.1), rgba(255, 107, 53, 0.05))',
           backdropFilter: 'blur(10px)',
           border: '1px solid rgba(255, 107, 53, 0.2)',
@@ -245,15 +255,23 @@ export const useSavedLists = () => {
           withCredentials: true
         }
       );
-      const newList = response.data.list;
-      setSavedLists(prevLists => [...prevLists, newList]);
+      if (response.data?.success === true) {
+        const newList = response.data.data;
+        setSavedLists(prevLists => [...prevLists, newList]);
 
-      toast.success(response.data.message || 'List added successfully!');
-      return true;
+        toast.success(response.data.message || 'List added successfully!');
+        return true;
+      } else {
+        toast.error(response.data?.message || "Update failed.");
+      }
     } catch (error) {
-      console.error('Error saving the list:', error);
-      toast.error(error.response?.data?.message || 'Failed to save the list.');
-      return false;
+      if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else if (error.response?.data) {
+        toast.error(typeof error.response.data === 'string' ? error.response.data : "An error occurred.");
+      } else {
+        toast.error("Something went wrong. Please try again.");
+      }
     }
   };
 
@@ -269,7 +287,7 @@ export const useSavedLists = () => {
       toast.error('❌ Selected list not found.');
       return null;
     }
-    
+
     return list;
   };
 

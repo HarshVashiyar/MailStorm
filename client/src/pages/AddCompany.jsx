@@ -96,7 +96,8 @@ const AddCompany = ({
   };
 
   const handleAddCompany = async () => {
-    console.log(`${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_ADD_COMPANY_ROUTE}`);
+    setLoading(true);
+    const toastID = toast.loading("Adding company...");
     if (validate()) {
       try {
         const updatedFormData = {
@@ -111,17 +112,23 @@ const AddCompany = ({
           updatedFormData,
           { withCredentials: true }
         );
-        if (response.status === 201) {
+        if (response.data?.success === true && response.status === 201) {
           const newCompany = response.data?.data;
+          toast.dismiss(toastID);
+          setLoading(false);
           if (newCompany) {
             setUsers(prevUsers => [...prevUsers, newCompany]);
           }
           toast.success(response.data?.message || "Company added successfully!");
           closeAddCompanyForm();
         } else {
+          toast.dismiss(toastID);
+          setLoading(false);
           toast.error(response.data?.message || "Addition failed.");
         }
       } catch (error) {
+        toast.dismiss(toastID);
+        setLoading(false);
         if (error.response?.data?.message) {
           toast.error(error.response.data.message);
         } else if (error.response?.data) {
@@ -135,6 +142,8 @@ const AddCompany = ({
 
   const handleUpdateCompany = async () => {
     if (validate()) {
+      const toastID = toast.loading("Updating company...");
+      setLoading(true);
       try {
         const updatedFormData = {
           ...formData,
@@ -149,7 +158,9 @@ const AddCompany = ({
           updatedFormData,
           { withCredentials: true }
         );
-        if (response.status === 200) {
+        if (response.data?.success === true && response.status === 200) {
+          toast.dismiss(toastID);
+          setLoading(false);
           const updatedCompany = response.data?.data;
           if (updatedCompany) {
             setUsers(prevUsers =>
@@ -162,9 +173,13 @@ const AddCompany = ({
           closeAddCompanyForm();
           setSelectedUsers([]);
         } else {
+          toast.dismiss(toastID);
+          setLoading(false);
           toast.error(response.data?.message || "Update failed.");
         }
       } catch (error) {
+        toast.dismiss(toastID);
+        setLoading(false);
         if (error.response?.data?.message) {
           toast.error(error.response.data.message);
         } else if (error.response?.data) {

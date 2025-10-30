@@ -3,7 +3,6 @@ const app = express.Router();
 const {
     handleAddList,
     handleGetAllLists,
-    handleGetListByID,
     handleUpdateList,
     handleRemoveLists
 } = require('../controllers/listController');
@@ -14,8 +13,6 @@ app.get('/', (req, res) => {
 });
 
 app.get('/getall', authenticateUser, handleGetAllLists);
-
-app.get('/:id', authenticateUser, handleGetListByID);
 
 app.post('/add', authenticateUser, handleAddList);
 

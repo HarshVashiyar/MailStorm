@@ -6,22 +6,37 @@ import "react-toastify/dist/ReactToastify.css";
 const Scheduled = () => {
   const [scheduledEmails, setScheduledEmails] = useState([]);
   const [selectedEmails, setSelectedEmails] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const fetchScheduledEmails = async () => {
+      setIsLoading(true);
+      const toastID = toast.loading("Loading scheduled emails...");
       try {
         const response = await axios.get(
-          `${import.meta.env.VITE_BASE_URL}${
-            import.meta.env.VITE_ALL_SCHEDULED_EMAILS_ROUTE
+          `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_ALL_SCHEDULED_EMAILS_ROUTE
           }`,
           { withCredentials: true }
         );
-        setScheduledEmails(response.data);
+        if (response.data.success === true) {
+          toast.dismiss(toastID);
+          setIsLoading(false);
+          setScheduledEmails(response.data.data);
+        } else {
+          toast.dismiss(toastID);
+          setIsLoading(false);
+          toast.error(response.data?.message || "Update failed.");
+        }
       } catch (error) {
-        console.error("Error fetching scheduled emails:", error);
-        toast.error(
-          error.response?.data?.message || "Failed to fetch scheduled emails."
-        );
+        toast.dismiss(toastID);
+        setIsLoading(false);
+        if (error.response?.data?.message) {
+          toast.error(error.response.data.message);
+        } else if (error.response?.data) {
+          toast.error(typeof error.response.data === 'string' ? error.response.data : "An error occurred.");
+        } else {
+          toast.error("Something went wrong. Please try again.");
+        }
       }
     };
 
@@ -45,23 +60,40 @@ const Scheduled = () => {
   };
 
   const deleteSelectedEmails = async () => {
+    setIsLoading(true);
+    const toastID = toast.loading("Deleting scheduled emails...");
     try {
       const response = await axios.delete(
-        `${import.meta.env.VITE_BASE_URL}${
-          import.meta.env.VITE_REMOVE_SCHEDULED_EMAILS_ROUTE
+        `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_REMOVE_SCHEDULED_EMAILS_ROUTE
         }`,
         {
           data: { ids: selectedEmails },
           withCredentials: true
         }
       );
-      setScheduledEmails((prevEmails) =>
-        prevEmails.filter((email) => !selectedEmails.includes(email._id))
-      );
-      setSelectedEmails([]);
-      toast.success(response.data.message);
+      if (response.data.success === true) {
+        toast.dismiss(toastID);
+        setIsLoading(false);
+        setScheduledEmails((prevEmails) =>
+          prevEmails.filter((email) => !selectedEmails.includes(email._id))
+        );
+        setSelectedEmails([]);
+        toast.success(response.data.message);
+      } else {
+        toast.dismiss(toastID);
+        setIsLoading(false);
+        toast.error(response.data?.message || "Update failed.");
+      }
     } catch (error) {
-      toast.error(error.response?.data?.message || "Error deleting emails");
+      toast.dismiss(toastID);
+      setIsLoading(false);
+      if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else if (error.response?.data) {
+        toast.error(typeof error.response.data === 'string' ? error.response.data : "An error occurred.");
+      } else {
+        toast.error("Something went wrong. Please try again.");
+      }
     }
   };
 
@@ -70,7 +102,7 @@ const Scheduled = () => {
       {/* Background glow effects */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary-500/10 via-accent-500/5 to-primary-600/10 animate-pulse-slow"></div>
       <div className="absolute inset-0 bg-gradient-radial from-primary-400/20 via-transparent to-transparent"></div>
-      
+
       {/* Scrollable Content */}
       <div className="absolute inset-0 top-20 overflow-auto">
         <div className="px-6 py-3 bg-glass-dark/50 backdrop-blur-lg border-b border-primary-500/20">
@@ -96,11 +128,10 @@ const Scheduled = () => {
 
           {/* Reserved Space for Action Bar - Fixed Height */}
           <div className="h-16 mt-2">
-            <div className={`transition-all duration-300 ${
-              selectedEmails.length > 0 
-                ? 'opacity-100 transform translate-y-0' 
-                : 'opacity-0 transform -translate-y-2 pointer-events-none'
-            }`}>
+            <div className={`transition-all duration-300 ${selectedEmails.length > 0
+              ? 'opacity-100 transform translate-y-0'
+              : 'opacity-0 transform -translate-y-2 pointer-events-none'
+              }`}>
               <div className="bg-gradient-to-r from-primary-600/90 via-accent-600/90 to-primary-600/90 backdrop-blur-lg p-3 rounded-2xl shadow-2xl border border-white/20">
                 <div className="flex flex-wrap gap-3 items-center">
                   <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-white/20">
@@ -109,7 +140,7 @@ const Scheduled = () => {
                       {selectedEmails.length} selected
                     </span>
                   </div>
-                  
+
                   <button
                     onClick={deleteSelectedEmails}
                     className="group bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white px-4 py-1.5 rounded-xl text-xs font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg border border-red-400/30 hover:shadow-red-500/50"
@@ -119,7 +150,7 @@ const Scheduled = () => {
                       <span>Delete</span>
                     </span>
                   </button>
-                  
+
                   <button
                     onClick={() => setSelectedEmails([])}
                     className="group bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white px-4 py-1.5 rounded-xl text-xs font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg border border-gray-400/30 hover:shadow-gray-500/50"
@@ -150,7 +181,7 @@ const Scheduled = () => {
                 </div>
               </div>
             </div>
-            
+
             {/* Table Container */}
             <div className="overflow-x-auto">
               <table className="w-full table-fixed bg-transparent text-gray-100">
@@ -195,13 +226,12 @@ const Scheduled = () => {
                     scheduledEmails.map((email, index) => {
                       const isSelected = selectedEmails.includes(email._id);
                       return (
-                        <tr 
-                          key={email._id} 
-                          className={`group transition-all duration-300 hover:bg-primary-500/10 ${
-                            isSelected 
-                              ? 'bg-gradient-to-r from-primary-500/20 to-accent-500/20 border-l-4 border-primary-400' 
-                              : index % 2 === 0 ? 'bg-glass-dark/20' : 'bg-transparent'
-                          }`}
+                        <tr
+                          key={email._id}
+                          className={`group transition-all duration-300 hover:bg-primary-500/10 ${isSelected
+                            ? 'bg-gradient-to-r from-primary-500/20 to-accent-500/20 border-l-4 border-primary-400'
+                            : index % 2 === 0 ? 'bg-glass-dark/20' : 'bg-transparent'
+                            }`}
                         >
                           <td className="py-4 px-4 text-center">
                             <div className="truncate text-gray-300" title={email.from}>{email.from}</div>
@@ -216,24 +246,22 @@ const Scheduled = () => {
                             {new Date(email.sendAt).toLocaleString()}
                           </td>
                           <td className="py-4 px-4 text-center">
-                            <span className={`px-3 py-1 rounded-full text-xs font-semibold inline-block ${
-                              email.status === 'pending' 
-                                ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' 
-                                : email.status === 'sent' 
+                            <span className={`px-3 py-1 rounded-full text-xs font-semibold inline-block ${email.status === 'Pending'
+                              ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                              : email.status === 'Sent'
                                 ? 'bg-green-500/20 text-green-400 border border-green-500/30'
                                 : 'bg-red-500/20 text-red-400 border border-red-500/30'
-                            }`}>
+                              }`}>
                               {email.status}
                             </span>
                           </td>
                           <td className="py-4 px-4 text-center">
                             <input
                               type="checkbox"
-                              className={`w-5 h-5 rounded border-2 transition-all duration-300 cursor-pointer ${
-                                isSelected 
-                                  ? 'bg-primary-500 border-primary-500 text-white' 
-                                  : 'border-gray-400 hover:border-primary-400'
-                              }`}
+                              className={`w-5 h-5 rounded border-2 transition-all duration-300 cursor-pointer ${isSelected
+                                ? 'bg-primary-500 border-primary-500 text-white'
+                                : 'border-gray-400 hover:border-primary-400'
+                                }`}
                               checked={isSelected}
                               onChange={() => toggleEmailSelection(email._id)}
                             />
@@ -245,7 +273,7 @@ const Scheduled = () => {
                 </tbody>
               </table>
             </div>
-            
+
             {/* Table Footer */}
             <div className="bg-gradient-to-r from-dark-800/90 to-dark-700/90 px-6 py-3 border-t border-primary-500/20">
               <div className="flex items-center justify-between text-sm text-gray-300">

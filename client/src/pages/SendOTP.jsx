@@ -32,16 +32,21 @@ const SendOTP = () => {
         setTimeout(() => {
           navigate("/verifyotp", { state: { email } });
         }, 700);
+      } else {
+        toast.dismiss(toastId);
+        setIsLoading(false);
+        toast.error(response.data?.message || "Update failed.");
       }
     } catch (error) {
       toast.dismiss(toastId);
       setIsLoading(false);
-      if (error?.response?.data?.message) {
+      if (error.response?.data?.message) {
         toast.error(error.response.data.message);
+      } else if (error.response?.data) {
+        toast.error(typeof error.response.data === 'string' ? error.response.data : "An error occurred.");
       } else {
-        toast.error("Something went wrong!");
+        toast.error("Something went wrong. Please try again.");
       }
-      console.error(error);
     }
   };
 
@@ -78,11 +83,10 @@ const SendOTP = () => {
               <div>
                 <button
                   type="submit"
-                  className={`w-full bg-gradient-to-r from-primary-500 to-accent-500 text-white py-2 px-4 rounded-lg transition-all duration-300 shadow-md flex items-center justify-center min-h-[42px] ${
-                    isLoading 
-                      ? 'opacity-75 cursor-not-allowed' 
+                  className={`w-full bg-gradient-to-r from-primary-500 to-accent-500 text-white py-2 px-4 rounded-lg transition-all duration-300 shadow-md flex items-center justify-center min-h-[42px] ${isLoading
+                      ? 'opacity-75 cursor-not-allowed'
                       : 'hover:from-primary-600 hover:to-accent-600 hover:shadow-glow'
-                  }`}
+                    }`}
                   disabled={isLoading}
                 >
                   {isLoading ? (

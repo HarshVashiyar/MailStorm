@@ -1,40 +1,33 @@
 const {
   sendOTP,
   verifyOTP,
-  sendMail,
-  sendUserMail
+  sendMail
 } = require("../utilities/mailUtil");
 
 const User = require("../models/userDB");
 
 const handleSendOTP = async (req, res) => {
+  const { email } = req.body;
   try {
-    const { email } = req.body;
-    // const { newUser } = req.body;
-    if (!email) return res.status(400).json({ success: false, message: "Email is required!" });
+    if (!email) {
+      return res.status(400).json({ success: false, message: "Email is required!" });
+    }
     const existingUser = await User.findOne({ email });
     if (!existingUser) {
       return res.status(404).json({ success: false, message: "User with provided email not found!" });
     }
-    // if(!newUser){
-    //     if (!existingUser) {
-    //         return res.status(404).json({ success: false, message: "User with provided email not found!" });
-    //     }
-    // }
     const response = await sendOTP(email);
     return res.status(200).json({ success: true, message: "OTP sent successfully!", data: response });
   } catch (error) {
     console.error("Error sending OTP:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res.status(500).json({ success: false, message: error.message });
   }
 }
 
 const handleVerifyOTP = (req, res) => {
   const { email, otp } = req.body;
   if (!email || !otp) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Email and OTP are required." });
+    return res.status(400).json({ success: false, message: "Email and OTP are required." });
   }
   const response = verifyOTP(email, otp);
   return res.status(response.success ? 200 : 400).json(response);
@@ -58,70 +51,43 @@ const handleResetPassword = async (req, res) => {
     return res.status(200).json({ success: true, message: "Password reset successfully!" });
   } catch (error) {
     console.error("Error resetting password:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res.status(500).json({ success: false, message: error.message });
   }
 }
 
 const handleSendMail = async (req, res) => {
+  const { to, subject, recipientPeople, html } = req.body;
   try {
-    const { to, subject, recipientPeople, text, html, signature, mState } = req.body;
-
-    if (!to || !subject || (!text && !html)) {
+    if (!to || !subject || !html) {
       return res.status(400).json({
         success: false,
         message:
-          "Recipient email(s), subject, and either text or HTML content are required.",
+          "Recipient email(s), subject, and content are required.",
       });
     }
-
     const emailAddresses = to.split(",").map((mail) => mail.trim());
-
     const attachments = req.files.map((file) => ({
       filename: file.originalname,
       content: file.buffer,
     }));
-
     const mailContent = {
       to: emailAddresses,
       subject,
       recipientPeople: recipientPeople ? JSON.parse(recipientPeople) : [],
-      text,
       html,
       attachments,
-      signature,
-      mState,
     };
-
     const response = await sendMail(mailContent);
     return res.status(response.success ? 200 : 500).json(response);
   } catch (error) {
     console.error("Error in handleSendMail:", error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error." });
+    return res.status(500).json({ success: false, message: + error.message });
   }
 }
-
-const handleSendUserMail = async (req, res) => {
-  try {
-    const { providerId, to, subject, html } = req.body;
-    const userId = req.user.id;
-
-    if (!providerId || !to || !subject || !html)
-      return res.status(400).json({ success: false, message: "Missing fields" });
-
-    const response = await sendUserMail(userId, providerId, { to, subject, html });
-    res.status(200).json(response);
-  } catch (err) {
-    console.error("Error sending user mail:", err);
-    res.status(500).json({ success: false, message: "Mail sending failed" });
-  }
-};
 
 module.exports = {
   handleSendOTP,
   handleVerifyOTP,
   handleResetPassword,
   handleSendMail,
-  handleSendUserMail
 }

@@ -6,10 +6,10 @@ const userSchema = new mongoose.Schema(
   {
     fullName: {
       type: String,
-      required: true,
+      required: [true, "Full name is required!"],
       trim: true,
-      minLength: 3,
-      maxLength: 30,
+      minLength: [3, "Full name must be at least 3 characters long!"],
+      maxLength: [100, "Full name cannot exceed 100 characters!"],
       validate: {
         validator: function (v) {
           // Allow only letters and spaces
@@ -21,54 +21,51 @@ const userSchema = new mongoose.Schema(
           const letters = (v.match(/[A-Za-z]/g) || []).length;
           return letters >= 3;
         },
-        message: (props) => `"${props.value}" is not a valid name! Only letters and up to two spaces allowed; at least 3 letters required.`,
+        message: "Invalid name! Only letters and up to two spaces allowed; at least 3 letters required.",
       }
     },
     email: {
       type: String,
-      required: true,
-      unique: true,
+      required: [true, "Email is required!"],
+      unique: [true, "Email already exists!"],
       trim: true,
       validate: {
         validator: function (v) {
           return /^[a-zA-z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(v);
         },
-        message: (props) => `\"${props.value}\" is not a valid email address!`,
-      }
+        message: "Invalid email address! It must be of the form user@example.com",
+      },
+      minLength: [5, "Email must be at least 5 characters long!"],
+      maxLength: [100, "Email cannot exceed 100 characters!"],
     },
     password: {
       type: String,
-      required: true,
+      required: [true, "Password is required!"],
       validate: {
         validator: function (v) {
           return /^(?=.*[0-9])(?=.*[!@#$%^&*])(?=.*[a-zA-Z])[a-zA-Z0-9!@#$%^&*]{8,}$/.test(v);
         },
-        message: "Password must be at least 8 characters long, contain a number and a special character"
+        message: "Password must be at least 8 characters long, contain a number and a special character!"
       }
     },
     role: {
       type: String,
-      required: true,
+      required: [true, "Role is required!"],
       enum: ["User", "Admin"],
       default: "User",
     },
-    dob: {
-      type: Date,
-      //required: true,
-      //default: DateTime.now,
-    },
-    pathToProfilePhoto: {
-      type: String,
-      required: false,
-      trim: true,
-      // validate: {
-      //     validator: function(v) {
-      //         return /^https?:\/\/.*\.(jpg|jpeg|png|gif)$/.test(v);
-      //     },
-      //     message: (props) => `${props.value} is not a valid URL! It should point to an image file.`,
-      // }
-      default: ''
-    },
+    // pathToProfilePhoto: {
+    //   type: String,
+    //   required: false,
+    //   trim: true,
+    //   validate: {
+    //       validator: function(v) {
+    //           return /^https?:\/\/.*\.(jpg|jpeg|png|gif)$/.test(v);
+    //       },
+    //       message: (props) => `${props.value} is not a valid URL! It should point to an image file.`,
+    //   },
+    //   default: ""
+    // },
   }, { timestamps: true }
 );
 
@@ -90,24 +87,20 @@ userSchema.static(
   'matchPasswordAndGenerateToken',
   async function (email, password) {
     const user = await this.findOne({ email });
-
     if (!user) {
       const error = new Error("User Not Found");
       error.statusCode = 404;
       throw error;
     }
-
     const isPasswordMatch = await bcrypt.compare(
       password,
       user.password
     );
-
     if (!isPasswordMatch) {
       const error = new Error("Incorrect Password");
       error.statusCode = 401;
       throw error;
     }
-
     const token = createTokenForUser(user);
     return token;
   }

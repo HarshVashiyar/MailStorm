@@ -60,39 +60,42 @@ const SavedListsModal = ({
                 <button
                   onClick={deleteSavedList}
                   className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-3 py-2 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 shadow-lg shadow-red-500/25 hover:shadow-red-500/40 border border-red-400/30 flex items-center space-x-2 text-sm max-w-[140px]"
-                  title={`Delete "${savedLists.find((list) => list._id === selectedSavedLists[0])?.listName}"`}
+                  title={`Delete "${savedLists.find((list) => list._id && list._id === selectedSavedLists[0])?.listName || 'Unnamed'}"`}
                 >
                   <MdDelete className="text-base flex-shrink-0" />
                   <span className="truncate">Delete "{
-                    (savedLists.find((list) => list._id === selectedSavedLists[0])?.listName?.length > 8) 
-                      ? savedLists.find((list) => list._id === selectedSavedLists[0])?.listName?.slice(0, 8) + '...'
-                      : savedLists.find((list) => list._id === selectedSavedLists[0])?.listName
+                    (() => {
+                      const listName = savedLists.find((list) => list._id && list._id === selectedSavedLists[0])?.listName || 'Unnamed';
+                      return listName.length > 8 ? listName.slice(0, 8) + '...' : listName;
+                    })()
                   }"</span>
                 </button>
                 
                 <button
                   onClick={mailSavedList}
                   className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white px-3 py-2 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 border border-blue-400/30 flex items-center space-x-2 text-sm max-w-[140px]"
-                  title={`Mail "${savedLists.find((list) => list._id === selectedSavedLists[0])?.listName}"`}
+                  title={`Mail "${savedLists.find((list) => list._id && list._id === selectedSavedLists[0])?.listName || 'Unnamed'}"`}
                 >
                   <MdEmail className="text-base flex-shrink-0" />
                   <span className="truncate">Mail "{
-                    (savedLists.find((list) => list._id === selectedSavedLists[0])?.listName?.length > 8) 
-                      ? savedLists.find((list) => list._id === selectedSavedLists[0])?.listName?.slice(0, 8) + '...'
-                      : savedLists.find((list) => list._id === selectedSavedLists[0])?.listName
+                    (() => {
+                      const listName = savedLists.find((list) => list._id && list._id === selectedSavedLists[0])?.listName || 'Unnamed';
+                      return listName.length > 8 ? listName.slice(0, 8) + '...' : listName;
+                    })()
                   }"</span>
                 </button>
                 
                 <button
                   onClick={handleScheduleEmail}
                   className="bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700 text-white px-3 py-2 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 border border-purple-400/30 flex items-center space-x-2 text-sm max-w-[140px]"
-                  title={`Schedule "${savedLists.find((list) => list._id === selectedSavedLists[0])?.listName}"`}
+                  title={`Schedule "${savedLists.find((list) => list._id && list._id === selectedSavedLists[0])?.listName || 'Unnamed'}"`}
                 >
                   <MdSchedule className="text-base flex-shrink-0" />
                   <span className="truncate">Schedule "{
-                    (savedLists.find((list) => list._id === selectedSavedLists[0])?.listName?.length > 6) 
-                      ? savedLists.find((list) => list._id === selectedSavedLists[0])?.listName?.slice(0, 6) + '...'
-                      : savedLists.find((list) => list._id === selectedSavedLists[0])?.listName
+                    (() => {
+                      const listName = savedLists.find((list) => list._id && list._id === selectedSavedLists[0])?.listName || 'Unnamed';
+                      return listName.length > 6 ? listName.slice(0, 6) + '...' : listName;
+                    })()
                   }"</span>
                 </button>
               </>
@@ -102,13 +105,14 @@ const SavedListsModal = ({
               <button
                 onClick={addToExistingList}
                 className="bg-gradient-to-r from-teal-500 to-green-500 hover:from-teal-600 hover:to-green-600 text-white px-3 py-2 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 border border-teal-400/30 flex items-center space-x-2 text-sm max-w-[140px]"
-                title={`Add ${selectedUsersCount} item(s) to "${savedLists.find((list) => list._id === selectedSavedLists[0])?.listName}"`}
+                title={`Add ${selectedUsersCount} item(s) to "${savedLists.find((list) => list._id && list._id === selectedSavedLists[0])?.listName || 'Unnamed'}"`}
               >
                 <MdAttachFile className="text-base flex-shrink-0" />
                 <span className="truncate">Add to "{
-                  (savedLists.find((list) => list._id === selectedSavedLists[0])?.listName?.length > 8) 
-                    ? savedLists.find((list) => list._id === selectedSavedLists[0])?.listName?.slice(0, 8) + '...'
-                    : savedLists.find((list) => list._id === selectedSavedLists[0])?.listName
+                  (() => {
+                    const listName = savedLists.find((list) => list._id && list._id === selectedSavedLists[0])?.listName || 'Unnamed';
+                    return listName.length > 8 ? listName.slice(0, 8) + '...' : listName;
+                  })()
                 }"</span>
               </button>
             )}
@@ -161,9 +165,9 @@ const SavedListsModal = ({
                 ) : (
                   savedLists.map((list, index) => (
                     <tr 
-                      key={list._id} 
+                      key={list._id || `list-${index}`} 
                       className={`transition-all duration-300 hover:bg-orange-500/5 ${ 
-                        selectedSavedLists.includes(list._id)
+                        list._id && selectedSavedLists.includes(list._id)
                           ? 'bg-gradient-to-r from-orange-500/20 to-amber-500/20 border-l-4 border-orange-400 shadow-lg shadow-orange-500/10'
                           : index % 2 === 0 ? 'bg-gray-800/20' : 'bg-transparent'
                       }`}
@@ -189,12 +193,13 @@ const SavedListsModal = ({
                         <input
                           type="checkbox"
                           className={`w-5 h-5 rounded border-2 transition-all duration-300 ${ 
-                            selectedSavedLists.includes(list._id)
+                            list._id && selectedSavedLists.includes(list._id)
                               ? 'bg-orange-500 border-orange-500 text-white'
                               : 'border-orange-400/50 hover:border-orange-400 bg-gray-800/60'
                           }`}
-                          checked={selectedSavedLists.includes(list._id)}
-                          onChange={() => toggleSavedListSelection(list._id)}
+                          checked={list._id ? selectedSavedLists.includes(list._id) : false}
+                          onChange={() => list._id && toggleSavedListSelection(list._id)}
+                          disabled={!list._id}
                         />
                       </td>
                     </tr>

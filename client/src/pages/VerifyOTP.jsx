@@ -46,30 +46,32 @@ const Verifyotp = () => {
     }
     try {
       const response = await axios.post(
-        `${import.meta.env.VITE_BASE_URL}${
-          import.meta.env.VITE_VERIFY_OTP_ROUTE
+        `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_VERIFY_OTP_ROUTE
         }`,
         { email, otp }
       );
-      toast.dismiss(toastId);
-      setIsLoading(false);
       if (response.data?.success === true) {
+        toast.dismiss(toastId);
+        setIsLoading(false);
         toast.success("OTP verified successfully!");
         setTimeout(() => {
           navigate("/resetpassword", { state: { email } });
         }, 700);
       } else {
-        toast.error(response.data?.message || "Invalid OTP.");
+        toast.dismiss(toastId);
+        setIsLoading(false);
+        toast.error(response.data?.message || "Update failed.");
       }
     } catch (error) {
       toast.dismiss(toastId);
       setIsLoading(false);
-      if (error?.response?.data?.message) {
+      if (error.response?.data?.message) {
         toast.error(error.response.data.message);
+      } else if (error.response?.data) {
+        toast.error(typeof error.response.data === 'string' ? error.response.data : "An error occurred.");
       } else {
-        toast.error("Something went wrong!");
+        toast.error("Something went wrong. Please try again.");
       }
-      console.error(error);
     }
   };
 
@@ -121,11 +123,10 @@ const Verifyotp = () => {
               </div>
               <button
                 type="submit"
-                className={`w-full bg-gradient-to-r from-primary-500 to-accent-500 text-white py-2 px-4 rounded-lg transition-all duration-300 shadow-md flex items-center justify-center min-h-[42px] ${
-                  isLoading || timeLeft === 0
-                    ? 'opacity-75 cursor-not-allowed' 
-                    : 'hover:from-primary-600 hover:to-accent-600 hover:shadow-glow'
-                }`}
+                className={`w-full bg-gradient-to-r from-primary-500 to-accent-500 text-white py-2 px-4 rounded-lg transition-all duration-300 shadow-md flex items-center justify-center min-h-[42px] ${isLoading || timeLeft === 0
+                  ? 'opacity-75 cursor-not-allowed'
+                  : 'hover:from-primary-600 hover:to-accent-600 hover:shadow-glow'
+                  }`}
                 disabled={isLoading || timeLeft === 0}
               >
                 {isLoading ? (

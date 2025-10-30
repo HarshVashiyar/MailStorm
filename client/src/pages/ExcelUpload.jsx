@@ -17,6 +17,7 @@ const ExcelUpload = ({ setUsers }) => {
     }
 
     setLoading(true);
+    const toastId = toast.loading("Importing companies from Excel...");
 
     const allowedFields = [
       "companyName",
@@ -32,19 +33,19 @@ const ExcelUpload = ({ setUsers }) => {
     ];
 
     const workbook = new ExcelJS.Workbook();
-    
+
     try {
-      
+
       // Read the file as ArrayBuffer and load it into ExcelJS
       const arrayBuffer = await file.arrayBuffer();
-      
+
       await workbook.xlsx.load(arrayBuffer);
 
       const worksheet = workbook.worksheets[0];
       if (!worksheet) {
         throw new Error("No worksheet found in the file");
       }
-      
+
       const jsonData = [];
 
       // Get headers
@@ -62,7 +63,7 @@ const ExcelUpload = ({ setUsers }) => {
             if (allowedFields.includes(header)) {
               // Handle product group as comma-separated string or array
               if (header === "companyProductGroup" && cell.value) {
-                rowData[header] = typeof cell.value === 'string' 
+                rowData[header] = typeof cell.value === 'string'
                   ? cell.value.split(',').map(item => item.trim())
                   : [String(cell.value)];
               } else {
@@ -76,13 +77,13 @@ const ExcelUpload = ({ setUsers }) => {
           }
         }
       });
-      
+
       if (jsonData.length === 0) {
         return toast.error("No valid company data found in the file. Make sure the headers match the required fields.");
       }
 
       const url = `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_IMPORT_EXCEL_ROUTE}`;
-      
+
       const response = await axios.post(
         url,
         jsonData,
@@ -91,30 +92,34 @@ const ExcelUpload = ({ setUsers }) => {
         }
       );
 
-      if (response.status === 201 || response.status === 207) {
+      if (response.data?.success === true && (response.status === 201 || response.status === 207)) {
         toast.success(response.data?.message || "Companies imported successfully!");
-        
+        toast.dismiss(toastId);
+        setLoading(false);
         // Update the users list with newly imported companies
         if (response.data?.data && Array.isArray(response.data.data) && setUsers) {
           setUsers(prevUsers => [...prevUsers, ...response.data.data]);
         }
-        
+
         setFile(null); // Reset file input
         // Reset the file input element
         const fileInput = document.querySelector('input[type="file"]');
         if (fileInput) fileInput.value = '';
       } else {
-        toast.error(response.data?.message || "Import failed.");
+        toast.dismiss(toastId);
+        setLoading(false);
+        toast.error(response.data?.message || "Update failed.");
       }
     } catch (error) {
-      console.error("Import error:", error);
-      console.error("Error details:", error.response?.data);
-      
-      const errorMessage = error.response?.data?.message 
-        || error.message 
-        || "An error occurred while importing companies.";
-      
-      toast.error(errorMessage);
+      toast.dismiss(toastId);
+      setLoading(false);
+      if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else if (error.response?.data) {
+        toast.error(typeof error.response.data === 'string' ? error.response.data : "An error occurred.");
+      } else {
+        toast.error("Something went wrong. Please try again.");
+      }
     } finally {
       setLoading(false);
     }

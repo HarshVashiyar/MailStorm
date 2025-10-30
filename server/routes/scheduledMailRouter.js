@@ -12,9 +12,8 @@ app.get("/", (req, res) => {
   res.send("Welcome to Scheduled Mail(s) Router!");
 });
 
-app.get("/getall", authenticateUser,handleGetScheduledMails);
+app.get("/getall", authenticateUser, handleGetScheduledMails);
 
-// Error handling middleware
 const multerErrorHandler = (err, req, res, next) => {
   console.log('=== Multer Error ===');
   console.log('Error:', err);
@@ -27,8 +26,7 @@ const multerErrorHandler = (err, req, res, next) => {
 app.post(
   "/add",
   authenticateUser,
-  debugFormData,
-  scheduledUpload.array("files", 10), // Increased limit to 10
+  scheduledUpload.array("files", 5),
   multerErrorHandler,
   processFiles,
   handleAddScheduledMail

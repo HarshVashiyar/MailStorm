@@ -4,10 +4,10 @@ const handleGetAllCompanies = async (req, res) => {
     const user = req.user;
     try {
         const companies = await Company.find({ createdBy: user.id });
-        return res.status(200).json({ success: true, data: companies });
+        return res.status(200).json({ success: true, message: "Companies retrieved successfully", data: companies });
     } catch (err) {
         console.error("Get all companies error:", err);
-        return res.status(500).json({ success: false, message: "Internal server error" });
+        return res.status(500).json({ success: false, message: err.message });
     }
 }
 
@@ -28,7 +28,7 @@ const handleGetCompanyByID = async (req, res) => {
         if (err.name === "CastError") {
             return res.status(400).json({ success: false, message: "Invalid company ID" });
         }
-        return res.status(500).json({ success: false, message: "Internal server error" });
+        return res.status(500).json({ success: false, message: err.message });
     }
 }
 
@@ -39,12 +39,6 @@ const handleAddCompany = async (req, res) => {
         return res.status(400).json({ success: false, message: "Company name is required" });
     }
     try {
-        if (companyEmail) {
-            const existingCompany = await Company.findOne({ companyEmail });
-            if (existingCompany) {
-                return res.status(400).json({ success: false, message: "Company with this email already exists" });
-            }
-        }
         const newCompany = await Company.create({
             companyName,
             companyWebsite,
@@ -67,7 +61,7 @@ const handleAddCompany = async (req, res) => {
         if (err.code === 11000) {
             return res.status(400).json({ success: false, message: "Company with this information already exists" });
         }
-        return res.status(500).json({ success: false, message: "Internal server error" });
+        return res.status(500).json({ success: false, message: err.message });
     }
 }
 
@@ -111,15 +105,18 @@ const handleUpdateCompany = async (req, res) => {
 
 const handleUpdateCompanyNote = async (req, res) => {
     const { id, companyNote } = req.body;
-    if (!id) {
-        return res.status(400).json({ success: false, message: "Company ID is required" });
-    }
     try {
+        if (!id) {
+            return res.status(400).json({ success: false, message: "Company ID is required" });
+        }
+        if (!companyNote || companyNote === undefined) {
+            return res.status(400).json({ success: false, message: "Company note is required" });
+        }
         const updatedCompany = await Company.findById(id);
         if (!updatedCompany) {
             return res.status(404).json({ success: false, message: "Company not found" });
         }
-        updatedCompany.companyNotes = companyNote || "";
+        updatedCompany.companyNotes = companyNote;
         await updatedCompany.save();
         return res.status(200).json({ success: true, message: "Company note updated successfully", data: updatedCompany });
     } catch (err) {
@@ -127,13 +124,13 @@ const handleUpdateCompanyNote = async (req, res) => {
         if (err.name === "CastError") {
             return res.status(400).json({ success: false, message: "Invalid company ID" });
         }
-        return res.status(500).json({ success: false, message: "Internal server error" });
+        return res.status(500).json({ success: false, message: err.message });
     }
 }
 
 const handleRemoveCompanies = async (req, res) => {
+    const { companyIds } = req.body;
     try {
-        const { companyIds } = req.body;
         if (!companyIds || !Array.isArray(companyIds) || companyIds.length === 0) {
             return res.status(400).json({ success: false, message: "No companies selected" });
         }
@@ -144,14 +141,13 @@ const handleRemoveCompanies = async (req, res) => {
         if (err.name === "CastError") {
             return res.status(400).json({ success: false, message: "Invalid company ID format" });
         }
-        return res.status(500).json({ success: false, message: "Internal server error" });
+        return res.status(500).json({ success: false, message: err.message });
     }
 }
 
 const handleImportCompanies = async (req, res) => {
     const companiesData = req.body;
     const user = req.user;
-    
     if (!companiesData || companiesData.length === 0) {
       return res.status(400).json({ success: false, message: "No companies data found" });
     }
@@ -161,38 +157,26 @@ const handleImportCompanies = async (req, res) => {
     if (!companiesData.every(company => company.companyName)) {
       return res.status(400).json({ success: false, message: "All companies must have a company name" });
     }
-    
     try {
-      // Add createdBy to each company object
       const companiesWithCreator = companiesData.map(company => ({
         ...company,
         createdBy: user.id
       }));
       const insertedCompanies = await Company.insertMany(companiesWithCreator, { ordered: false });
-      
-      return res.status(201).json({ 
-        success: true, 
-        message: `${insertedCompanies.length} company(ies) imported successfully`, 
-        data: insertedCompanies 
-      });
+      return res.status(201).json({ success: true, message: `${insertedCompanies.length} company(ies) imported successfully`, data: insertedCompanies });
     } catch (err) {
       console.error("Import companies error:", err);
       console.error("Error name:", err.name);
       console.error("Error code:", err.code);
-      
       if (err.name === "ValidationError") {
         const errorMessages = Object.values(err.errors).map(e => e.message).join(", ");
         return res.status(400).json({ success: false, message: `Validation error: ${errorMessages}` });
       }
       if (err.code === 11000) {
         const inserted = err.insertedDocs ? err.insertedDocs.length : 0;
-        return res.status(207).json({ 
-          success: true, 
-          message: `${inserted} company(ies) imported, some duplicates were skipped`, 
-          data: err.insertedDocs || [] 
-        });
+        return res.status(207).json({ success: true, message: `${inserted} company(ies) imported, some duplicates were skipped` });
       }
-      return res.status(500).json({ success: false, message: "Internal server error: " + err.message });
+      return res.status(500).json({ success: false, message: err.message });
     }
 };
 

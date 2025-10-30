@@ -1,8 +1,8 @@
 const User = require("../models/userDB");
 
 const handleCheckAuthStatus = async (req, res) => {
+    const user = req.user;
     try {
-        const user = req.user;
         if (!user) {
             return res.status(401).json({ success: false, isAuthenticated: false });
         }
@@ -16,10 +16,10 @@ const handleCheckAuthStatus = async (req, res) => {
 
 const handleUserSignUp = async (req, res) => {
     const { fullName, email, password } = req.body;
-    if (!fullName || !email || !password) {
-        return res.status(400).json({ success: false, message: "Full name, email and password are required" });
-    }
     try {
+        if (!fullName || !email || !password) {
+            return res.status(400).json({ success: false, message: "Full name, email and password are required" });
+        }
         const existingUser = await User.findOne({ email });
         if (existingUser) {
             return res.status(400).json({ success: false, message: "User with the provided email already exists" });
@@ -40,14 +40,13 @@ const handleUserSignUp = async (req, res) => {
 
 const handleUserSignIn = async (req, res) => {
     const { email, password } = req.body;
-    if (!email || !password) {
-        return res.status(400).json({ success: false, message: "All fields are required" });
-    }
     try {
+        if (!email || !password) {
+            return res.status(400).json({ success: false, message: "All fields are required" });
+        }
         const token = await User.matchPasswordAndGenerateToken(email, password);
         res.cookie("token", token, {
             httpOnly: true,
-            //secure: process.env.NODE_ENV === "production",
             secure: true,
             sameSite: "none",
             maxAge: 24 * 60 * 60 * 1000
@@ -59,29 +58,27 @@ const handleUserSignIn = async (req, res) => {
         if (error.statusCode === 401 || error.statusCode === 404) {
             return res.status(401).json({ success: false, message: "Email or Password is incorrect." });
         }
-        return res.status(500).json({ success: false, message: "Internal server error" });
+        return res.status(500).json({ success: false, message: error.message });
     }
 }
 
 const handleGetAllUsers = async (req, res) => {
     try {
         const users = await User.find();
-        return res.status(200).json({
-            success: true,
-            users: users.map(user => ({
-                fullName: user.fullName,
-                role: user.role,
-                email: user.email,
-                dob: user.dob,
-                pathToProfilePhoto: user.pathToProfilePhoto,
-                createdAt: user.createdAt,
-                updatedAt: user.updatedAt,
-            }))
-        });
+        const data = users.map(user => ({
+            fullName: user.fullName,
+            role: user.role,
+            email: user.email,
+            dob: user.dob,
+            pathToProfilePhoto: user.pathToProfilePhoto,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt,
+        }));
+        return res.status(200).json({ success: true, message: "Users fetched successfully", data });
     }
     catch (error) {
         console.error("Error fetching users:", error);
-        return res.status(500).json({ success: false, message: "Internal server error" });
+        return res.status(500).json({ success: false, message: error.message });
     }
 }
 
@@ -94,7 +91,7 @@ const handleGetUserById = async (req, res) => {
         }
         return res.status(200).json({
             success: true,
-            user: {
+            data: {
                 fullName: user.fullName,
                 role: user.role,
                 email: user.email,
@@ -110,7 +107,7 @@ const handleGetUserById = async (req, res) => {
         if (error.name === "CastError") {
             return res.status(400).json({ success: false, message: "Invalid user ID" });
         }
-        return res.status(500).json({ success: false, message: "Internal server error" });
+        return res.status(500).json({ success: false, message: error.message });
     }
 }
 
@@ -142,7 +139,7 @@ const handleUpdateUser = async (req, res) => {
         if (error.name === "CastError") {
             return res.status(400).json({ success: false, message: "Invalid user ID" });
         }
-        return res.status(500).json({ success: false, message: "Internal server error" });
+        return res.status(500).json({ success: false, message: error.message });
     }
 }
 
@@ -161,7 +158,7 @@ const handleDeleteUser = async (req, res) => {
         if (error.name === "CastError") {
             return res.status(400).json({ success: false, message: "Invalid user ID" });
         }
-        return res.status(500).json({ success: false, message: "Internal server error" });
+        return res.status(500).json({ success: false, message: error.message });
     }
 }
 
@@ -172,7 +169,7 @@ const handleLogout = async (req, res) => {
     }
     catch (error) {
         console.error("Error logging out user:", error);
-        return res.status(500).json({ success: false, message: "Internal server error" });
+        return res.status(500).json({ success: false, message: error.message });
     }
 }
 

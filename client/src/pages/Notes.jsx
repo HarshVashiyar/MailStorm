@@ -7,7 +7,8 @@ import { MdSave, MdClose, MdNote, MdInfo } from 'react-icons/md';
 const Notes = ({ user, show, noteId, note, setNote, closeForm, updatedNoteInList }) => {
   const [originalNote, setOriginalNote] = useState('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  
+  const [isLoading, setIsLoading] = useState(false);
+
   useEffect(() => {
     const initialNote = user?.companyNotes || '';
     setNote(initialNote);
@@ -59,26 +60,38 @@ const Notes = ({ user, show, noteId, note, setNote, closeForm, updatedNoteInList
   };
 
   const handleUpdateNote = async () => {
+    const toastID = toast.loading("Updating note...");
+    setIsLoading(true);
     try {
       const response = await axios.put(
-        `${import.meta.env.VITE_BASE_URL}${
-          import.meta.env.VITE_UPDATE_COMPANY_NOTE_ROUTE
+        `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_UPDATE_COMPANY_NOTE_ROUTE
         }`,
         { id: noteId, companyNote: note.trim() },
         {
           withCredentials: true
         }
       );
-      if (response.status === 200) {
+      if (response.data?.success === true && response.status === 200) {
+        toast.dismiss(toastID);
+        setIsLoading(false);
         updatedNoteInList(noteId, note.trim());
         toast.success(response.data.message || "Note updated successfully!");
         closeForm();
+      } else {
+        toast.dismiss(toastID);
+        setIsLoading(false);
+        toast.error(response.data?.message || "Update failed.");
       }
     } catch (error) {
-      console.error("Error updating note:", error);
-      toast.error(
-        error.response?.data?.message || "Failed to update the note."
-      );
+      toast.dismiss(toastID);
+      setIsLoading(false);
+      if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else if (error.response?.data) {
+        toast.error(typeof error.response.data === 'string' ? error.response.data : "An error occurred.");
+      } else {
+        toast.error("Something went wrong. Please try again.");
+      }
     }
   };
 
@@ -90,7 +103,7 @@ const Notes = ({ user, show, noteId, note, setNote, closeForm, updatedNoteInList
       <div className="bg-gray-900/80 backdrop-blur-lg border border-orange-500/20 rounded-3xl shadow-2xl shadow-orange-500/20 p-8 w-4/5 max-w-4xl max-h-[85vh] overflow-hidden relative group animate-glow">
         {/* Animated background gradient */}
         <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 via-amber-500/5 to-orange-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl"></div>
-        
+
         <div className="relative z-10 flex flex-col h-full">
           {/* Header */}
           <div className="mb-6">
@@ -112,7 +125,7 @@ const Notes = ({ user, show, noteId, note, setNote, closeForm, updatedNoteInList
               )}
             </div>
           </div>
-          
+
           {/* Text area container */}
           <div className="flex-1 mb-6">
             <textarea
@@ -122,14 +135,13 @@ const Notes = ({ user, show, noteId, note, setNote, closeForm, updatedNoteInList
               placeholder="Enter your notes here..."
               maxLength={maxCharacters}
             />
-            
+
             {/* Character counter */}
             <div className="flex justify-between items-center mt-3 text-sm">
               <div className="text-gray-400">
-                <span className={`${
-                  characterCount > maxCharacters * 0.9 ? 'text-amber-400' : 
-                  characterCount > maxCharacters * 0.95 ? 'text-orange-400' : 'text-gray-400'
-                }`}>
+                <span className={`${characterCount > maxCharacters * 0.9 ? 'text-amber-400' :
+                    characterCount > maxCharacters * 0.95 ? 'text-orange-400' : 'text-gray-400'
+                  }`}>
                   {characterCount}
                 </span>
                 <span className="text-gray-500"> / {maxCharacters} characters</span>
@@ -139,7 +151,7 @@ const Notes = ({ user, show, noteId, note, setNote, closeForm, updatedNoteInList
               </div> */}
             </div>
           </div>
-          
+
           {/* Action buttons */}
           <div className="flex justify-between gap-4">
             <button
@@ -151,11 +163,10 @@ const Notes = ({ user, show, noteId, note, setNote, closeForm, updatedNoteInList
             </button>
             <button
               onClick={handleUpdateNote}
-              className={`flex-1 py-3 px-6 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2 ${
-                hasUnsavedChanges
+              className={`flex-1 py-3 px-6 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2 ${hasUnsavedChanges
                   ? 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-orange-500/25 hover:shadow-orange-500/40'
                   : 'bg-gray-600/40 hover:bg-gray-500/40 text-gray-300 shadow-gray-500/10'
-              }`}
+                }`}
             >
               <MdSave className="text-lg" />
               <span>Save Note</span>

@@ -5,7 +5,7 @@ const handleGetAllTemplates = async (req, res) => {
     try {
         const templates = await Template.find({ createdBy: user.id }).select('templateName templateSubject -_id');
         if (!templates || !Array.isArray(templates) || templates.length === 0) {
-            return res.status(404).json({ message: "No templates found" });
+            return res.status(404).json({ success: false, message: "No templates found" });
         }
         const data = templates.map(t => ({
             templateName: t.templateName,
@@ -23,11 +23,11 @@ const handleGetTemplateByName = async (req, res) => {
     const { templateName } = req.query;
     try {
         if (!templateName) {
-            return res.status(400).json({ message: "Template name is required" });
+            return res.status(400).json({ success: false, message: "Template name is required" });
         }
         const template = await Template.findOne({ createdBy: user.id, templateName: templateName });
         if (!template) {
-            return res.status(404).json({ message: "Template not found" });
+            return res.status(404).json({ success: false, message: "Template not found" });
         }
         return res.status(200).json({ success: true, message: "Template retrieved successfully", data: template });
     } catch (error) {
@@ -41,11 +41,11 @@ const handleAddTemplate = async (req, res) => {
     const { templateName, templateSubject, templateContent } = req.body;
     try {
         if (!templateName || !templateSubject || !templateContent) {
-            return res.status(400).json({ message: "All fields are required" });
+            return res.status(400).json({ success: false, message: "All fields are required" });
         }
         const existingTemplate = await Template.findOne({ createdBy: user.id, templateName: templateName });
         if (existingTemplate) {
-            return res.status(409).json({ message: "Template with this name already exists" });
+            return res.status(409).json({ success: false, message: "Template with this name already exists" });
         }
         const newTemplate = new Template({
             templateName,
@@ -66,11 +66,11 @@ const handleUpdateTemplate = async (req, res) => {
     const { templateName, templateSubject, templateContent } = req.body;
     try {
         if (!templateName || !templateSubject || !templateContent) {
-            return res.status(400).json({ message: "All fields are required" });
+            return res.status(400).json({ success: false, message: "All fields are required" });
         }
         const existingTemplate = await Template.findOne({ createdBy: user.id, templateName: templateName });
         if (!existingTemplate) {
-            return res.status(404).json({ message: "Template with this name not found" });
+            return res.status(404).json({ success: false, message: "Template with this name not found" });
         }
         existingTemplate.templateSubject = templateSubject;
         existingTemplate.templateContent = templateContent;
@@ -87,7 +87,7 @@ const handleRemoveTemplates = async (req, res) => {
     const { templateNames } = req.body;
     try {
         if (!templateNames || !Array.isArray(templateNames) || templateNames.length === 0) {
-            return res.status(400).json({ message: "Template names are required" });
+            return res.status(400).json({ success: false, message: "Template names are required" });
         }
         const removedTemplates = await Template.deleteMany({ createdBy: user.id, templateName: { $in: templateNames } });
         return res.status(200).json({ success: true, message: "Templates removed successfully", data: removedTemplates });

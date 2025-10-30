@@ -6,11 +6,7 @@ const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
   message: "Too many login attempts, please try again later"
-});
-
-// if (!secretKey) {
-//   throw new Error('JWT_SECRET_KEY is not defined in environment variables');
-// }
+})
 
 function createTokenForUser(user) {
   const payload = {

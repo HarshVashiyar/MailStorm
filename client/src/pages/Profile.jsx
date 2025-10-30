@@ -23,7 +23,7 @@ const Profile = () => {
           { withCredentials: true }
         );
         if (response.data?.success === true) {
-          setUser(response.data.user);
+          setUser(response.data.data);
           setIsLoading(false);
           toast.dismiss(toastID);
           if (isFirstMount.current) {
@@ -31,6 +31,10 @@ const Profile = () => {
             isFirstMount.current = false;
           }
           return;
+        } else {
+          toast.dismiss(toastID);
+          setIsLoading(false);
+          toast.error(response.data?.message || "Failed to load user data.");
         }
       } catch (error) {
         setIsLoading(false);
@@ -40,7 +44,8 @@ const Profile = () => {
             toast.error(error.response.data.message);
             isFirstMount.current = false;
           }
-        } else {
+        }
+        else {
           if (isFirstMount.current) {
             toast.error("Something went wrong!");
             isFirstMount.current = false;
