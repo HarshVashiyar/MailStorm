@@ -109,9 +109,6 @@ const handleUpdateCompanyNote = async (req, res) => {
         if (!id) {
             return res.status(400).json({ success: false, message: "Company ID is required" });
         }
-        if (!companyNote || companyNote === undefined) {
-            return res.status(400).json({ success: false, message: "Company note is required" });
-        }
         const updatedCompany = await Company.findById(id);
         if (!updatedCompany) {
             return res.status(404).json({ success: false, message: "Company not found" });

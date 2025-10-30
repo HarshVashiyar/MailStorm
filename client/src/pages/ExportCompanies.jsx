@@ -4,13 +4,16 @@ export const exportCompaniesToExcel = async (companies) => {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Companies');
 
-  // Format product group array to string
-  const dataForExport = companies.map((company) => ({
-    ...company,
-    companyProductGroup: Array.isArray(company.companyProductGroup)
-      ? company.companyProductGroup.join(", ")
-      : company.companyProductGroup,
-  }));
+  // Remove MongoDB metadata and format product group array to string
+  const dataForExport = companies.map((company) => {
+    const { _id, __v, createdAt, updatedAt, companyId, ...cleanData } = company;
+    return {
+      ...cleanData,
+      companyProductGroup: Array.isArray(cleanData.companyProductGroup)
+        ? cleanData.companyProductGroup.join(", ")
+        : cleanData.companyProductGroup,
+    };
+  });
 
   // Add headers
   const headers = Object.keys(dataForExport[0] || {});

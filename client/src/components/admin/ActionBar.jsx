@@ -81,7 +81,7 @@ const ActionBar = ({
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search..."
-            className="w-full pl-3 pr-3 py-2 bg-glass-dark backdrop-blur-sm border border-primary-500/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-300 text-sm"
+            className="w-full pl-3 pr-3 py-2 bg-gray-900 backdrop-blur-sm border border-primary-500/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-300 text-sm"
           />
         </div>
       </div>
