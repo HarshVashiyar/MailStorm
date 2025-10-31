@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -9,10 +9,11 @@ const Verifyotp = () => {
   const navigate = useNavigate();
   const email = location.state?.email || "";
 
-  const [otp, setOtp] = useState("");
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState(150);
+  const inputRefs = useRef([]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -30,25 +31,61 @@ const Verifyotp = () => {
     return () => clearInterval(timer);
   }, [navigate]);
 
+  const handleOtpChange = (index, value) => {
+    // Only allow digits
+    if (value && !/^\d$/.test(value)) return;
+
+    const newOtp = [...otp];
+    newOtp[index] = value;
+    setOtp(newOtp);
+    setError("");
+
+    // Auto-focus next input
+    if (value && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleKeyDown = (index, e) => {
+    // Handle backspace
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handlePaste = (e) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData("text").slice(0, 6);
+    if (!/^\d+$/.test(pastedData)) return;
+
+    const newOtp = [...otp];
+    pastedData.split("").forEach((char, idx) => {
+      if (idx < 6) newOtp[idx] = char;
+    });
+    setOtp(newOtp);
+    
+    // Focus last filled input or last input
+    const nextIndex = Math.min(pastedData.length, 5);
+    inputRefs.current[nextIndex]?.focus();
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!otp) {
-      setError("Please enter the OTP.");
-      return;
-    }
+    const otpString = otp.join("");
+    
+    // if (otpString.length < 6) {
+    //   setError("Please enter all 6 digits.");
+    //   return;
+    // }
+    
     setError("");
     setIsLoading(true);
     const toastId = toast.loading("Verifying OTP...");
-    if (otp.length !== 6) {
-      setError("OTP must be 6 digits.");
-      setIsLoading(false);
-      return;
-    }
+    
     try {
       const response = await axios.post(
-        `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_VERIFY_OTP_ROUTE
-        }`,
-        { email, otp }
+        `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_VERIFY_OTP_ROUTE}`,
+        { email, otp: otpString }
       );
       if (response.data?.success === true) {
         toast.dismiss(toastId);
@@ -101,25 +138,28 @@ const Verifyotp = () => {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <label
-                  htmlFor="otp"
-                  className="block text-sm font-medium text-gray-300 mb-1.5"
-                >
-                  Enter OTP
+                <label className="block text-sm font-medium text-gray-300 mb-4 text-center">
+                  Enter 6-Digit OTP
                 </label>
-                <input
-                  type="text"
-                  id="otp"
-                  name="otp"
-                  placeholder="6-digit OTP"
-                  className="mt-1 block w-full bg-dark-800/50 text-white placeholder-gray-400 border border-white/10 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-400/40 focus:border-primary-400/40 backdrop-blur-sm transition-all duration-300 tracking-widest text-center"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
-                  maxLength={6}
-                  required
-                />
+                <div className="flex justify-center gap-2 sm:gap-3">
+                  {otp.map((digit, index) => (
+                    <input
+                      key={index}
+                      ref={(el) => (inputRefs.current[index] = el)}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={digit}
+                      onChange={(e) => handleOtpChange(index, e.target.value)}
+                      onKeyDown={(e) => handleKeyDown(index, e)}
+                      onPaste={handlePaste}
+                      className="w-12 h-14 sm:w-14 sm:h-16 bg-dark-800/50 text-white text-2xl font-bold text-center border-2 border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-primary-400 backdrop-blur-sm transition-all duration-300 hover:border-primary-400/30"
+                      disabled={isLoading || timeLeft === 0}
+                    />
+                  ))}
+                </div>
               </div>
               <button
                 type="submit"

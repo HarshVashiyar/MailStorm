@@ -42,6 +42,20 @@ const sendOTP = async (mail) => {
 }
 
 const verifyOTP = (mail, otp) => {
+  // Validate OTP format and length
+  if (!otp || typeof otp !== 'string' && typeof otp !== 'number') {
+    return { success: false, message: "OTP is required!" };
+  }
+  
+  const otpString = String(otp);
+  if (otpString.length !== 6) {
+    return { success: false, message: "OTP must be exactly 6 digits!" };
+  }
+  
+  if (!/^\d{6}$/.test(otpString)) {
+    return { success: false, message: "OTP must contain only digits!" };
+  }
+  
   const otpData = otpStorage[mail];
   if (!otpData) {
     return { success: false, message: "OTP not found!" };
