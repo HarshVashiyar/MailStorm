@@ -26,6 +26,29 @@ const storage = new CloudinaryStorage({
 
 const scheduledUpload = multer({ storage });
 
+const profilePhotoStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: async (req, file) => ({
+    folder: "profile-photos",
+    resource_type: "image",
+    public_id: `user-${req.user.id}-${Date.now()}`,
+    format: "jpg", // Convert all images to JPG for browser compatibility
+    transformation: [{ width: 400, height: 400, crop: "limit", quality: "auto" }]
+  }),
+});
+
+const profilePhotoUpload = multer({ 
+  storage: profilePhotoStorage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!'), false);
+    }
+  }
+});
+
 const processFiles = (req, res, next) => {
   console.log('=== Process Files ===');
   console.log('Number of files:', req.files ? req.files.length : 0);
@@ -46,5 +69,6 @@ const processFiles = (req, res, next) => {
 module.exports = {
   upload,
   scheduledUpload,
+  profilePhotoUpload,
   processFiles,
 };

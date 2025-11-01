@@ -7,14 +7,17 @@ const {
   handleGetAllUsers,
   handleGetUserById,
   handleUpdateUser,
-  handleDeleteUser,
+  handleDeleteUsers,
   handleLogout,
+  handleUploadProfilePhoto,
+  handleDeleteProfilePhoto,
 } = require("../controllers/userController");
 const {
   authenticateUser,
   authorizeAdmin,
   loginLimiter,
 } = require("../utilities/userUtil");
+const { profilePhotoUpload } = require("../middlewares/storeFiles");
 
 app.get("/", (req, res) => {
   res.send("Welcome to User Router!");
@@ -26,14 +29,23 @@ app.post("/signup", handleUserSignUp);
 
 app.post("/signin", loginLimiter, handleUserSignIn);
 
-app.get("/getall", authenticateUser, authorizeAdmin, handleGetAllUsers);
+app.get("/getall", authenticateUser, handleGetAllUsers);
 
 app.get("/getuser", authenticateUser, handleGetUserById);
 
 app.put("/updateuser", authenticateUser, handleUpdateUser);
 
-app.delete("/deleteuser", authenticateUser, handleDeleteUser);
+app.delete("/delete", authenticateUser, handleDeleteUsers);
 
 app.post("/logout", authenticateUser, handleLogout);
+
+app.post(
+  "/addpp",
+  authenticateUser,
+  profilePhotoUpload.single("profilePhoto"),
+  handleUploadProfilePhoto
+);
+
+app.delete("/deletepp", authenticateUser, handleDeleteProfilePhoto);
 
 module.exports = app;

@@ -104,9 +104,12 @@ const SignIn = () => {
                 <p className="text-red-500 text-sm">{error}</p>
               )}
               <div className="text-right">
-                <a href="/SendOTP" className="text-primary-400 hover:text-accent-400 underline-offset-4 hover:underline transition-colors duration-300">
+                <span 
+                  onClick={() => navigate("/sendotp", { state: { isNew: false } })}
+                  className="text-primary-400 hover:text-accent-400 underline-offset-4 hover:underline transition-colors duration-300 cursor-pointer"
+                >
                   Forgot password?
-                </a>
+                </span>
               </div>
               <button
                 type="submit"
@@ -118,9 +121,12 @@ const SignIn = () => {
             <div className="text-center mt-4">
               <p className="text-sm">
                 New user?{" "}
-                <a href="/SignUp" className="text-primary-400 hover:text-accent-400 underline-offset-4 hover:underline transition-colors duration-300">
+                <span 
+                  onClick={() => navigate("/sendotp", { state: { isNew: true } })}
+                  className="text-primary-400 hover:text-accent-400 underline-offset-4 hover:underline transition-colors duration-300 cursor-pointer"
+                >
                   Sign Up
-                </a>
+                </span>
               </p>
             </div>
           </div>

@@ -23,7 +23,7 @@ const ActionBar = ({
           <div className="text-center">
             <div className="text-lg mb-0.5">{show ? '🏢' : '👥'}</div>
             <div className="text-xs font-medium whitespace-nowrap">
-              {show ? 'Companies' : 'Users'}
+              Switch to {show ? 'Companies' : 'Users'}
             </div>
           </div>
         </button>

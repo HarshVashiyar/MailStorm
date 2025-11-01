@@ -1,13 +1,16 @@
 import { useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 const SignUp = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const verifiedEmail = location.state?.email || "";
+  
   const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(verifiedEmail);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -82,7 +85,7 @@ const SignUp = () => {
                   htmlFor="email"
                   className="block text-sm font-medium text-gray-300"
                 >
-                  Email
+                  Email {verifiedEmail && <span className="text-green-400 text-xs">(Verified)</span>}
                 </label>
                 <input
                   type="email"
@@ -90,7 +93,8 @@ const SignUp = () => {
                   name="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="mt-1 block w-full bg-dark-800/50 text-white placeholder-gray-400 border border-white/10 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-400/40 focus:border-primary-400/40 backdrop-blur-sm transition-all duration-300"
+                  className={`mt-1 block w-full bg-dark-800/50 text-white placeholder-gray-400 border border-white/10 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-400/40 focus:border-primary-400/40 backdrop-blur-sm transition-all duration-300 ${verifiedEmail ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  disabled={!!verifiedEmail}
                   required
                 />
               </div>
@@ -121,6 +125,17 @@ const SignUp = () => {
                 Signup
               </button>
             </form>
+            {!verifiedEmail && (
+              <p className="text-center mt-4 text-sm text-gray-400">
+                New user?{" "}
+                <span
+                  className="text-primary-400 hover:text-accent-400 font-semibold underline-offset-4 hover:underline transition-colors duration-300 cursor-pointer"
+                  onClick={() => navigate("/sendotp", { state: { isNew: true } })}
+                >
+                  Verify your email first
+                </span>
+              </p>
+            )}
             <p className="text-center mt-4">
               Already have an account?{" "}
               <a href="/SignIn" className="text-primary-400 hover:text-accent-400 underline-offset-4 hover:underline transition-colors duration-300">

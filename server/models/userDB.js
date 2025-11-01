@@ -54,18 +54,16 @@ const userSchema = new mongoose.Schema(
       enum: ["User", "Admin"],
       default: "User",
     },
-    // pathToProfilePhoto: {
-    //   type: String,
-    //   required: false,
-    //   trim: true,
-    //   validate: {
-    //       validator: function(v) {
-    //           return /^https?:\/\/.*\.(jpg|jpeg|png|gif)$/.test(v);
-    //       },
-    //       message: (props) => `${props.value} is not a valid URL! It should point to an image file.`,
-    //   },
-    //   default: ""
-    // },
+    profilePhoto: {
+      url: {
+        type: String,
+        default: ""
+      },
+      publicId: {
+        type: String,
+        default: ""
+      }
+    },
   }, { timestamps: true }
 );
 

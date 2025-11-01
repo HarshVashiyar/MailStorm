@@ -24,7 +24,7 @@ const ResetPassword = () => {
         if (prevTime <= 1) {
           clearInterval(timerRef.current);
           toast.error("Session expired! Redirecting to forgot password...");
-          setTimeout(() => navigate("/forgotpassword"), 700);
+          setTimeout(() => navigate("/sendotp", { state: { isNew: false } }), 700);
           return 0;
         }
         return prevTime - 1;

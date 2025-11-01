@@ -1,4 +1,5 @@
 const User = require("../models/userDB");
+const cloudinary = require("../utilities/cloudinary");
 
 const handleCheckAuthStatus = async (req, res) => {
     const user = req.user;
@@ -66,11 +67,12 @@ const handleGetAllUsers = async (req, res) => {
     try {
         const users = await User.find();
         const data = users.map(user => ({
+            _id: user._id,
             fullName: user.fullName,
             role: user.role,
             email: user.email,
             dob: user.dob,
-            pathToProfilePhoto: user.pathToProfilePhoto,
+            profilePhoto: user.profilePhoto,
             createdAt: user.createdAt,
             updatedAt: user.updatedAt,
         }));
@@ -92,11 +94,12 @@ const handleGetUserById = async (req, res) => {
         return res.status(200).json({
             success: true,
             data: {
+                _id: user._id,
                 fullName: user.fullName,
                 role: user.role,
                 email: user.email,
                 dob: user.dob,
-                pathToProfilePhoto: user.pathToProfilePhoto,
+                profilePhoto: user.profilePhoto,
                 createdAt: user.createdAt,
                 updatedAt: user.updatedAt,
             }
@@ -143,15 +146,39 @@ const handleUpdateUser = async (req, res) => {
     }
 }
 
-const handleDeleteUser = async (req, res) => {
-    const { id } = req.user;
+const handleDeleteUsers = async (req, res) => {
+    const { userIds } = req.body;
     try {
-        const user = await User.findByIdAndDelete(id);
-        if (!user) {
-            return res.status(404).json({ success: false, message: "User not found" });
+        if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+            return res.status(400).json({ success: false, message: "No users selected" });
         }
-        res.clearCookie("token");
-        return res.status(200).json({ success: true, message: "User deleted successfully" });
+
+        // Import related models
+        const Company = require("../models/companyDB");
+        const List = require("../models/listDB");
+        const Template = require("../models/templateDB");
+        const ScheduledMail = require("../models/scheduledMailDB");
+
+        // Cascade delete all resources created by these users
+        await Promise.all([
+            Company.deleteMany({ createdBy: { $in: userIds } }),
+            List.deleteMany({ createdBy: { $in: userIds } }),
+            Template.deleteMany({ createdBy: { $in: userIds } }),
+            ScheduledMail.deleteMany({ createdBy: { $in: userIds } })
+        ]);
+
+        // Delete the users themselves
+        const users = await User.deleteMany({ _id: { $in: userIds } });
+        if (!users) {
+            return res.status(404).json({ success: false, message: "Users not found" });
+        }
+        
+       // Only clear cookie if current user deleted their own account
+       if (userIds.includes(req.user.id)) {
+         res.clearCookie("token");
+       }
+        
+        return res.status(200).json({ success: true, message: "Users deleted successfully" });
     }
     catch (error) {
         console.error("Error deleting user:", error);
@@ -173,6 +200,78 @@ const handleLogout = async (req, res) => {
     }
 }
 
+const handleUploadProfilePhoto = async (req, res) => {
+    const { id } = req.user;
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: "No file uploaded" });
+        }
+
+        const user = await User.findById(id);
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        // Delete old photo from Cloudinary if exists
+        if (user.profilePhoto?.publicId) {
+            try {
+                await cloudinary.uploader.destroy(user.profilePhoto.publicId);
+            } catch (deleteError) {
+                console.error("Error deleting old profile photo:", deleteError);
+            }
+        }
+
+        // Update user with new photo
+        user.profilePhoto = {
+            url: req.file.path,
+            publicId: req.file.filename
+        };
+        await user.save({ validateModifiedOnly: true });
+
+        return res.status(200).json({ 
+            success: true, 
+            message: "Profile photo uploaded successfully",
+            data: {
+                profilePhoto: user.profilePhoto
+            }
+        });
+    }
+    catch (error) {
+        console.error("Error uploading profile photo:", error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+}
+
+const handleDeleteProfilePhoto = async (req, res) => {
+    const { id } = req.user;
+    try {
+        const user = await User.findById(id);
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        if (user.profilePhoto?.publicId) {
+            try {
+                await cloudinary.uploader.destroy(user.profilePhoto.publicId);
+            } catch (deleteError) {
+                console.error("Error deleting profile photo from Cloudinary:", deleteError);
+            }
+        }
+
+        user.profilePhoto = { url: "", publicId: "" };
+        await user.save({ validateModifiedOnly: true });
+
+        return res.status(200).json({ 
+            success: true, 
+            message: "Profile photo deleted successfully"
+        });
+    }
+    catch (error) {
+        console.error("Error deleting profile photo:", error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+}
+
 module.exports = {
     handleCheckAuthStatus,
     handleUserSignUp,
@@ -180,6 +279,8 @@ module.exports = {
     handleGetAllUsers,
     handleGetUserById,
     handleUpdateUser,
-    handleDeleteUser,
+    handleDeleteUsers,
     handleLogout,
+    handleUploadProfilePhoto,
+    handleDeleteProfilePhoto,
 };

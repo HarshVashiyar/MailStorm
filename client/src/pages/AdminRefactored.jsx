@@ -245,14 +245,16 @@ const AdminRefactored = () => {
           {/* Add Button & Selected Items Action Bar - Fixed Height Container */}
           <div className="h-20 mt-2">
             <div className="flex flex-wrap gap-2 items-start">
-              {/* Add Button - Always visible, matches wrapper height */}
-              <button
-                onClick={openAddCompanyModal}
-                className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-6 rounded-2xl font-medium transition-all duration-300 transform hover:scale-105 shadow-2xl shadow-emerald-500/25 hover:shadow-emerald-500/40 border border-emerald-400/30 flex items-center justify-center space-x-2 text-sm min-h-[52px]"
-              >
-                <span className="text-lg">➕</span>
-                <span className="font-semibold">Add {show ? 'User' : 'Company'}</span>
-              </button>
+              {/* Add Button - Only visible for companies (when show is false) */}
+              {!show && (
+                <button
+                  onClick={openAddCompanyModal}
+                  className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-6 rounded-2xl font-medium transition-all duration-300 transform hover:scale-105 shadow-2xl shadow-emerald-500/25 hover:shadow-emerald-500/40 border border-emerald-400/30 flex items-center justify-center space-x-2 text-sm min-h-[52px]"
+                >
+                  <span className="text-lg">➕</span>
+                  <span className="font-semibold">Add Company</span>
+                </button>
+              )}
               
               {/* Action buttons - Only visible when items are selected */}
               {selectedUsers.length > 0 && (

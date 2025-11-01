@@ -7,14 +7,20 @@ const {
 const User = require("../models/userDB");
 
 const handleSendOTP = async (req, res) => {
-  const { email } = req.body;
+  const { email, isNew } = req.body;
   try {
     if (!email) {
       return res.status(400).json({ success: false, message: "Email is required!" });
     }
     const existingUser = await User.findOne({ email });
     if (!existingUser) {
-      return res.status(404).json({ success: false, message: "User with provided email not found!" });
+      if (!isNew) {
+        return res.status(404).json({ success: false, message: "User with provided email not found!" });
+      }
+    } else {
+      if (isNew) {
+        return res.status(400).json({ success: false, message: "User with provided email already exists!" });
+      }
     }
     const response = await sendOTP(email);
     return res.status(200).json({ success: true, message: "OTP sent successfully!", data: response });

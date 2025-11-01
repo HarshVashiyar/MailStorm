@@ -8,6 +8,7 @@ const Verifyotp = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const email = location.state?.email || "";
+  const isNew = location.state?.isNew || false;
 
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [error, setError] = useState("");
@@ -92,7 +93,11 @@ const Verifyotp = () => {
         setIsLoading(false);
         toast.success("OTP verified successfully!");
         setTimeout(() => {
-          navigate("/resetpassword", { state: { email } });
+          if (isNew) {
+            navigate("/signup", { state: { email } });
+          } else {
+            navigate("/resetpassword", { state: { email } });
+          }
         }, 700);
       } else {
         toast.dismiss(toastId);
@@ -181,14 +186,17 @@ const Verifyotp = () => {
             </form>
 
             <div className="text-sm text-gray-400 text-center mt-4 bg-dark-800/30 p-3 rounded-lg border border-white/5">
-              Please enter the OTP sent to your email to continue.
+              {isNew 
+                ? "Please enter the OTP sent to your email to verify your account."
+                : "Please enter the OTP sent to your email to continue."
+              }
             </div>
 
             <p className="text-sm text-center mt-4 text-gray-300">
               Didn't receive the OTP?{" "}
               <span
                 className="text-primary-400 hover:text-accent-400 font-semibold underline-offset-4 hover:underline transition-colors duration-300 cursor-pointer"
-                onClick={() => navigate("/forgotpassword")}
+                onClick={() => navigate("/sendotp", { state: { isNew } })}
               >
                 Resend here
               </span>

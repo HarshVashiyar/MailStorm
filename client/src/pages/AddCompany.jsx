@@ -16,7 +16,8 @@ import {
   FaTimes,
   FaCheck,
   FaExclamationTriangle,
-  FaChartBar
+  FaChartBar,
+  FaFileUpload
 } from 'react-icons/fa';
 
 const AddCompany = ({
@@ -41,6 +42,8 @@ const AddCompany = ({
 
   const [productGroupString, setProductGroupString] = useState("");
   const [errors, setErrors] = useState({});
+  const [isBulkMode, setIsBulkMode] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -227,18 +230,65 @@ const AddCompany = ({
       <div className="bg-white/10 backdrop-blur-lg p-6 rounded-3xl shadow-2xl w-full max-w-5xl max-h-[85vh] overflow-hidden border border-white/20 flex flex-col mt-4">
         {/* Header */}
         <div className="mb-6">
-          <h3 className="text-3xl font-bold text-white flex items-center space-x-3 mb-2">
-            <span className="text-white">{upd ? <FaEdit /> : <FaBuilding />}</span>
-            <span>{upd ? 'Edit Company' : 'Add New Company'}</span>
-          </h3>
-          <p className="text-gray-300 text-sm">
-            {upd ? 'Update company information and contact details' : 'Enter company information and contact details to add a new company'}
-          </p>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-3xl font-bold text-white flex items-center space-x-3 mb-2">
+                <span className="text-white">{upd ? <FaEdit /> : <FaBuilding />}</span>
+                <span>{upd ? 'Edit Company' : 'Add New Company'}</span>
+              </h3>
+              <p className="text-gray-300 text-sm">
+                {upd ? 'Update company information and contact details' : isBulkMode ? 'Import multiple companies from Excel file' : 'Enter company information and contact details to add a new company'}
+              </p>
+            </div>
+            
+            {/* Toggle Switch - Only show in add mode, not update */}
+            {!upd && (
+              <div className="flex items-center space-x-3">
+                <span className={`text-sm font-medium transition-colors ${!isBulkMode ? 'text-white' : 'text-gray-400'}`}>
+                  <FaBuilding className="inline mr-1" />
+                  Manual
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsBulkMode(!isBulkMode)}
+                  className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900 ${
+                    isBulkMode ? 'bg-blue-600' : 'bg-gray-600'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
+                      isBulkMode ? 'translate-x-7' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+                <span className={`text-sm font-medium transition-colors ${isBulkMode ? 'text-white' : 'text-gray-400'}`}>
+                  <FaFileUpload className="inline mr-1" />
+                  Bulk Import
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Scrollable Form Container */}
         <div className="flex-1 overflow-y-auto">
-          <form className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {isBulkMode ? (
+            /* Bulk Import Mode */
+            <div className="bg-gradient-to-br from-purple-500/20 to-pink-500/20 backdrop-blur-sm border-2 border-purple-400/40 rounded-2xl p-4">
+              <div className="flex flex-col items-center justify-center space-y-3">
+                <FaChartBar className="text-purple-300 text-4xl" />
+                <h4 className="text-white font-medium text-xl">Bulk Import Companies</h4>
+                <p className="text-gray-200 text-center text-sm max-w-2xl">
+                  Upload an Excel file to import multiple companies at once. Make sure your file contains all required fields.
+                </p>
+                <div className="w-full mt-2">
+                  <ExcelUpload setUsers={setUsers} />
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Manual Form Mode */
+            <form className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="space-y-2">
               <label className="block text-white font-medium flex items-center space-x-2">
                 <FaBuilding className="text-blue-400" />
@@ -433,40 +483,45 @@ const AddCompany = ({
                 </p>
               )}
             </div>
-
-            {/* Excel Upload Section */}
-            <div className="md:col-span-2 lg:col-span-3 space-y-4">
-              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
-                <h4 className="text-white font-medium text-lg mb-3 flex items-center space-x-2">
-                  <FaChartBar className="text-teal-400" />
-                  <span>Bulk Import</span>
-                </h4>
-                <ExcelUpload setUsers={setUsers} />
-              </div>
-            </div>
           </form>
+          )}
         </div>
 
         {/* Action Buttons */}
-        <div className="mt-8 flex flex-col sm:flex-row gap-4">
-          <button
-            type="button"
-            onClick={upd ? handleUpdateCompany : handleAddCompany}
-            className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold py-4 px-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center space-x-2 backdrop-blur-sm border border-blue-400/30"
-          >
-            <span className="text-white">{upd ? <FaEdit /> : <FaCheck />}</span>
-            <span>{upd ? 'Update Company' : 'Add Company'}</span>
-          </button>
-          
-          <button
-            type="button"
-            onClick={closeAddCompanyForm}
-            className="flex-1 sm:flex-none bg-white/10 hover:bg-white/20 text-white font-semibold py-4 px-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center space-x-2 backdrop-blur-sm border border-white/20"
-          >
-            <FaTimes />
-            <span>Cancel</span>
-          </button>
-        </div>
+        {!isBulkMode && (
+          <div className="mt-8 flex flex-col sm:flex-row gap-4">
+            <button
+              type="button"
+              onClick={upd ? handleUpdateCompany : handleAddCompany}
+              disabled={loading}
+              className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold py-4 px-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center space-x-2 backdrop-blur-sm border border-blue-400/30 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span className="text-white">{upd ? <FaEdit /> : <FaCheck />}</span>
+              <span>{upd ? 'Update Company' : 'Add Company'}</span>
+            </button>
+            
+            <button
+              type="button"
+              onClick={closeAddCompanyForm}
+              className="flex-1 sm:flex-none bg-white/10 hover:bg-white/20 text-white font-semibold py-4 px-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center space-x-2 backdrop-blur-sm border border-white/20"
+            >
+              <FaTimes />
+              <span>Cancel</span>
+            </button>
+          </div>
+        )}
+        {isBulkMode && (
+          <div className="mt-8 flex justify-end">
+            <button
+              type="button"
+              onClick={closeAddCompanyForm}
+              className="bg-white/10 hover:bg-white/20 text-white font-semibold py-4 px-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center space-x-2 backdrop-blur-sm border border-white/20"
+            >
+              <FaTimes />
+              <span>Close</span>
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,11 +1,13 @@
 import { useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 const SendOTP = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isNew = location.state?.isNew || false;
 
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
@@ -23,14 +25,14 @@ const SendOTP = () => {
     try {
       const response = await axios.post(
         `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_SEND_OTP_ROUTE}`,
-        { email }
+        { email, isNew }
       );
       if (response.data?.success === true) {
         toast.dismiss(toastId);
         setIsLoading(false);
         toast.success("OTP sent successfully!");
         setTimeout(() => {
-          navigate("/verifyotp", { state: { email } });
+          navigate("/verifyotp", { state: { email, isNew } });
         }, 700);
       } else {
         toast.dismiss(toastId);
@@ -59,7 +61,7 @@ const SendOTP = () => {
 
           <div className="relative z-10">
             <h2 className="text-2xl font-bold mb-6 text-center bg-gradient-to-r from-primary-400 to-accent-400 bg-clip-text text-transparent">
-              Forgot Password
+              {isNew ? "Email Verification" : "Forgot Password"}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>

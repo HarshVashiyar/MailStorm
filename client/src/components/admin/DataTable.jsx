@@ -42,9 +42,10 @@ const DataTable = ({
   const UsersTableHeader = () => (
     <tr>
       <th className="py-2 px-4 text-center w-1/5">Full Name</th>
-      <th className="py-2 px-4 text-center w-1/5">Username</th>
+      {/* <th className="py-2 px-4 text-center w-1/5">Username</th> */}
       <th className="py-2 px-4 text-center w-1/4">Email</th>
       <th className="py-2 px-4 text-center w-1/5">Created</th>
+      <th className="py-2 px-4 text-center w-1/5">Updated</th>
       <th className="py-2 px-4 text-center w-16">
         <input
           ref={userSelectAllRef}
@@ -115,14 +116,17 @@ const DataTable = ({
       <td className="py-4 px-4 text-center">
         <div className="truncate font-medium text-white" title={user.fullName}>{user.fullName}</div>
       </td>
-      <td className="py-4 px-4 text-center">
+      {/* <td className="py-4 px-4 text-center">
         <div className="truncate text-accent-300" title={user.userName}>@{user.userName}</div>
-      </td>
+      </td> */}
       <td className="py-4 px-4 text-center">
         <div className="truncate text-gray-300" title={user.email}>{user.email}</div>
       </td>
       <td className="py-4 px-4 text-center text-xs text-gray-400">
         {new Date(user.createdAt).toLocaleDateString()}
+      </td>
+      <td className="py-4 px-4 text-center text-xs text-gray-400">
+        {new Date(user.updatedAt).toLocaleDateString()}
       </td>
       <td className="py-4 px-4 text-center">
         <input

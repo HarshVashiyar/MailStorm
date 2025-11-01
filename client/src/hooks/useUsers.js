@@ -7,7 +7,6 @@ const dummyUsers = [
   {
     _id: 'user1',
     fullName: 'John Doe',
-    userName: 'johndoe',
     email: 'john.doe@email.com',
     createdAt: new Date('2023-01-15').toISOString(),
     updatedAt: new Date('2023-06-20').toISOString(),
@@ -15,7 +14,6 @@ const dummyUsers = [
   {
     _id: 'user2',
     fullName: 'Jane Smith',
-    userName: 'janesmith',
     email: 'jane.smith@email.com',
     createdAt: new Date('2023-02-10').toISOString(),
     updatedAt: new Date('2023-07-15').toISOString(),
@@ -201,7 +199,7 @@ export const useUsers = () => {
     if (!user) return false;
 
     const searchFields = show
-      ? [user.fullName, user.userName, user.email]
+      ? [user.fullName, user.email]
       : [
         user.companyName,
         user.companyContactPersonName,
