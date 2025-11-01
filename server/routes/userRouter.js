@@ -29,7 +29,7 @@ app.post("/signup", handleUserSignUp);
 
 app.post("/signin", loginLimiter, handleUserSignIn);
 
-app.get("/getall", authenticateUser, handleGetAllUsers);
+app.get("/getall", authenticateUser, authorizeAdmin, handleGetAllUsers);
 
 app.get("/getuser", authenticateUser, handleGetUserById);
 
