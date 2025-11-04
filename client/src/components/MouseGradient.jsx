@@ -20,7 +20,7 @@ const MouseGradient = () => {
 
   return (
     <div 
-      className="fixed inset-0 pointer-events-none z-0"
+      className="fixed inset-0 pointer-events-none z-20"
       style={{
         background: `radial-gradient(600px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(255, 107, 53, 0.1) 0%, rgba(255, 107, 53, 0.05) 40%, transparent 100%)`
       }}

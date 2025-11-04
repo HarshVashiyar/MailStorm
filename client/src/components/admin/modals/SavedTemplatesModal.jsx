@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { 
   MdClose, 
   MdAdd, 
@@ -17,7 +18,18 @@ const SavedTemplatesModal = ({
   deleteSavedTemplate,
   closeSavedTemplatesTable,
 }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+
   if (!showSavedTemplatesTable) return null;
+
+  // Filter templates based on search term
+  const filteredTemplates = savedTemplates.filter((template) => {
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      template.templateName.toLowerCase().includes(searchLower) ||
+      template.templateSubject.toLowerCase().includes(searchLower)
+    );
+  });
 
   return (
     <div
@@ -25,21 +37,35 @@ const SavedTemplatesModal = ({
       style={{ zIndex: 1050 }}
     >
       <div className="bg-gray-900/80 backdrop-blur-lg p-8 rounded-3xl shadow-2xl shadow-orange-500/20 w-full max-w-6xl border border-orange-500/20 max-h-[85vh] overflow-hidden flex flex-col animate-glow">
-        {/* Header */}
-        <div className="mb-6">
-          <h3 className="text-3xl font-bold text-white flex items-center space-x-3 mb-2">
-            <MdDescription className="text-orange-400 text-4xl" />
-            <span className="bg-gradient-to-r from-orange-400 to-amber-400 bg-clip-text text-transparent">
-              Saved Email Templates
-            </span>
-          </h3>
-          <p className="text-gray-300 text-sm">
-            Manage your saved email templates and perform actions
-          </p>
+        {/* Header with Search Bar */}
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <div className="flex-1">
+            <h3 className="text-3xl font-bold text-white flex items-center space-x-3 mb-2">
+              <MdDescription className="text-orange-400 text-4xl" />
+              <span className="bg-gradient-to-r from-orange-400 to-amber-400 bg-clip-text text-transparent">
+                Saved Email Templates
+              </span>
+            </h3>
+            <p className="text-gray-300 text-sm">
+              Manage your saved email templates and perform actions
+            </p>
+          </div>
+          {/* Search Bar - Top Right */}
+          <div className="w-80">
+            <div className="relative">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search..."
+                className="w-full pl-3 pr-3 py-2 bg-gray-900 backdrop-blur-sm border border-orange-500/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300 text-sm"
+              />
+            </div>
+          </div>
         </div>
 
         {/* Action Buttons - Fixed Height Container */}
-        <div className="h-20 mb-6 flex items-start">
+        <div className="h-20 mb-2 flex items-start">
           <div className="flex flex-wrap gap-2">
             <button
               onClick={toggleManualTemplateForm}
@@ -80,7 +106,7 @@ const SavedTemplatesModal = ({
         </div>
 
         {/* Scrollable Table Container */}
-        <div className="flex-1 overflow-auto mb-6">
+        <div className="flex-1 overflow-auto mb-4">
           <div className="bg-gray-800/40 backdrop-blur-sm rounded-2xl border border-orange-500/20 overflow-hidden">
             <table className="w-full text-white">
               <thead className="bg-gradient-to-r from-orange-600/30 to-amber-600/30 backdrop-blur-sm">
@@ -106,18 +132,18 @@ const SavedTemplatesModal = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-orange-500/10">
-                {savedTemplates.length === 0 ? (
+                {filteredTemplates.length === 0 ? (
                   <tr>
                     <td colSpan="3" className="py-12 px-6 text-center text-gray-300">
                       <div className="flex flex-col items-center space-y-3">
                         <MdDescription className="text-6xl text-gray-500" />
-                        <p className="text-xl font-medium">No saved templates found</p>
-                        <p className="text-sm">Create your first email template to get started</p>
+                        <p className="text-xl font-medium">{savedTemplates.length === 0 ? 'No saved templates found' : 'No Results Found'}</p>
+                        <p className="text-sm">{savedTemplates.length === 0 ? 'Create your first email template to get started' : 'Try adjusting your search'}</p>
                       </div>
                     </td>
                   </tr>
                 ) : (
-                  savedTemplates.map((template, index) => (
+                  filteredTemplates.map((template, index) => (
                     <tr 
                       key={template.templateName} 
                       className={`transition-all duration-300 hover:bg-orange-500/5 ${ 

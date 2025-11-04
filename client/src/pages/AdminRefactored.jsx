@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 
 // Components
@@ -13,15 +12,15 @@ import ManualListFormModal from '../components/admin/modals/ManualListFormModal'
 import SavedListsModal from '../components/admin/modals/SavedListsModal';
 import SavedTemplatesModal from '../components/admin/modals/SavedTemplatesModal';
 import ManualTemplateFormModal from '../components/admin/modals/ManualTemplateFormModal';
+import ScheduledEmailsModal from '../components/admin/modals/ScheduledEmailsModal';
 
 // Hooks
 import { useUsers } from '../hooks/useUsers';
 import { useSavedLists } from '../hooks/useSavedLists';
 import { useSavedTemplates } from '../hooks/useSavedTemplates';
+import useScheduledEmailsModal from '../hooks/useScheduledEmailsModal';
 
 const AdminRefactored = () => {
-  const navigate = useNavigate();
-
   // Custom hooks for state management
   const {
     users,
@@ -41,6 +40,9 @@ const AdminRefactored = () => {
     updateUserNote,
     fetchUsers,
   } = useUsers();
+
+  // Scheduled emails modal hook
+  const { isOpen: isScheduledModalOpen, openModal: openScheduledModal, closeModal: closeScheduledModal } = useScheduledEmailsModal();
 
   const {
     savedLists,
@@ -191,15 +193,11 @@ const AdminRefactored = () => {
     fetchUsers();
   };
 
-  const goToScheduled = () => {
-    navigate('/Scheduled');
-  };
-
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-dark-900 via-dark-800 to-dark-900">
+    <div className="fixed inset-0 bg-gradient-to-br from-dark-900 via-dark-800 to-dark-900 z-10">
       {/* Background glow effects */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary-500/10 via-accent-500/5 to-primary-600/10 animate-pulse-slow"></div>
-      <div className="absolute inset-0 bg-gradient-radial from-primary-400/20 via-transparent to-transparent"></div>
+      <div className="absolute inset-0 bg-gradient-to-br from-primary-500/10 via-accent-500/5 to-primary-600/10 animate-pulse-slow pointer-events-none"></div>
+      <div className="absolute inset-0 bg-gradient-radial from-primary-400/20 via-transparent to-transparent pointer-events-none"></div>
       
       {/* Scrollable Content */}
       <div className="absolute inset-0 top-20 overflow-auto">
@@ -234,7 +232,7 @@ const AdminRefactored = () => {
               show={show}
               toggleView={toggleView}
               fetchSavedLists={fetchSavedLists}
-              goToScheduled={goToScheduled}
+              onScheduledClick={openScheduledModal}
               fetchSavedTemplates={fetchSavedTemplates}
               searchTerm={searchTerm}
               setSearchTerm={setSearchTerm}
@@ -358,6 +356,11 @@ const AdminRefactored = () => {
         initialTemplateContent={editingTemplate?.templateContent || ''}
         onSave={saveTemplate}
         onClose={closeManualTemplateForm}
+      />
+
+      <ScheduledEmailsModal
+        isOpen={isScheduledModalOpen}
+        onClose={closeScheduledModal}
       />
     </div>
   );

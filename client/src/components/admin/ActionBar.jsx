@@ -4,7 +4,7 @@ const ActionBar = ({
   show,
   toggleView,
   fetchSavedLists,
-  goToScheduled,
+  onScheduledClick,
   fetchSavedTemplates,
   searchTerm,
   setSearchTerm,
@@ -41,7 +41,7 @@ const ActionBar = ({
         
         {/* Schedule */}
         <button
-          onClick={goToScheduled}
+          onClick={onScheduledClick}
           className="group bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white flex-1 py-2 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg border border-purple-400/30"
         >
           <div className="text-center">

@@ -22,11 +22,14 @@ const ManualListFormModal = ({
 
   if (!showManualListForm) return null;
 
-  const handleSave = () => {
-    onSave(listName, typedEmail, contactNames);
-    setListName('');
-    setTypedEmail('');
-    setContactNames('');
+  const handleSave = async () => {
+    const success = await onSave(listName, typedEmail, contactNames);
+    // Only clear form if save was successful
+    if (success) {
+      setListName('');
+      setTypedEmail('');
+      setContactNames('');
+    }
   };
 
   const handleClose = () => {

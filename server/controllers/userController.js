@@ -65,7 +65,7 @@ const handleUserSignIn = async (req, res) => {
 
 const handleGetAllUsers = async (req, res) => {
     try {
-        const users = await User.find();
+        const users = await User.find({ role: 'User' });
         const data = users.map(user => ({
             _id: user._id,
             fullName: user.fullName,

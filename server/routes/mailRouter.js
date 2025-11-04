@@ -5,6 +5,8 @@ const {
   handleVerifyOTP,
   handleResetPassword,
   handleSendMail,
+  handleEnhanceSubject,
+  handleGenerateHTMLBody
 } = require("../controllers/mailController");
 const { authenticateUser } = require("../utilities/userUtil");
 const { upload } = require("../middlewares/storeFiles");
@@ -20,5 +22,9 @@ app.post("/verifyotp", handleVerifyOTP);
 app.post("/resetpassword", handleResetPassword);
 
 app.post("/sendmail", authenticateUser, upload.array("files"), handleSendMail);
+
+app.post("/enhance", authenticateUser, handleEnhanceSubject);
+
+app.post("/generate", authenticateUser, handleGenerateHTMLBody);
 
 module.exports = app;

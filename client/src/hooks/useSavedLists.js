@@ -263,6 +263,7 @@ export const useSavedLists = () => {
         return true;
       } else {
         toast.error(response.data?.message || "Update failed.");
+        return false;
       }
     } catch (error) {
       if (error.response?.data?.message) {
@@ -272,6 +273,7 @@ export const useSavedLists = () => {
       } else {
         toast.error("Something went wrong. Please try again.");
       }
+      return false;
     }
   };
 

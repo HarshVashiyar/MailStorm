@@ -23,11 +23,14 @@ const ManualTemplateFormModal = ({
 
   if (!showManualTemplateForm) return null;
 
-  const handleSave = () => {
-    onSave(templateName, templateSubject, templateContent);
-    setTemplateName('');
-    setTemplateSubject('');
-    setTemplateContent('');
+  const handleSave = async () => {
+    const success = await onSave(templateName, templateSubject, templateContent);
+    // Only clear form if save was successful
+    if (success) {
+      setTemplateName('');
+      setTemplateSubject('');
+      setTemplateContent('');
+    }
   };
 
   const handleClose = () => {

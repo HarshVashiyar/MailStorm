@@ -142,6 +142,7 @@ export const useSavedTemplates = () => {
           toast.dismiss(toastID);
           setLoading(false);
           toast.error(response.data?.message || "Update failed.");
+          return false;
         }
       } catch (error) {
         toast.dismiss(toastID);
@@ -153,6 +154,7 @@ export const useSavedTemplates = () => {
         } else {
           toast.error("Something went wrong. Please try again.");
         }
+        return false;
       }
     } else {
       const toastID = toast.loading("Creating template...");
@@ -176,6 +178,7 @@ export const useSavedTemplates = () => {
           toast.dismiss(toastID);
           setLoading(false);
           toast.error(response.data?.message || "Update failed.");
+          return false;
         }
       } catch (error) {
         toast.dismiss(toastID);
@@ -187,6 +190,7 @@ export const useSavedTemplates = () => {
         } else {
           toast.error("Something went wrong. Please try again.");
         }
+        return false;
       }
     }
   };

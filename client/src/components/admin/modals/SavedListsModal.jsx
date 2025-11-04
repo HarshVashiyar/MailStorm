@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { 
   MdClose, 
   MdAdd, 
@@ -23,7 +24,21 @@ const SavedListsModal = ({
   closeSavedListsTable,
   selectedUsersCount = 0,
 }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+
   if (!showSavedListsTable) return null;
+
+  // Filter lists based on search term
+  const filteredLists = savedLists.filter((list) => {
+    const searchLower = searchTerm.toLowerCase();
+    const emails = list.listItems?.map((item) => item.email).join(', ').toLowerCase() || '';
+    const contacts = list.listItems?.map((item) => item.contactName).join(', ').toLowerCase() || '';
+    return (
+      list.listName.toLowerCase().includes(searchLower) ||
+      emails.includes(searchLower) ||
+      contacts.includes(searchLower)
+    );
+  });
 
   return (
     <div
@@ -31,21 +46,35 @@ const SavedListsModal = ({
       style={{ zIndex: 1050 }}
     >
       <div className="bg-gray-900/80 backdrop-blur-lg p-8 rounded-3xl shadow-2xl shadow-orange-500/20 w-full max-w-6xl border border-orange-500/20 max-h-[85vh] overflow-hidden flex flex-col animate-glow">
-        {/* Header */}
-        <div className="mb-6">
-          <h3 className="text-3xl font-bold text-white flex items-center space-x-3 mb-2">
-            <MdFolder className="text-orange-400 text-4xl" />
-            <span className="bg-gradient-to-r from-orange-400 to-amber-400 bg-clip-text text-transparent">
-              Saved Email Lists
-            </span>
-          </h3>
-          <p className="text-gray-300 text-sm">
-            Manage your saved email lists and perform bulk actions
-          </p>
+        {/* Header with Search Bar */}
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <div className="flex-1">
+            <h3 className="text-3xl font-bold text-white flex items-center space-x-3 mb-2">
+              <MdFolder className="text-orange-400 text-4xl" />
+              <span className="bg-gradient-to-r from-orange-400 to-amber-400 bg-clip-text text-transparent">
+                Saved Email Lists
+              </span>
+            </h3>
+            <p className="text-gray-300 text-sm">
+              Manage your saved email lists and perform bulk actions
+            </p>
+          </div>
+          {/* Search Bar - Top Right */}
+          <div className="w-80">
+            <div className="relative">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search..."
+                className="w-full pl-3 pr-3 py-2 bg-gray-900 backdrop-blur-sm border border-orange-500/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300 text-sm"
+              />
+            </div>
+          </div>
         </div>
 
         {/* Action Buttons - Fixed Height Container */}
-        <div className="h-20 mb-6 flex items-start">
+        <div className="h-20 mb-2 flex items-start">
           <div className="flex flex-wrap gap-2">
             <button
               onClick={toggleManualListForm}
@@ -120,7 +149,7 @@ const SavedListsModal = ({
         </div>
 
         {/* Scrollable Table Container */}
-        <div className="flex-1 overflow-auto mb-6">
+        <div className="flex-1 overflow-auto mb-4">
           <div className="bg-gray-800/40 backdrop-blur-sm rounded-2xl border border-orange-500/20 overflow-hidden">
             <table className="w-full text-white">
               <thead className="bg-gradient-to-r from-orange-600/30 to-amber-600/30 backdrop-blur-sm">
@@ -152,18 +181,18 @@ const SavedListsModal = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-orange-500/10">
-                {savedLists.length === 0 ? (
+                {filteredLists.length === 0 ? (
                   <tr>
                     <td colSpan="4" className="py-12 px-6 text-center text-gray-300">
                       <div className="flex flex-col items-center space-y-3">
                         <MdFolder className="text-6xl text-gray-500" />
-                        <p className="text-xl font-medium">No saved lists found</p>
-                        <p className="text-sm">Create your first email list to get started</p>
+                        <p className="text-xl font-medium">{savedLists.length === 0 ? 'No saved lists found' : 'No Results Found'}</p>
+                        <p className="text-sm">{savedLists.length === 0 ? 'Create your first email list to get started' : 'Try adjusting your search'}</p>
                       </div>
                     </td>
                   </tr>
                 ) : (
-                  savedLists.map((list, index) => (
+                  filteredLists.map((list, index) => (
                     <tr 
                       key={list._id || `list-${index}`} 
                       className={`transition-all duration-300 hover:bg-orange-500/5 ${ 

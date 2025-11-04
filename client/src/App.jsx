@@ -12,7 +12,6 @@ import SendOTP from './pages/SendOTP';
 import VerifyOTP from './pages/VerifyOTP';
 import ResetPassword from './pages/ResetPassword';
 import AdminRefactored from './pages/AdminRefactored';
-import Scheduled from './pages/Scheduled';
 import { ToastContainer } from "react-toastify";
 
 export default function App() {
@@ -51,7 +50,6 @@ export default function App() {
             <Route path="/ResetPassword" element={<ResetPassword />} />
             <Route path="/Admin" element={<AdminRefactored />} />
             <Route path="/Profile" element={<Profile />} />
-            <Route path="/Scheduled" element={<Scheduled />} />
           </Routes>
         </main>
         <Footer />

@@ -14,7 +14,7 @@ import {
   FaPaperPlane,
   FaTimes,
   FaTrashAlt,
-  // FaSparkles
+  FaMagic
 } from 'react-icons/fa';
 import { MdDescription } from 'react-icons/md';
 
@@ -42,6 +42,10 @@ const EmailForm = ({
   const [loading, setLoading] = useState(false);
   const [availableTemplates, setAvailableTemplates] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState("");
+  const [formalityLevel, setFormalityLevel] = useState("neutral");
+  const [formalityLevelForContent, setFormalityLevelForContent] = useState("neutral");
+  const [enhancingSubject, setEnhancingSubject] = useState(false);
+  const [generatingHTML, setGeneratingHTML] = useState(false);
 
   // Fetch available templates on mount
   useEffect(() => {
@@ -108,6 +112,91 @@ const EmailForm = ({
     } catch (error) {
       toast.dismiss(toastId);
       setLoading(false);
+      if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else if (error.response?.data) {
+        toast.error(typeof error.response.data === 'string' ? error.response.data : "An error occurred.");
+      } else {
+        toast.error("Something went wrong. Please try again.");
+      }
+    }
+  };
+
+  const handleEnhanceSubject = async () => {
+    if (!subject || subject.trim().split(/\s+/).length < 2) {
+      toast.error("Please enter at least two words in the subject.");
+      return;
+    }
+
+    const toastId = toast.loading("Enhancing subject with AI...");
+    setEnhancingSubject(true);
+    try {
+      const response = await axios.post(
+        `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_ENHANCE_SUBJECT_ROUTE}`,
+        {
+          subject: subject,
+          formalityLevel: formalityLevel
+        },
+        { withCredentials: true }
+      );
+      if (response.data?.success === true) {
+        toast.dismiss(toastId);
+        setEnhancingSubject(false);
+        setSubject(response.data.enhancedSubject);
+        toast.success("✨ Subject enhanced successfully!");
+      } else {
+        toast.dismiss(toastId);
+        setEnhancingSubject(false);
+        toast.error(response.data?.message || "Enhancement failed.");
+      }
+    } catch (error) {
+      toast.dismiss(toastId);
+      setEnhancingSubject(false);
+      if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else if (error.response?.data) {
+        toast.error(typeof error.response.data === 'string' ? error.response.data : "An error occurred.");
+      } else {
+        toast.error("Something went wrong. Please try again.");
+      }
+    }
+  };
+
+  const handleGenerateHTML = async () => {
+    if (!subject || subject.trim().split(/\s+/).length < 2) {
+      toast.error("Please enter at least two words in the subject.");
+      return;
+    }
+
+    const toastId = toast.loading("Generating email content with AI...");
+    setGeneratingHTML(true);
+    try {
+      const response = await axios.post(
+        `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_GENERATE_HTML_ROUTE}`,
+        {
+          enhancedSubject: subject,
+          formalityLevel: formalityLevelForContent
+        },
+        { withCredentials: true }
+      );
+      if (response.data?.success === true) {
+        toast.dismiss(toastId);
+        setGeneratingHTML(false);
+        
+        // Clean up the HTML content by removing any markdown code blocks
+        let cleanHTML = response.data.HTMLContent;
+        cleanHTML = cleanHTML.replace(/^```html\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/g, '').trim();
+        
+        setHtml(cleanHTML);
+        toast.success("✨ Email content generated successfully!");
+      } else {
+        toast.dismiss(toastId);
+        setGeneratingHTML(false);
+        toast.error(response.data?.message || "Generation failed.");
+      }
+    } catch (error) {
+      toast.dismiss(toastId);
+      setGeneratingHTML(false);
       if (error.response?.data?.message) {
         toast.error(error.response.data.message);
       } else if (error.response?.data) {
@@ -371,10 +460,32 @@ const EmailForm = ({
         <div className="flex-1 overflow-y-auto space-y-6">
           {/* Subject Input */}
           <div>
-            <label className="block text-white font-medium mb-3 flex items-center space-x-2">
-              <FaEdit className="text-blue-400" />
-              <span>Subject Line:</span>
-            </label>
+            <div className="flex items-center justify-between mb-3">
+              <label className="flex items-center space-x-2 text-white font-medium">
+                <FaEdit className="text-blue-400" />
+                <span>Subject Line:</span>
+              </label>
+              <div className="flex items-center space-x-2">
+                <select
+                  value={formalityLevel}
+                  onChange={(e) => setFormalityLevel(e.target.value)}
+                  disabled={!subject || subject.trim().split(/\s+/).length < 2 || enhancingSubject}
+                  className="px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <option value="Informal- e.g., friend or close peer">Informal- e.g., friend or close peer</option>
+                  <option value="Neutral - e.g., colleague or vendor">Neutral - e.g., colleague or vendor</option>
+                  <option value="Formal - e.g., boss or client">Formal - e.g., boss or client</option>
+                </select>
+                <button
+                  onClick={handleEnhanceSubject}
+                  disabled={!subject || subject.trim().split(/\s+/).length < 2 || enhancingSubject}
+                  className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:from-purple-500 disabled:hover:to-pink-600"
+                >
+                  <FaMagic className={enhancingSubject ? "animate-spin" : ""} />
+                  <span>{enhancingSubject ? "Enhancing..." : "Enhance"}</span>
+                </button>
+              </div>
+            </div>
             <input
               type="text"
               value={subject}
@@ -386,10 +497,32 @@ const EmailForm = ({
 
           {/* Email Content Editor */}
           <div>
-            <label className="block text-white font-medium mb-3 flex items-center space-x-2">
-              <FaEdit className="text-green-400" />
-              <span>Email Content:</span>
-            </label>
+            <div className="flex items-center justify-between mb-3">
+              <label className="flex items-center space-x-2 text-white font-medium">
+                <FaEdit className="text-green-400" />
+                <span>Email Content:</span>
+              </label>
+              <div className="flex items-center space-x-2">
+                <select
+                  value={formalityLevelForContent}
+                  onChange={(e) => setFormalityLevelForContent(e.target.value)}
+                  disabled={!subject || subject.trim().split(/\s+/).length < 2 || generatingHTML}
+                  className="px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <option value="Informal- e.g., friend or close peer">Informal- e.g., friend or close peer</option>
+                  <option value="Neutral - e.g., colleague or vendor">Neutral - e.g., colleague or vendor</option>
+                  <option value="Formal - e.g., boss or client">Formal - e.g., boss or client</option>
+                </select>
+                <button
+                  onClick={handleGenerateHTML}
+                  disabled={!subject || subject.trim().split(/\s+/).length < 2 || generatingHTML}
+                  className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:from-purple-500 disabled:hover:to-pink-600"
+                >
+                  <FaMagic className={generatingHTML ? "animate-spin" : ""} />
+                  <span>{generatingHTML ? "Generating..." : "Generate"}</span>
+                </button>
+              </div>
+            </div>
             <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 overflow-hidden">
               <NewPost setHtml={setHtml} initialContent={html} />
             </div>
