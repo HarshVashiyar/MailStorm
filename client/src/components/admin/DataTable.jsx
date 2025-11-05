@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import Notes from '../../pages/Notes';
+import NotesModal from '../modals/NotesModal';
 
 const DataTable = ({
   filteredUsers,
@@ -332,7 +332,7 @@ const DataTable = ({
       </div>
 
       {viewNote && (
-        <Notes
+        <NotesModal
           user={filteredUsers.find((u) => u._id === noteId)}
           show={show}
           note={note}

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import ExcelUpload from './ExcelUpload';
+import ExcelUpload from '../ExcelUpload';
 import { 
   FaBuilding, 
   FaGlobe, 
@@ -20,7 +20,7 @@ import {
   FaFileUpload
 } from 'react-icons/fa';
 
-const AddCompany = ({
+const AddCompanyModal = ({
   upd,
   users,
   setUsers,
@@ -527,4 +527,4 @@ const AddCompany = ({
   );
 };
 
-export default AddCompany;
+export default AddCompanyModal;

@@ -6,7 +6,6 @@ import Footer from './components/Footer';
 import Home from './pages/Home';
 import SignUp from './pages/SignUp';
 import SignIn from './pages/SignIn';
-import SignOut from './pages/SignOut';
 import Profile from './pages/Profile';
 import SendOTP from './pages/SendOTP';
 import VerifyOTP from './pages/VerifyOTP';
@@ -44,7 +43,6 @@ export default function App() {
             <Route path="/" element={<Home />} />
             <Route path="/SignUp" element={<SignUp />} />
             <Route path="/SignIn" element={<SignIn />} />
-            <Route path="/SignOut" element={<SignOut />} />
             <Route path="/SendOTP" element={<SendOTP />} />
             <Route path="/VerifyOTP" element={<VerifyOTP />} />
             <Route path="/ResetPassword" element={<ResetPassword />} />

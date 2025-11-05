@@ -8,13 +8,35 @@ const Verifyotp = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const email = location.state?.email || "";
-  const isNew = location.state?.isNew || false;
+  const isNew = location.state?.isNew ?? null;
+  
+  // Security: Redirect if no email or isNew flag is missing
+  useEffect(() => {
+    if (!email || isNew === null) {
+      toast.error("Invalid access. Please start from the beginning.");
+      navigate("/signin", { replace: true });
+    }
+  }, [email, isNew, navigate]);
+
+  // Prevent browser back button from breaking the flow
+  useEffect(() => {
+    const handlePopState = () => {
+      navigate("/signin", { replace: true });
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [navigate]);
 
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState(150);
   const inputRefs = useRef([]);
+
+  // Don't render if security check fails
+  if (!email || isNew === null) {
+    return null;
+  }
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -94,9 +116,9 @@ const Verifyotp = () => {
         toast.success("OTP verified successfully!");
         setTimeout(() => {
           if (isNew) {
-            navigate("/signup", { state: { email } });
+            navigate("/signup", { state: { email }, replace: true });
           } else {
-            navigate("/resetpassword", { state: { email } });
+            navigate("/resetpassword", { state: { email }, replace: true });
           }
         }, 700);
       } else {

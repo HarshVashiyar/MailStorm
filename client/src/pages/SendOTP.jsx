@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -7,11 +7,33 @@ import "react-toastify/dist/ReactToastify.css";
 const SendOTP = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const isNew = location.state?.isNew || false;
+  const isNew = location.state?.isNew ?? null;
+  
+  // Security: Redirect if isNew flag is missing (must come from proper flow)
+  useEffect(() => {
+    if (isNew === null) {
+      toast.error("Invalid access. Please use the proper authentication flow.");
+      navigate("/signin", { replace: true });
+    }
+  }, [isNew, navigate]);
+
+  // Prevent browser back button from breaking the flow
+  useEffect(() => {
+    const handlePopState = () => {
+      navigate("/signin", { replace: true });
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [navigate]);
 
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  // Don't render if security check fails
+  if (isNew === null) {
+    return null;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -32,7 +54,7 @@ const SendOTP = () => {
         setIsLoading(false);
         toast.success("OTP sent successfully!");
         setTimeout(() => {
-          navigate("/verifyotp", { state: { email, isNew } });
+          navigate("/verifyotp", { state: { email, isNew }, replace: true });
         }, 700);
       } else {
         toast.dismiss(toastId);

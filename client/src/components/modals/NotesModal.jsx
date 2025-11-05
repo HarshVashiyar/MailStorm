@@ -4,7 +4,7 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { MdSave, MdClose, MdNote, MdInfo } from 'react-icons/md';
 
-const Notes = ({ user, show, noteId, note, setNote, closeForm, updatedNoteInList }) => {
+const NotesModal = ({ user, show, noteId, note, setNote, closeForm, updatedNoteInList }) => {
   const [originalNote, setOriginalNote] = useState('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -178,4 +178,4 @@ const Notes = ({ user, show, noteId, note, setNote, closeForm, updatedNoteInList
   );
 };
 
-export default Notes;
+export default NotesModal;

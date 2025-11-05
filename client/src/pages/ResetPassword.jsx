@@ -8,6 +8,23 @@ const ResetPassword = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const email = location.state?.email || "";
+  
+  // Security: Redirect if no email is provided (must come from VerifyOTP)
+  useEffect(() => {
+    if (!email) {
+      toast.error("Invalid access. Please verify your email first.");
+      navigate("/sendotp", { state: { isNew: false }, replace: true });
+    }
+  }, [email, navigate]);
+
+  // Prevent browser back button from breaking the flow
+  useEffect(() => {
+    const handlePopState = () => {
+      navigate("/signin", { replace: true });
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [navigate]);
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -16,6 +33,11 @@ const ResetPassword = () => {
   const [timeLeft, setTimeLeft] = useState(150); // 2 minutes 30 seconds initial timeout
   const timerRef = useRef(null);
   const MAX_TIME = 150; // Maximum time cap: 2 minutes 30 seconds
+
+  // Don't render if no email
+  if (!email) {
+    return null;
+  }
 
   useEffect(() => {
     // Start countdown timer

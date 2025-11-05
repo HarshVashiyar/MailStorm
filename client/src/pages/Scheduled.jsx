@@ -237,7 +237,19 @@ const Scheduled = () => {
                             <div className="truncate text-gray-300" title={email.from}>{email.from}</div>
                           </td>
                           <td className="py-4 px-4 text-center">
-                            <div className="truncate text-gray-300" title={email.to}>{email.to}</div>
+                            <div 
+                              className="truncate text-gray-300 cursor-help"
+                              title={Array.isArray(email.to) ? email.to.join(', ') : email.to}
+                            >
+                              {Array.isArray(email.to) ? (
+                                <>
+                                  {email.to.slice(0, 2).join(', ')}
+                                  {email.to.length > 2 && <span className="text-primary-400 ml-1">+{email.to.length - 2} more</span>}
+                                </>
+                              ) : (
+                                email.to
+                              )}
+                            </div>
                           </td>
                           <td className="py-4 px-4 text-center">
                             <div className="truncate font-medium text-white" title={email.subject}>{email.subject}</div>

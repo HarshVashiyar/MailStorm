@@ -82,9 +82,6 @@ const sendScheduledMail = async ({
     const MAIL_USER = process.env.MAIL_USER_1;
     const MAIL_PASS = process.env.MAIL_PASS_1;
     const MAIL_FROM = process.env.MAIL_FROM_1;
-    if (typeof to[0] === "string") {
-      to = to[0].split(",").map((mail) => mail.trim());
-    }
     if (to.length !== recipientPeople.length) {
       recipientPeople = [];
     }

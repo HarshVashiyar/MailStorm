@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -9,14 +9,44 @@ const SignUp = () => {
   const location = useLocation();
   const verifiedEmail = location.state?.email || "";
   
+  // Security: Redirect if no verified email is provided
+  useEffect(() => {
+    if (!verifiedEmail) {
+      toast.error("Please verify your email first before signing up.");
+      navigate("/sendotp", { state: { isNew: true }, replace: true });
+    }
+  }, [verifiedEmail, navigate]);
+
+  // Prevent browser back button from breaking the flow
+  useEffect(() => {
+    const handlePopState = () => {
+      navigate("/signin", { replace: true });
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [navigate]);
+  
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState(verifiedEmail);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
+  // Don't render if no verified email
+  if (!verifiedEmail) {
+    return null;
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Extra security check: ensure email matches verified email
+    if (email !== verifiedEmail) {
+      toast.error("Email mismatch. Please start the signup process again.");
+      navigate("/sendotp", { state: { isNew: true }, replace: true });
+      return;
+    }
+    
     if (!fullName || !email || !password) {
       setError("Fields marked with * are required.");
       return;
@@ -92,9 +122,8 @@ const SignUp = () => {
                   id="email"
                   name="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className={`mt-1 block w-full bg-dark-800/50 text-white placeholder-gray-400 border border-white/10 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-400/40 focus:border-primary-400/40 backdrop-blur-sm transition-all duration-300 ${verifiedEmail ? 'opacity-60 cursor-not-allowed' : ''}`}
-                  disabled={!!verifiedEmail}
+                  readOnly
+                  className="mt-1 block w-full bg-dark-800/50 text-white placeholder-gray-400 border border-white/10 rounded-lg px-4 py-2 opacity-60 cursor-not-allowed backdrop-blur-sm"
                   required
                 />
               </div>
@@ -125,17 +154,6 @@ const SignUp = () => {
                 Signup
               </button>
             </form>
-            {!verifiedEmail && (
-              <p className="text-center mt-4 text-sm text-gray-400">
-                New user?{" "}
-                <span
-                  className="text-primary-400 hover:text-accent-400 font-semibold underline-offset-4 hover:underline transition-colors duration-300 cursor-pointer"
-                  onClick={() => navigate("/sendotp", { state: { isNew: true } })}
-                >
-                  Verify your email first
-                </span>
-              </p>
-            )}
             <p className="text-center mt-4">
               Already have an account?{" "}
               <a href="/SignIn" className="text-primary-400 hover:text-accent-400 underline-offset-4 hover:underline transition-colors duration-300">

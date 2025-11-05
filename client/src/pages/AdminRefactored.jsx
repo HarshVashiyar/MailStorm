@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { toast } from 'react-toastify';
 
 // Components
-import AddCompany from './AddCompany';
-import Email from './Email';
+import AddCompanyModal from '../components/modals/AddCompanyModal';
+import EmailModal from '../components/modals/EmailModal';
 import DummyDataBanner from '../components/admin/DummyDataBanner';
 import ActionBar from '../components/admin/ActionBar';
 import SelectedItemsActionBar from '../components/admin/SelectedItemsActionBar';
@@ -287,7 +287,7 @@ const AdminRefactored = () => {
 
       {/* Modals */}
       {showAddCompanyModal && (
-        <AddCompany
+        <AddCompanyModal
           upd={updateCompany}
           users={users}
           setUsers={setUsers}
@@ -298,7 +298,7 @@ const AdminRefactored = () => {
       )}
 
       {(showEmailForm || schedule) && (
-        <Email
+        <EmailModal
           closeForm={closeEmailForm}
           show={show}
           users={users}

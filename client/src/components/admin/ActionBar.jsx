@@ -1,4 +1,4 @@
-import { exportCompaniesToExcel } from '../../pages/ExportCompanies';
+import { exportCompaniesToExcel } from '../../utils/exportCompanies';
 
 const ActionBar = ({
   show,

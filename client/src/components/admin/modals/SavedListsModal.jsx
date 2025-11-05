@@ -209,13 +209,21 @@ const SavedListsModal = ({
                         </div>
                       </td>
                       <td className="py-4 px-6">
-                        <div className="max-w-xs truncate text-gray-300 text-sm">
-                          {list.listItems?.map((item) => item.email).join(', ')}
+                        <div 
+                          className="max-w-xs truncate text-gray-300 text-sm cursor-help"
+                          title={list.listItems?.map((item) => item.email).join(', ')}
+                        >
+                          {list.listItems?.slice(0, 2).map((item) => item.email).join(', ')}
+                          {list.listItems?.length > 2 && <span className="text-orange-400 ml-1">+{list.listItems.length - 2} more</span>}
                         </div>
                       </td>
                       <td className="py-4 px-6">
-                        <div className="max-w-xs truncate text-gray-300 text-sm">
-                          {list.listItems?.map((item) => item.contactName).join(', ')}
+                        <div 
+                          className="max-w-xs truncate text-gray-300 text-sm cursor-help"
+                          title={list.listItems?.map((item) => item.contactName).join(', ')}
+                        >
+                          {list.listItems?.slice(0, 2).map((item) => item.contactName).join(', ')}
+                          {list.listItems?.length > 2 && <span className="text-orange-400 ml-1">+{list.listItems.length - 2} more</span>}
                         </div>
                       </td>
                       <td className="py-4 px-6 text-center">

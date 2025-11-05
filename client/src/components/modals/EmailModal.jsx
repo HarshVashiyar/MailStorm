@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import NewPost from "../components/NewPost";
+import NewPost from "../NewPost";
 import {
   FaEnvelope,
   FaCalendarAlt,
@@ -18,7 +18,7 @@ import {
 } from 'react-icons/fa';
 import { MdDescription } from 'react-icons/md';
 
-const EmailForm = ({
+const EmailModal = ({
   setTypedEmail,
   closeForm,
   show,
@@ -643,4 +643,4 @@ const EmailForm = ({
   );
 };
 
-export default EmailForm;
+export default EmailModal;
