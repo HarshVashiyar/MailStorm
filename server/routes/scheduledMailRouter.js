@@ -4,6 +4,7 @@ const {
   handleAddScheduledMail,
   handleGetScheduledMails,
   handleDeleteScheduledMails,
+  // handleUpdateScheduledMail
 } = require("../controllers/scheduledMailController");
 const { scheduledUpload, processFiles } = require("../middlewares/storeFiles");
 const { authenticateUser } = require("../utilities/userUtil");
@@ -31,6 +32,8 @@ app.post(
   processFiles,
   handleAddScheduledMail
 );
+
+// app.put("/update", authenticateUser, handleUpdateScheduledMail);
 
 app.delete("/remove", authenticateUser, handleDeleteScheduledMails);
 

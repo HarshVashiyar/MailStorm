@@ -33,6 +33,8 @@ mongoose
   .connect(mongo_URI)
   .then(() => {
     console.log("Connected to database successfully");
+    console.log("Starting email workers...");
+    require('./workers/emailWorker');
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
     });

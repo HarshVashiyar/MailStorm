@@ -1,4 +1,5 @@
 .env
+*.xlsx
 
 # Logs
 logs

@@ -60,7 +60,6 @@ const scheduledMailSchema = new mongoose.Schema(
                 message: 'HTML content is invalid, or contains potentially unsafe content!'
             },
             minlength: [3, 'Email content must be at least 3 characters long!'],
-            // maxlength: [50000, 'Email content cannot exceed 50000 characters!']
         },
         attachments: [
             {
@@ -75,9 +74,14 @@ const scheduledMailSchema = new mongoose.Schema(
         },
         status: {
             type: String,
-            enum: ['Pending', 'Sent'],
+            enum: ['Pending', 'Sent', 'Failed'],
             default: 'Pending',
             required: true
+        },
+        // ✨ NEW: Store Bull queue job ID for tracking
+        jobId: {
+            type: String,
+            index: true,
         },
         createdBy: {
             type: mongoose.Schema.Types.ObjectId,
@@ -87,6 +91,10 @@ const scheduledMailSchema = new mongoose.Schema(
     },
     { timestamps: true }
 );
+
+// Index for efficient querying
+scheduledMailSchema.index({ sendAt: 1, status: 1 });
+scheduledMailSchema.index({ createdBy: 1, status: 1 });
 
 const ScheduledMail = mongoose.model("ScheduledMail", scheduledMailSchema);
 module.exports = ScheduledMail;

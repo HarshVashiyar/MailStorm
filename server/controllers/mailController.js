@@ -1,8 +1,9 @@
 const {
   sendOTP,
   verifyOTP,
-  sendMail
+  // sendMail
 } = require("../utilities/mailUtil");
+const { emailQueue, scheduledEmailQueue } = require("../config/queue");
 const User = require("../models/userDB");
 const { GoogleGenAI } = require("@google/genai");
 const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
@@ -64,33 +65,322 @@ const handleResetPassword = async (req, res) => {
 
 const handleSendMail = async (req, res) => {
   const { to, subject, recipientPeople, html } = req.body;
+  const user = req.user;
   try {
     if (!to || !subject || !html) {
       return res.status(400).json({
         success: false,
-        message:
-          "Recipient email(s), subject, and content are required.",
+        message: "Recipient email(s), subject, and content are required.",
       });
     }
+
     const emailAddresses = to.split(",").map((mail) => mail.trim());
-    const attachments = req.files.map((file) => ({
+    const recipients = recipientPeople ? JSON.parse(recipientPeople) : [];
+    
+    // Prepare attachments from uploaded files
+    const attachments = req.files?.map((file) => ({
       filename: file.originalname,
-      content: file.buffer,
+      content: file.buffer.toString('base64'),  // ← Convert to base64
+      encoding: 'base64',                       // ← Tell nodemailer
+      contentType: file.mimetype,               // ← Preserve type
+    })) || [];
+
+    // Prepare email data for queue
+    const emails = emailAddresses.map((email, index) => ({
+      to: email,
+      recipientName: recipients[index] || 'User',
     }));
-    const mailContent = {
-      to: emailAddresses,
-      subject,
-      recipientPeople: recipientPeople ? JSON.parse(recipientPeople) : [],
-      html,
-      attachments,
-    };
-    const response = await sendMail(mailContent);
-    return res.status(response.success ? 200 : 500).json(response);
+
+    // Add bulk email job to queue
+    const job = await emailQueue.add(
+      'bulk-email',
+      {
+        emails,
+        subject,
+        html,
+        attachments,
+        userId: user.id,
+        from: process.env.MAIL_FROM_1,
+      },
+      {
+        priority: 1, // High priority for direct sends
+        attempts: 3,
+      }
+    );
+
+    // Compute approximate queue position (Bull doesn't expose job.getPosition())
+    let queuePosition = null;
+    try {
+      const waiting = await emailQueue.getWaiting();
+      const idxWaiting = waiting.findIndex((j) => String(j.id) === String(job.id));
+      if (idxWaiting !== -1) {
+        queuePosition = idxWaiting;
+      } else {
+        const active = await emailQueue.getActive();
+        const idxActive = active.findIndex((j) => String(j.id) === String(job.id));
+        if (idxActive !== -1) {
+          queuePosition = waiting.length + idxActive;
+        } else {
+          const delayed = await emailQueue.getDelayed();
+          const idxDelayed = delayed.findIndex((j) => String(j.id) === String(job.id));
+          if (idxDelayed !== -1) {
+            queuePosition = waiting.length + active.length + idxDelayed;
+          }
+        }
+      }
+    } catch (posErr) {
+      console.error('Error computing queue position:', posErr);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Email job queued successfully! ${emailAddresses.length} email(s) will be sent.`,
+      jobId: job.id,
+      totalEmails: emailAddresses.length,
+      // queuePosition: job.getPosition,
+      queuePosition,
+    });
   } catch (error) {
-    console.error("Error in handleSendMail:", error);
-    return res.status(500).json({ success: false, message: + error.message });
+    console.error("Error queuing emails:", error);
+    return res.status(500).json({ 
+      success: false, 
+      message: "Failed to queue emails",
+      error: error.message 
+    });
+  }
+};
+
+const handleGetQueueStats = async (req, res) => {
+  try {
+    const [
+      emailWaiting,
+      emailActive,
+      emailCompleted,
+      emailFailed,
+      emailDelayed,
+      scheduledWaiting,
+      scheduledActive,
+      scheduledCompleted,
+      scheduledFailed,
+      scheduledDelayed,
+    ] = await Promise.all([
+      emailQueue.getWaitingCount(),
+      emailQueue.getActiveCount(),
+      emailQueue.getCompletedCount(),
+      emailQueue.getFailedCount(),
+      emailQueue.getDelayedCount(),
+      scheduledEmailQueue.getWaitingCount(),
+      scheduledEmailQueue.getActiveCount(),
+      scheduledEmailQueue.getCompletedCount(),
+      scheduledEmailQueue.getFailedCount(),
+      scheduledEmailQueue.getDelayedCount(),
+    ]);
+    
+    res.json({
+      success: true,
+      queues: {
+        email: {
+          waiting: emailWaiting,
+          active: emailActive,
+          completed: emailCompleted,
+          failed: emailFailed,
+          delayed: emailDelayed,
+          total: emailWaiting + emailActive + emailDelayed,
+        },
+        scheduled: {
+          waiting: scheduledWaiting,
+          active: scheduledActive,
+          completed: scheduledCompleted,
+          failed: scheduledFailed,
+          delayed: scheduledDelayed,
+          total: scheduledWaiting + scheduledActive + scheduledDelayed,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching queue stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch queue statistics',
+      error: error.message,
+    });
   }
 }
+
+// ✨ NEW: Get job status
+const handleGetJobStatus = async (req, res) => {
+  const { jobId } = req.params;
+  
+  try {
+    const job = await emailQueue.getJob(jobId);
+    
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        message: "Job not found"
+      });
+    }
+
+    const state = await job.getState();
+    const progress = job.progress();
+    const reason = job.failedReason;
+
+    return res.status(200).json({
+      success: true,
+      job: {
+        id: job.id,
+        state,
+        progress,
+        failedReason: reason,
+        attemptsMade: job.attemptsMade,
+        processedOn: job.processedOn,
+        finishedOn: job.finishedOn,
+        data: {
+          totalEmails: job.data.emails?.length || 1,
+          subject: job.data.subject,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching job status:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch job status",
+      error: error.message,
+    });
+  }
+};
+
+// ✨ NEW: Get user's job history
+const handleGetJobHistory = async (req, res) => {
+  const user = req.user;
+  const { status = 'all', limit = 20 } = req.query;
+  
+  try {
+    let jobs = [];
+    
+    if (status === 'completed' || status === 'all') {
+      const completed = await emailQueue.getCompleted(0, limit);
+      jobs = jobs.concat(completed);
+    }
+    
+    if (status === 'failed' || status === 'all') {
+      const failed = await emailQueue.getFailed(0, limit);
+      jobs = jobs.concat(failed);
+    }
+    
+    if (status === 'active' || status === 'all') {
+      const active = await emailQueue.getActive(0, limit);
+      jobs = jobs.concat(active);
+    }
+    
+    if (status === 'waiting' || status === 'all') {
+      const waiting = await emailQueue.getWaiting(0, limit);
+      jobs = jobs.concat(waiting);
+    }
+
+    // Filter jobs by userId
+    const userJobs = jobs.filter(job => job.data.userId === user.id);
+
+    const jobsData = await Promise.all(
+      userJobs.map(async (job) => ({
+        id: job.id,
+        state: await job.getState(),
+        progress: job.progress(),
+        data: {
+          subject: job.data.subject,
+          totalEmails: job.data.emails?.length || 1,
+        },
+        timestamp: job.timestamp,
+        processedOn: job.processedOn,
+        finishedOn: job.finishedOn,
+        failedReason: job.failedReason,
+      }))
+    );
+
+    return res.status(200).json({
+      success: true,
+      jobs: jobsData,
+      total: jobsData.length,
+    });
+  } catch (error) {
+    console.error("Error fetching job history:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch job history",
+      error: error.message,
+    });
+  }
+};
+
+// ✨ NEW: Retry failed job
+const handleRetryJob = async (req, res) => {
+  const { jobId } = req.params;
+  
+  try {
+    const job = await emailQueue.getJob(jobId);
+    
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        message: "Job not found"
+      });
+    }
+
+    const state = await job.getState();
+    
+    if (state !== 'failed') {
+      return res.status(400).json({
+        success: false,
+        message: `Job is ${state}, can only retry failed jobs`
+      });
+    }
+
+    await job.retry();
+
+    return res.status(200).json({
+      success: true,
+      message: "Job queued for retry",
+      jobId: job.id,
+    });
+  } catch (error) {
+    console.error("Error retrying job:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to retry job",
+      error: error.message,
+    });
+  }
+};
+// const handleSendMail = async (req, res) => {
+//   const { to, subject, recipientPeople, html } = req.body;
+//   try {
+//     if (!to || !subject || !html) {
+//       return res.status(400).json({
+//         success: false,
+//         message:
+//           "Recipient email(s), subject, and content are required.",
+//       });
+//     }
+//     const emailAddresses = to.split(",").map((mail) => mail.trim());
+//     const attachments = req.files.map((file) => ({
+//       filename: file.originalname,
+//       content: file.buffer,
+//     }));
+//     const mailContent = {
+//       to: emailAddresses,
+//       subject,
+//       recipientPeople: recipientPeople ? JSON.parse(recipientPeople) : [],
+//       html,
+//       attachments,
+//     };
+//     const response = await sendMail(mailContent);
+//     return res.status(response.success ? 200 : 500).json(response);
+//   } catch (error) {
+//     console.error("Error in handleSendMail:", error);
+//     return res.status(500).json({ success: false, message: + error.message });
+//   }
+// }
 
 const handleEnhanceSubject = async (req, res) => {
   const { subject, formalityLevel } = req.body;
@@ -213,6 +503,10 @@ module.exports = {
   handleVerifyOTP,
   handleResetPassword,
   handleSendMail,
+  handleGetQueueStats,
+  handleGetJobStatus,
+  handleGetJobHistory,
+  handleRetryJob,
   handleEnhanceSubject,
   handleGenerateHTMLBody
 }
