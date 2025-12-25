@@ -67,6 +67,7 @@ export const useUsers = () => {
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [show, setShow] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterProcurement, setFilterProcurement] = useState(false);
   const [isUsingDummyData, setIsUsingDummyData] = useState(false);
 
   // Fetch users/companies from API or use dummy data
@@ -198,23 +199,52 @@ export const useUsers = () => {
   const filteredUsers = (users || []).filter((user) => {
     if (!user) return false;
 
+    // Build searchable fields with sensible fallbacks so search works even
+    // if the API returns slightly different user field names.
     const searchFields = show
-      ? [user.fullName, user.email]
+      ? [
+          user.fullName,
+          user.email,
+          user.name,
+          user.userName,
+          user.username,
+          `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+        ]
       : [
-        user.companyName,
-        user.companyContactPersonName,
-        user.companyAddress,
-        user.companyCountry,
-        user.companyEmail,
-        user.companyPhone,
-        user.companyContactPersonPhone,
-        user.companyWebsite,
-        ...(user.companyProductGroup || []),
-      ];
+          user.companyName,
+          user.companyContactPersonName,
+          user.companyAddress,
+          user.companyCountry,
+          user.companyEmail,
+          user.companyPhone,
+          user.companyContactPersonPhone,
+          user.companyWebsite,
+          ...(user.companyProductGroup || []),
+        ];
 
-    return searchFields.some((field) =>
-      field && String(field).toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    // Normalize search input into keywords (support both array and space-separated string)
+    const keywords = Array.isArray(searchTerm)
+      ? searchTerm.map(k => String(k).trim().toLowerCase()).filter(Boolean)
+      : String(searchTerm || '').split(/\s+/).map(k => k.trim().toLowerCase()).filter(Boolean);
+
+    if (keywords.length === 0 && !filterProcurement) return true;
+
+    // If procurement filter is enabled for companies, require procurement=true
+    if (!show && filterProcurement) {
+      const hasProcurement = Boolean(
+        user.hasProcurementTeam ?? user.procurementTeam ?? user.procurement ?? user.hasProcurement
+      );
+      if (!hasProcurement) return false;
+    }
+
+    // Combine all searchable fields into one string to allow matching keywords across fields
+    const haystack = searchFields
+      .filter(Boolean)
+      .map(f => String(f).toLowerCase())
+      .join(' ');
+
+    // Require that every keyword appears somewhere in the combined fields
+    return keywords.every(k => haystack.includes(k));
   });
 
   return {
@@ -225,6 +255,8 @@ export const useUsers = () => {
     show,
     searchTerm,
     setSearchTerm,
+    filterProcurement,
+    setFilterProcurement,
     filteredUsers,
     isUsingDummyData,
     toggleView,

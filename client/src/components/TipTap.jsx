@@ -75,7 +75,7 @@ const Tiptap = ({ onEditorContentSave, initialContent = '' }) => {
     },
     editorProps: {
       attributes: {
-        class: 'prose prose-invert max-w-none focus:outline-none min-h-[200px] px-4 py-3',
+        class: 'prose prose-invert max-w-none focus:outline-none min-h-[40vh] px-3 py-2',
       },
     },
   });
@@ -110,90 +110,90 @@ const Tiptap = ({ onEditorContentSave, initialContent = '' }) => {
   if (!editor) return null;
 
   const getButtonClass = (active, variant = 'default') => {
-    const baseClass = 'flex items-center justify-center w-10 h-10 rounded-lg transition-all duration-300 transform hover:scale-105 border';
-    
+    const baseClass = 'flex items-center justify-center w-7 h-7 rounded-sm transition-all duration-150 transform hover:scale-105 border';
+
     if (active) {
-      return `${baseClass} bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/25 border-orange-400/50`;
+      return `${baseClass} bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-sm shadow-orange-500/20 border-orange-400/40`;
     }
-    
+
     if (variant === 'utility') {
-      return `${baseClass} bg-gray-700/40 hover:bg-gray-600/60 text-gray-300 hover:text-white border-gray-600/30 hover:border-gray-500/50`;
+      return `${baseClass} bg-gray-700/40 text-gray-300 border-gray-600/30`;
     }
-    
-    return `${baseClass} bg-gray-800/60 hover:bg-gray-700/80 text-gray-300 hover:text-white border-orange-500/20 hover:border-orange-400/40`;
+
+    return `${baseClass} bg-gray-800/60 hover:bg-gray-700/80 text-gray-300 border-orange-500/20`;
   };
 
   return (
-    <div className="bg-gray-900/80 backdrop-blur-lg rounded-2xl border border-orange-500/20 shadow-2xl shadow-orange-500/10 flex flex-col max-h-[450px]">
+    <div className="bg-gray-900/80 backdrop-blur-lg rounded-2xl border border-orange-500/20 shadow-2xl shadow-orange-500/10 flex flex-col max-h-[85vh]">
       {/* Sticky Toolbar */}
-      <div className="flex-shrink-0 bg-gradient-to-r from-gray-800/95 to-gray-700/95 backdrop-blur-md p-4 border-b border-orange-500/20 rounded-t-2xl">
+      <div className="flex-shrink-0 bg-gradient-to-r from-gray-800/95 to-gray-700/95 backdrop-blur-md p-2 border-b border-orange-500/20 rounded-t-2xl">
         {/* Primary Formatting Tools */}
-        <div className="flex flex-wrap gap-2 mb-3">
+        <div className="flex flex-wrap gap-1 mb-1">
           {/* Text Formatting Group */}
-          <div className="flex gap-1 bg-gray-800/40 p-1 rounded-xl border border-gray-600/30">
+          <div className="flex gap-1 bg-gray-800/40 p-0.5 rounded-xl border border-gray-600/30">
             <button
               onClick={() => editor.chain().focus().toggleBold().run()}
               className={getButtonClass(editor.isActive('bold'))}
               title="Bold (Ctrl+B)"
             >
-              <MdFormatBold className="text-lg" />
+              <MdFormatBold className="text-sm" />
             </button>
             <button
               onClick={() => editor.chain().focus().toggleItalic().run()}
               className={getButtonClass(editor.isActive('italic'))}
               title="Italic (Ctrl+I)"
             >
-              <MdFormatItalic className="text-lg" />
+              <MdFormatItalic className="text-sm" />
             </button>
             <button
               onClick={() => editor.chain().focus().toggleUnderline().run()}
               className={getButtonClass(editor.isActive('underline'))}
               title="Underline (Ctrl+U)"
             >
-              <MdFormatUnderlined className="text-lg" />
+              <MdFormatUnderlined className="text-sm" />
             </button>
             <button
               onClick={() => editor.chain().focus().toggleStrike().run()}
               className={getButtonClass(editor.isActive('strike'))}
               title="Strikethrough"
             >
-              <MdStrikethroughS className="text-lg" />
+              <MdStrikethroughS className="text-sm" />
             </button>
           </div>
 
           {/* Lists Group */}
-          <div className="flex gap-1 bg-gray-800/40 p-1 rounded-xl border border-gray-600/30">
+          <div className="flex gap-1 bg-gray-800/40 p-0.5 rounded-xl border border-gray-600/30">
             <button
               onClick={() => editor.chain().focus().toggleBulletList().run()}
               className={getButtonClass(editor.isActive('bulletList'))}
               title="Bullet List"
             >
-              <MdFormatListBulleted className="text-lg" />
+              <MdFormatListBulleted className="text-sm" />
             </button>
             <button
               onClick={() => editor.chain().focus().toggleOrderedList().run()}
               className={getButtonClass(editor.isActive('orderedList'))}
               title="Numbered List"
             >
-              <MdFormatListNumbered className="text-lg" />
+              <MdFormatListNumbered className="text-sm" />
             </button>
             <button
               onClick={() => editor.chain().focus().toggleBlockquote().run()}
               className={getButtonClass(editor.isActive('blockquote'))}
               title="Quote"
             >
-              <MdFormatQuote className="text-lg" />
+              <MdFormatQuote className="text-sm" />
             </button>
           </div>
 
           {/* Color and Link Group */}
-          <div className="flex gap-1 bg-gray-800/40 p-1 rounded-xl border border-gray-600/30">
-            <div className="flex items-center justify-center w-10 h-10 bg-gray-700/60 rounded-lg border border-gray-600/30">
+          <div className="flex gap-1 bg-gray-800/40 p-0.5 rounded-xl border border-gray-600/30">
+            <div className="flex items-center justify-center w-7 h-7 bg-gray-700/60 rounded-sm border border-gray-600/30">
               <input
                 type="color"
                 onChange={(e) => editor.chain().focus().setColor(e.target.value).run()}
                 value={editor.getAttributes('textStyle').color || '#ffffff'}
-                className="w-6 h-6 border-none bg-transparent cursor-pointer rounded"
+                className="w-5 h-5 border-none bg-transparent cursor-pointer rounded"
                 title="Text Color"
               />
             </div>
@@ -202,19 +202,19 @@ const Tiptap = ({ onEditorContentSave, initialContent = '' }) => {
               className={getButtonClass(editor.isActive('link'))}
               title="Add/Edit Link"
             >
-              <MdLink className="text-lg" />
+              <MdLink className="text-sm" />
             </button>
           </div>
 
           {/* Utility Group */}
-          <div className="flex gap-1 bg-gray-800/40 p-1 rounded-xl border border-gray-600/30">
+          <div className="flex gap-1 bg-gray-800/40 p-0.5 rounded-xl border border-gray-600/30">
             <button
               onClick={() => editor.chain().focus().undo().run()}
               className={getButtonClass(false, 'utility')}
               disabled={!editor.can().undo()}
               title="Undo (Ctrl+Z)"
             >
-              <MdUndo className="text-lg" />
+              <MdUndo className="text-sm" />
             </button>
             <button
               onClick={() => editor.chain().focus().redo().run()}
@@ -222,38 +222,38 @@ const Tiptap = ({ onEditorContentSave, initialContent = '' }) => {
               disabled={!editor.can().redo()}
               title="Redo (Ctrl+Y)"
             >
-              <MdRedo className="text-lg" />
+              <MdRedo className="text-sm" />
             </button>
             <button
               onClick={() => editor.chain().focus().unsetAllMarks().run()}
               className={getButtonClass(false, 'utility')}
               title="Clear Formatting"
             >
-              <MdFormatClear className="text-lg" />
+              <MdFormatClear className="text-sm" />
             </button>
           </div>
 
           {/* Advanced Options Toggle */}
           <button
             onClick={() => setShowAdvanced(!showAdvanced)}
-            className={`flex items-center gap-2 px-4 h-10 rounded-lg transition-all duration-300 border ${
+            className={`flex items-center gap-2 px-2 h-7 rounded-sm transition-all duration-150 border ${
               showAdvanced 
                 ? 'bg-orange-500/20 text-orange-300 border-orange-400/30' 
-                : 'bg-gray-800/60 hover:bg-gray-700/80 text-gray-300 hover:text-white border-gray-600/30'
+                : 'bg-gray-800/60 text-gray-300 border-gray-600/30'
             }`}
             title="Advanced Options"
           >
-            <MdSettings className="text-lg" />
-            <span className="text-sm font-medium hidden sm:block">Advanced</span>
-            {showAdvanced ? <MdExpandLess /> : <MdExpandMore />}
+            <MdSettings className="text-sm" />
+            <span className="text-xs font-medium hidden sm:block">Adv</span>
+            {showAdvanced ? <MdExpandLess className="text-sm" /> : <MdExpandMore className="text-sm" />}
           </button>
         </div>
 
         {/* Advanced Options */}
         {showAdvanced && (
-          <div className="flex flex-wrap gap-2 pt-3 border-t border-gray-600/20">
+          <div className="flex flex-wrap gap-1 pt-1 border-t border-gray-600/20">
             {/* Alignment Group */}
-            <div className="flex gap-1 bg-gray-800/40 p-1 rounded-xl border border-gray-600/30">
+            <div className="flex gap-1 bg-gray-800/40 p-0.5 rounded-xl border border-gray-600/30">
               {[
                 { align: 'left', icon: MdFormatAlignLeft, title: 'Align Left' },
                 { align: 'center', icon: MdFormatAlignCenter, title: 'Align Center' },
@@ -272,7 +272,7 @@ const Tiptap = ({ onEditorContentSave, initialContent = '' }) => {
             </div>
 
             {/* Headings Group */}
-            <div className="flex gap-1 bg-gray-800/40 p-1 rounded-xl border border-gray-600/30">
+            <div className="flex gap-1 bg-gray-800/40 p-0.5 rounded-xl border border-gray-600/30">
               {[1, 2, 3].map((level) => (
                 <button
                   key={level}
@@ -292,13 +292,13 @@ const Tiptap = ({ onEditorContentSave, initialContent = '' }) => {
         )}
 
         {/* Stats Bar */}
-        <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-600/20 text-sm">
-          <div className="flex items-center space-x-4 text-gray-400">
+        <div className="flex items-center justify-between mt-1 pt-1 border-t border-gray-600/20 text-xxs">
+          <div className="flex items-center space-x-2 text-gray-400 text-xxs">
             <span>{wordCount} words</span>
-            <span>{editor.getText().length} characters</span>
+            <span>{editor.getText().length} chars</span>
           </div>
-          <div className="text-xs text-gray-500">
-            Press Ctrl+B for bold, Ctrl+I for italic, Ctrl+U for underline
+          <div className="text-xxs text-gray-500">
+            Ctrl+B Ctrl+I Ctrl+U
           </div>
         </div>
       </div>
@@ -307,7 +307,8 @@ const Tiptap = ({ onEditorContentSave, initialContent = '' }) => {
       <div className="flex-1 bg-gray-800/40 backdrop-blur-sm overflow-y-auto">
         <EditorContent 
           editor={editor} 
-          className="min-h-[280px] text-white p-2"
+          className="min-h-[40vh] max-h-[60vh] resize-y overflow-auto text-white p-2"
+          style={{ resize: 'vertical' }}
         />
       </div>
 
