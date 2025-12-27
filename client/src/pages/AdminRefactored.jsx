@@ -39,6 +39,8 @@ const AdminRefactored = () => {
     deleteSelectedUsers,
     updateUserNote,
     fetchUsers,
+    filterProcurement,
+    setFilterProcurement,
   } = useUsers();
 
   // Scheduled emails modal hook
@@ -236,21 +238,25 @@ const AdminRefactored = () => {
               fetchSavedTemplates={fetchSavedTemplates}
               searchTerm={searchTerm}
               setSearchTerm={setSearchTerm}
+              filterProcurement={filterProcurement}
+              setFilterProcurement={setFilterProcurement}
               users={users}
             />
           </div>
 
-          {/* Add Button & Selected Items Action Bar - Fixed Height Container */}
-          <div className="h-20 mt-2">
-            <div className="flex flex-wrap gap-2 items-start">
+          {/* Add Button & Selected Items Action Bar - Compact Container */}
+          <div className="h-10 mt-1">
+            <div className="flex flex-wrap gap-2 items-center">
               {/* Add Button - Only visible for companies (when show is false) */}
               {!show && (
                 <button
                   onClick={openAddCompanyModal}
-                  className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-6 rounded-2xl font-medium transition-all duration-300 transform hover:scale-105 shadow-2xl shadow-emerald-500/25 hover:shadow-emerald-500/40 border border-emerald-400/30 flex items-center justify-center space-x-2 text-sm min-h-[52px]"
+                  aria-label="Add Company"
+                  title="Add Company"
+                  className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white h-9 w-20 rounded-md font-medium transition-colors duration-150 transform hover:scale-105 shadow-sm border border-emerald-400/20 flex items-center justify-center gap-1 text-xs ml-2"
                 >
-                  <span className="text-lg">➕</span>
-                  <span className="font-semibold">Add Company</span>
+                  <span className="text-sm">➕</span>
+                  <span className="font-semibold">Add</span>
                 </button>
               )}
               
@@ -271,7 +277,7 @@ const AdminRefactored = () => {
         </div>
 
         {/* Main Content Area - Enhanced Table */}
-        <div className="p-6 pb-20">
+        <div className="p-4 pb-20">
           <DataTable
             filteredUsers={filteredUsers}
             show={show}

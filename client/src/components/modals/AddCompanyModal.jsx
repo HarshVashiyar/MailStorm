@@ -38,6 +38,7 @@ const AddCompanyModal = ({
     companyProductGroup: [],
     companyContactPersonName: "",
     companyContactPersonPhone: "",
+    hasProcurementTeam: false,
   });
 
   const [productGroupString, setProductGroupString] = useState("");
@@ -92,6 +93,7 @@ const AddCompanyModal = ({
       companyProductGroup: [],
       companyContactPersonName: "",
       companyContactPersonPhone: "",
+      hasProcurementTeam: false,
     });
     setProductGroupString("");
     setErrors({});
@@ -109,6 +111,8 @@ const AddCompanyModal = ({
             .split(",")
             .map((item) => item.trim())
             .filter((item) => item),
+          // ensure procurement flag is sent
+          hasProcurementTeam: Boolean(formData.hasProcurementTeam),
         };
         const response = await axios.post(
           `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_ADD_COMPANY_ROUTE}`,
@@ -154,6 +158,7 @@ const AddCompanyModal = ({
             .split(",")
             .map((item) => item.trim())
             .filter((item) => item),
+          hasProcurementTeam: Boolean(formData.hasProcurementTeam),
           id: selectedUsers,
         };
         const response = await axios.put(
@@ -211,6 +216,9 @@ const AddCompanyModal = ({
           companyContactPersonName: userData.companyContactPersonName || "",
           companyContactPersonPhone: userData.companyContactPersonPhone || "",
           companyProductGroup: userData.companyProductGroup || [],
+          hasProcurementTeam: Boolean(
+            userData.hasProcurementTeam ?? userData.procurementTeam ?? userData.procurement ?? userData.hasProcurement
+          ),
         });
 
         setProductGroupString(
@@ -227,16 +235,16 @@ const AddCompanyModal = ({
       className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 pt-24"
       style={{ zIndex: 1100 }}
     >
-      <div className="bg-white/10 backdrop-blur-lg p-6 rounded-3xl shadow-2xl w-full max-w-5xl max-h-[85vh] overflow-hidden border border-white/20 flex flex-col mt-4">
+      <div className="bg-white/10 backdrop-blur-lg p-4 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden border border-white/20 flex flex-col mt-4">
         {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="mb-4">
+          <div className="flex items-center justify-between mb-3">
             <div>
-              <h3 className="text-3xl font-bold text-white flex items-center space-x-3 mb-2">
+              <h3 className="text-2xl font-bold text-white flex items-center space-x-3 mb-1">
                 <span className="text-white">{upd ? <FaEdit /> : <FaBuilding />}</span>
                 <span>{upd ? 'Edit Company' : 'Add New Company'}</span>
               </h3>
-              <p className="text-gray-300 text-sm">
+              <p className="text-gray-300 text-xs">
                 {upd ? 'Update company information and contact details' : isBulkMode ? 'Import multiple companies from Excel file' : 'Enter company information and contact details to add a new company'}
               </p>
             </div>
@@ -288,9 +296,9 @@ const AddCompanyModal = ({
             </div>
           ) : (
             /* Manual Form Mode */
-            <form className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="space-y-2">
-              <label className="block text-white font-medium flex items-center space-x-2">
+            <form className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="space-y-1">
+              <label className="block text-white text-sm font-medium flex items-center space-x-2">
                 <FaBuilding className="text-blue-400" />
                 <span>Company Name</span>
               </label>
@@ -300,7 +308,7 @@ const AddCompanyModal = ({
                 value={formData.companyName}
                 onChange={handleChange}
                 placeholder="Enter company name..."
-                className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+                className="w-full px-3 py-2 text-sm bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 required
               />
               {errors.companyName && (
@@ -310,8 +318,8 @@ const AddCompanyModal = ({
                 </p>
               )}
             </div>
-            <div className="space-y-2">
-              <label className="block text-white font-medium flex items-center space-x-2">
+            <div className="space-y-1">
+              <label className="block text-white text-sm font-medium flex items-center space-x-2">
                 <FaGlobe className="text-green-400" />
                 <span>Website</span>
               </label>
@@ -321,7 +329,7 @@ const AddCompanyModal = ({
                 value={formData.companyWebsite}
                 onChange={handleChange}
                 placeholder="https://company.com"
-                className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+                className="w-full px-3 py-2 text-sm bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 required
               />
               {errors.companyWebsite && (
@@ -332,8 +340,8 @@ const AddCompanyModal = ({
               )}
             </div>
 
-            <div className="space-y-2">
-              <label className="block text-white font-medium flex items-center space-x-2">
+            <div className="space-y-1">
+              <label className="block text-white text-sm font-medium flex items-center space-x-2">
                 <FaGlobe className="text-purple-400" />
                 <span>Country</span>
               </label>
@@ -343,7 +351,7 @@ const AddCompanyModal = ({
                 value={formData.companyCountry}
                 onChange={handleChange}
                 placeholder="Enter country..."
-                className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+                className="w-full px-3 py-2 text-sm bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 required
               />
               {errors.companyCountry && (
@@ -354,8 +362,8 @@ const AddCompanyModal = ({
               )}
             </div>
 
-            <div className="space-y-2">
-              <label className="block text-white font-medium flex items-center space-x-2">
+            <div className="space-y-1">
+              <label className="block text-white text-sm font-medium flex items-center space-x-2">
                 <FaMapMarkerAlt className="text-red-400" />
                 <span>Address</span>
               </label>
@@ -365,7 +373,7 @@ const AddCompanyModal = ({
                 value={formData.companyAddress}
                 onChange={handleChange}
                 placeholder="Enter full address..."
-                className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+                className="w-full px-3 py-2 text-sm bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 required
               />
               {errors.companyAddress && (
@@ -376,8 +384,8 @@ const AddCompanyModal = ({
               )}
             </div>
 
-            <div className="space-y-2">
-              <label className="block text-white font-medium flex items-center space-x-2">
+            <div className="space-y-1">
+              <label className="block text-white text-sm font-medium flex items-center space-x-2">
                 <FaEnvelope className="text-yellow-400" />
                 <span>Email</span>
               </label>
@@ -387,7 +395,7 @@ const AddCompanyModal = ({
                 value={formData.companyEmail}
                 onChange={handleChange}
                 placeholder="company@email.com"
-                className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+                className="w-full px-3 py-2 text-sm bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 required
               />
               {errors.companyEmail && (
@@ -398,8 +406,8 @@ const AddCompanyModal = ({
               )}
             </div>
 
-            <div className="space-y-2">
-              <label className="block text-white font-medium flex items-center space-x-2">
+            <div className="space-y-1">
+              <label className="block text-white text-sm font-medium flex items-center space-x-2">
                 <FaPhone className="text-cyan-400" />
                 <span>Phone</span>
               </label>
@@ -409,7 +417,7 @@ const AddCompanyModal = ({
                 value={formData.companyPhone}
                 onChange={handleChange}
                 placeholder="+1 (555) 123-4567"
-                className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+                className="w-full px-3 py-2 text-sm bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 required
               />
               {errors.companyPhone && (
@@ -420,18 +428,20 @@ const AddCompanyModal = ({
               )}
             </div>
 
-            <div className="space-y-2">
-              <label className="block text-white font-medium flex items-center space-x-2">
+            <div className="space-y-1 lg:row-span-2 h-full">
+              <label className="block text-white text-sm font-medium flex items-center space-x-2">
                 <FaClipboardList className="text-orange-400" />
                 <span>Products/Services</span>
               </label>
-              <textarea
-                value={productGroupString}
-                onChange={handleProductGroupChange}
-                placeholder="Software, Consulting, Marketing..."
-                rows="3"
-                className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 resize-none"
-              />
+              <div className="h-full">
+                <textarea
+                  value={productGroupString}
+                  onChange={handleProductGroupChange}
+                  placeholder="Software, Consulting, Marketing..."
+                  rows="3"
+                  className="w-full h-full px-3 py-2 text-sm bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-none"
+                />
+              </div>
               {errors.companyProductGroup && (
                 <p className="text-red-400 text-sm flex items-center space-x-1">
                   <FaExclamationTriangle />
@@ -483,18 +493,34 @@ const AddCompanyModal = ({
                 </p>
               )}
             </div>
+            {/* Procurement team toggle - placed below contact fields and beside product group */}
+            <div className="space-y-1 lg:col-span-2">
+              <label className="block text-white text-sm font-medium flex items-center space-x-2">
+                <span>Procurement Team</span>
+              </label>
+              <div className="flex items-center">
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, hasProcurementTeam: !prev.hasProcurementTeam }))}
+                  className={`text-lg w-10 h-10 flex items-center justify-center rounded-lg transition-colors duration-200 ${formData.hasProcurementTeam ? 'bg-amber-400 text-gray-900' : 'bg-gray-800 text-amber-300'} border border-amber-400/20`}
+                  title={formData.hasProcurementTeam ? 'Has procurement team' : 'No procurement team'}
+                >
+                  {formData.hasProcurementTeam ? '★' : '☆'}
+                </button>
+              </div>
+            </div>
           </form>
           )}
         </div>
 
         {/* Action Buttons */}
         {!isBulkMode && (
-          <div className="mt-8 flex flex-col sm:flex-row gap-4">
+          <div className="mt-6 flex flex-col sm:flex-row gap-3">
             <button
               type="button"
               onClick={upd ? handleUpdateCompany : handleAddCompany}
               disabled={loading}
-              className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold py-4 px-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center space-x-2 backdrop-blur-sm border border-blue-400/30 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold py-2 px-4 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center space-x-2 backdrop-blur-sm border border-blue-400/30 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
             >
               <span className="text-white">{upd ? <FaEdit /> : <FaCheck />}</span>
               <span>{upd ? 'Update Company' : 'Add Company'}</span>
@@ -503,7 +529,7 @@ const AddCompanyModal = ({
             <button
               type="button"
               onClick={closeAddCompanyForm}
-              className="flex-1 sm:flex-none bg-white/10 hover:bg-white/20 text-white font-semibold py-4 px-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center space-x-2 backdrop-blur-sm border border-white/20"
+              className="flex-1 sm:flex-none bg-white/10 hover:bg-white/20 text-white font-semibold py-2 px-4 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center space-x-2 backdrop-blur-sm border border-white/20 text-sm"
             >
               <FaTimes />
               <span>Cancel</span>

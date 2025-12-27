@@ -38,74 +38,62 @@ const ActionBar = ({
 
   return (
     <div className="flex items-center gap-2">
-      <div className="flex-1 flex items-center gap-2">
+        <div className="flex items-center gap-1">
         <button
           onClick={toggleView}
-          className="group bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white flex-1 py-2 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg border border-primary-400/30 animate-glow"
+          className="group bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white inline-flex items-center gap-2 px-3 py-1 rounded-md transition-all duration-200 transform hover:scale-105 border border-primary-400/20 text-sm"
         >
-          <div className="text-center">
-            <div className="text-lg mb-0.5">{show ? '🏢' : '👥'}</div>
-            <div className="text-xs font-medium whitespace-nowrap">
-              Switch to {show ? 'Companies' : 'Users'}
-            </div>
-          </div>
+          <span className="text-sm">{show ? '🏢' : '👥'}</span>
+          <span className="font-medium whitespace-nowrap">{show ? 'Companies' : 'Users'}</span>
         </button>
 
         <button
           onClick={fetchSavedLists}
-          className="group bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 text-white flex-1 py-2 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg border border-accent-400/30"
+          className="group bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 text-white inline-flex items-center gap-2 px-3 py-1 rounded-md transition-all duration-200 transform hover:scale-105 border border-accent-400/20 text-sm"
         >
-          <div className="text-center">
-            <div className="text-lg mb-0.5">📁</div>
-            <div className="text-xs font-medium whitespace-nowrap">Lists</div>
-          </div>
+          <span className="text-sm">📁</span>
+          <span className="font-medium whitespace-nowrap">Lists</span>
         </button>
 
         <button
           onClick={onScheduledClick}
-          className="group bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white flex-1 py-2 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg border border-purple-400/30"
+          className="group bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white inline-flex items-center gap-2 px-3 py-1 rounded-md transition-all duration-200 transform hover:scale-105 border border-purple-400/20 text-sm"
         >
-          <div className="text-center">
-            <div className="text-lg mb-0.5">⏰</div>
-            <div className="text-xs font-medium whitespace-nowrap">Scheduled</div>
-          </div>
+          <span className="text-sm">⏰</span>
+          <span className="font-medium whitespace-nowrap">Scheduled</span>
         </button>
 
         <button
           onClick={fetchSavedTemplates}
-          className="group bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white flex-1 py-2 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg border border-orange-400/30"
+          className="group bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white inline-flex items-center gap-2 px-3 py-1 rounded-md transition-all duration-200 transform hover:scale-105 border border-orange-400/20 text-sm"
         >
-          <div className="text-center">
-            <div className="text-lg mb-0.5">📝</div>
-            <div className="text-xs font-medium whitespace-nowrap">Templates</div>
-          </div>
+          <span className="text-sm">📝</span>
+          <span className="font-medium whitespace-nowrap">Templates</span>
         </button>
 
         <button
           onClick={() => exportCompaniesToExcel(users)}
-          className="group bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white flex-1 py-2 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg border border-emerald-400/30"
+          className="group bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white inline-flex items-center gap-2 px-3 py-1 rounded-md transition-all duration-200 transform hover:scale-105 border border-emerald-400/20 text-sm"
         >
-          <div className="text-center">
-            <div className="text-lg mb-0.5">📊</div>
-            <div className="text-xs font-medium whitespace-nowrap">Export</div>
-          </div>
+          <span className="text-sm">📊</span>
+          <span className="font-medium whitespace-nowrap">Export</span>
         </button>
       </div>
 
-      <div className="w-1/4">
-        <div className="relative flex items-center gap-2">
+      <div className="ml-auto w-80 flex-shrink-0">
+        <div className="relative flex items-center gap-3">
           <input
             type="text"
             value={localSearch}
             onChange={handleSearchChange}
-            placeholder="Search... (separate keywords with space)"
-            className="flex-1 pl-3 pr-3 py-2 bg-gray-900 backdrop-blur-sm border border-primary-500/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-300 text-sm"
+            placeholder="Search (space-separated keywords)"
+            className="flex-1 pl-3 pr-3 py-2 bg-gray-900 backdrop-blur-sm border border-primary-500/20 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
           />
 
           <button
             onClick={() => setFilterProcurement && setFilterProcurement((v) => !v)}
             title={filterProcurement ? 'Filter: Procurement only' : 'Show all companies'}
-            className={`w-10 h-10 flex items-center justify-center rounded-xl transition-colors duration-200 text-xl ${filterProcurement ? 'bg-amber-400 text-gray-900' : 'bg-gray-800 text-amber-300'} border border-amber-400/20`}
+            className={`w-10 h-10 flex items-center justify-center rounded-md transition-colors duration-200 text-lg ${filterProcurement ? 'bg-amber-400 text-gray-900' : 'bg-gray-800 text-amber-300'} border border-amber-400/20 ml-2`}
           >
             {filterProcurement ? '★' : '☆'}
           </button>
