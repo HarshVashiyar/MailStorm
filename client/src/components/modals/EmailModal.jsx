@@ -310,7 +310,7 @@ const EmailModal = ({
       );
       if (selectedList) {
         recipientEmails = selectedList.listItems
-          .map((item) => item.email)
+          .map((item) => item.contactEmail)
           .filter(Boolean);
       }
     } else {
@@ -472,7 +472,7 @@ const EmailModal = ({
 
             {/* Template Selector - Compact */}
             <div className="w-64">
-              <label className="block text-white text-xs font-medium mb-1 flex items-center space-x-1">
+              <label className="text-white text-xs font-medium mb-1 flex items-center space-x-1">
                 <MdDescription className="text-orange-400" />
                 <span className="text-xs">Load Template:</span>
               </label>
@@ -601,14 +601,14 @@ const EmailModal = ({
             <div className="w-full flex-shrink-0 flex flex-col gap-3 min-w-0" style={{ width: rightWidth }}>
               {schedule && (
                 <div>
-                  <label className="block text-white font-medium mb-3 flex items-center space-x-2">
+                  <label className="text-white font-medium mb-3 flex items-center space-x-2">
                     <FaClock className="text-purple-400" />
                     <span>Schedule Settings:</span>
                   </label>
                   <div className="bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 p-3">
                     <div className="grid grid-cols-1 gap-3">
                       <div>
-                        <label className="block text-white font-medium mb-2 flex items-center space-x-2 text-sm">
+                        <label className="text-white font-medium mb-2 flex items-center space-x-2 text-sm">
                           <FaGlobeAmericas className="text-cyan-400" />
                           <span>Time Zone:</span>
                         </label>
@@ -620,7 +620,7 @@ const EmailModal = ({
                         />
                       </div>
                       <div>
-                        <label className="block text-white font-medium mb-2 flex items-center space-x-2 text-sm">
+                        <label className="text-white font-medium mb-2 flex items-center space-x-2 text-sm">
                           <FaCalendarAlt className="text-pink-400" />
                           <span>Schedule Date & Time:</span>
                         </label>
@@ -638,7 +638,7 @@ const EmailModal = ({
 
               {/* Attachments Section (always visible in right column) */}
               <div>
-                <label className="block text-white font-medium mb-2 flex items-center space-x-2 text-sm">
+                <label className="text-white font-medium mb-2 flex items-center space-x-2 text-sm">
                   <FaPaperclip className="text-orange-400" />
                   <span>Attachments:</span>
                 </label>

@@ -33,6 +33,8 @@ const dummyCompanies = [
     companyProductGroup: ['Software Development', 'Cloud Services', 'AI Solutions'],
     companyWebsite: 'https://techcorp.com',
     companyNote: 'Interested in enterprise solutions. Follow up monthly.',
+    hasProcurementTeam: true,
+    includedIn: 'N/A'
   },
   {
     _id: 'company2',
@@ -46,6 +48,8 @@ const dummyCompanies = [
     companyProductGroup: ['Digital Marketing', 'SEO Services', 'Social Media'],
     companyWebsite: 'https://digitalmarketingpro.com',
     companyNote: '',
+    hasProcurementTeam: false,
+    includedIn: 'N/A'
   },
   {
     _id: 'company3',
@@ -59,6 +63,8 @@ const dummyCompanies = [
     companyProductGroup: ['Solar Panels', 'Wind Energy', 'Battery Storage'],
     companyWebsite: 'https://greenenergy.com',
     companyNote: 'Large scale projects only. Quarterly reviews.',
+    hasProcurementTeam: true,
+    includedIn: 'N/A'
   },
 ];
 
@@ -83,14 +89,18 @@ export const useUsers = () => {
       );
       // Handle empty response gracefully - backend returns { success: true, data: [...] }
       const responseData = response.data?.data || response.data || [];
-      setUsers(Array.isArray(responseData) ? responseData : []);
+      const normalizedData = (Array.isArray(responseData) ? responseData : []).map(item => ({
+        ...item,
+        lists: Array.isArray(item.lists) ? item.lists : []
+      }));
+      setUsers(Array.isArray(normalizedData) ? normalizedData : []);
       setIsUsingDummyData(false);
     } catch (error) {
       console.warn('API call failed, using dummy data:', error);
       setUsers(show ? dummyUsers : dummyCompanies);
       setIsUsingDummyData(true);
-      toast.info('🔄 Using demo data - API unavailable', { 
-        style: { 
+      toast.info('🔄 Using demo data - API unavailable', {
+        style: {
           background: 'linear-gradient(135deg, rgba(255, 107, 53, 0.1), rgba(255, 107, 53, 0.05))',
           backdropFilter: 'blur(10px)',
           border: '1px solid rgba(255, 107, 53, 0.2)',
@@ -203,24 +213,24 @@ export const useUsers = () => {
     // if the API returns slightly different user field names.
     const searchFields = show
       ? [
-          user.fullName,
-          user.email,
-          user.name,
-          user.userName,
-          user.username,
-          `${user.firstName || ''} ${user.lastName || ''}`.trim(),
-        ]
+        user.fullName,
+        user.email,
+        user.name,
+        user.userName,
+        user.username,
+        `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+      ]
       : [
-          user.companyName,
-          user.companyContactPersonName,
-          user.companyAddress,
-          user.companyCountry,
-          user.companyEmail,
-          user.companyPhone,
-          user.companyContactPersonPhone,
-          user.companyWebsite,
-          ...(user.companyProductGroup || []),
-        ];
+        user.companyName,
+        user.companyContactPersonName,
+        user.companyAddress,
+        user.companyCountry,
+        user.companyEmail,
+        user.companyPhone,
+        user.companyContactPersonPhone,
+        user.companyWebsite,
+        ...(user.companyProductGroup || []),
+      ];
 
     // Normalize search input into keywords (support both array and space-separated string)
     const keywords = Array.isArray(searchTerm)
@@ -247,6 +257,14 @@ export const useUsers = () => {
     return keywords.every(k => haystack.includes(k));
   });
 
+  const getCompanyListCount = (company) => {
+    return company?.lists?.length || 0;
+  };
+
+  const getCompanyListNames = (company) => {
+    return (company?.lists || []).map(l => l.listName);
+  };
+
   return {
     users,
     setUsers,
@@ -266,5 +284,7 @@ export const useUsers = () => {
     deleteSelectedUsers,
     updateUserNote,
     fetchUsers,
+    getCompanyListCount,
+    getCompanyListNames
   };
 };

@@ -298,7 +298,7 @@ const AddCompanyModal = ({
             /* Manual Form Mode */
             <form className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             <div className="space-y-1">
-              <label className="block text-white text-sm font-medium flex items-center space-x-2">
+              <label className="text-white text-sm font-medium flex items-center space-x-2">
                 <FaBuilding className="text-blue-400" />
                 <span>Company Name</span>
               </label>
@@ -319,7 +319,7 @@ const AddCompanyModal = ({
               )}
             </div>
             <div className="space-y-1">
-              <label className="block text-white text-sm font-medium flex items-center space-x-2">
+              <label className="text-white text-sm font-medium flex items-center space-x-2">
                 <FaGlobe className="text-green-400" />
                 <span>Website</span>
               </label>
@@ -341,7 +341,7 @@ const AddCompanyModal = ({
             </div>
 
             <div className="space-y-1">
-              <label className="block text-white text-sm font-medium flex items-center space-x-2">
+              <label className="text-white text-sm font-medium flex items-center space-x-2">
                 <FaGlobe className="text-purple-400" />
                 <span>Country</span>
               </label>
@@ -363,7 +363,7 @@ const AddCompanyModal = ({
             </div>
 
             <div className="space-y-1">
-              <label className="block text-white text-sm font-medium flex items-center space-x-2">
+              <label className="text-white text-sm font-medium flex items-center space-x-2">
                 <FaMapMarkerAlt className="text-red-400" />
                 <span>Address</span>
               </label>
@@ -385,7 +385,7 @@ const AddCompanyModal = ({
             </div>
 
             <div className="space-y-1">
-              <label className="block text-white text-sm font-medium flex items-center space-x-2">
+              <label className="text-white text-sm font-medium flex items-center space-x-2">
                 <FaEnvelope className="text-yellow-400" />
                 <span>Email</span>
               </label>
@@ -407,7 +407,7 @@ const AddCompanyModal = ({
             </div>
 
             <div className="space-y-1">
-              <label className="block text-white text-sm font-medium flex items-center space-x-2">
+              <label className="text-white text-sm font-medium flex items-center space-x-2">
                 <FaPhone className="text-cyan-400" />
                 <span>Phone</span>
               </label>
@@ -429,7 +429,7 @@ const AddCompanyModal = ({
             </div>
 
             <div className="space-y-1 lg:row-span-2 h-full">
-              <label className="block text-white text-sm font-medium flex items-center space-x-2">
+              <label className="text-white text-sm font-medium flex items-center space-x-2">
                 <FaClipboardList className="text-orange-400" />
                 <span>Products/Services</span>
               </label>
@@ -451,7 +451,7 @@ const AddCompanyModal = ({
             </div>
 
             <div className="space-y-2">
-              <label className="block text-white font-medium flex items-center space-x-2">
+              <label className="text-white font-medium flex items-center space-x-2">
                 <FaUser className="text-indigo-400" />
                 <span>Contact Person Name</span>
               </label>
@@ -473,7 +473,7 @@ const AddCompanyModal = ({
             </div>
 
             <div className="space-y-2">
-              <label className="block text-white font-medium flex items-center space-x-2">
+              <label className="text-white font-medium flex items-center space-x-2">
                 <FaMobileAlt className="text-pink-400" />
                 <span>Contact Person Phone</span>
               </label>
@@ -495,7 +495,7 @@ const AddCompanyModal = ({
             </div>
             {/* Procurement team toggle - placed below contact fields and beside product group */}
             <div className="space-y-1 lg:col-span-2">
-              <label className="block text-white text-sm font-medium flex items-center space-x-2">
+              <label className="text-white text-sm font-medium flex items-center space-x-2">
                 <span>Procurement Team</span>
               </label>
               <div className="flex items-center">

@@ -55,9 +55,10 @@ const AdminRefactored = () => {
     closeSavedListsTable,
     deleteSavedList,
     addToExistingList,
+    removeItemsFromList,
     createNewList,
     mailSavedList,
-  } = useSavedLists();
+  } = useSavedLists(fetchUsers);
 
   const {
     savedTemplates,
@@ -162,6 +163,8 @@ const AdminRefactored = () => {
   const handleCreateNewList = async (listName, typedEmail, contactNames = '') => {
     const emails = typedEmail.split(',').map(email => email.trim()).filter(email => email);
     const names = contactNames.split(',').map(name => name.trim());
+
+    const companyIds = selectedUsers.map(userId => userId);
     
     const listItems = emails.map((email, index) => {
       // First try to get contact name from the provided names array
@@ -181,8 +184,9 @@ const AdminRefactored = () => {
       };
     });
 
-    const success = await createNewList(listName, listItems);
+    const success = await createNewList(listName, listItems, companyIds);
     if (success) {
+      await fetchUsers();
       setShowManualListForm(false);
       setPrefilledEmails('');
       setPrefilledListName('');
@@ -317,6 +321,7 @@ const AdminRefactored = () => {
       )}
 
       <SavedListsModal
+        refetchUsers={fetchUsers}
         showSavedListsTable={showSavedListsTable}
         savedLists={savedLists}
         selectedSavedLists={selectedSavedLists}
@@ -326,6 +331,7 @@ const AdminRefactored = () => {
         mailSavedList={handleMailSavedList}
         handleScheduleEmail={handleScheduleEmail}
         addToExistingList={handleAddToExistingList}
+        removeItemsFromList={removeItemsFromList}
         closeSavedListsTable={closeSavedListsTable}
         selectedUsersCount={selectedUsers.length}
       />
@@ -334,6 +340,7 @@ const AdminRefactored = () => {
         showManualListForm={showManualListForm}
         initialListName={prefilledListName}
         initialTypedEmail={prefilledEmails}
+        companyIds={selectedUsers}
         onSave={handleCreateNewList}
         initialContactNames={prefilledContactNames}
         onClose={() => {

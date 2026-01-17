@@ -9,11 +9,11 @@ const dummySavedLists = [
     listName: 'Tech Prospects',
     listItems: [
       {
-        email: 'info@techcorp.com',
+        contactEmail: 'info@techcorp.com',
         contactName: 'Michael Johnson',
       },
       {
-        email: 'contact@greenenergy.com',
+        contactEmail: 'contact@greenenergy.com',
         contactName: 'David Chen',
       },
     ],
@@ -23,14 +23,14 @@ const dummySavedLists = [
     listName: 'Marketing Contacts',
     listItems: [
       {
-        email: 'hello@digitalmarketingpro.com',
+        contactEmail: 'hello@digitalmarketingpro.com',
         contactName: 'Sarah Williams',
       },
     ],
   },
 ];
 
-export const useSavedLists = () => {
+export const useSavedLists = (refetchUsers) => {
   const [savedLists, setSavedLists] = useState([]);
   const [selectedSavedLists, setSelectedSavedLists] = useState([]);
   const [showSavedListsTable, setShowSavedListsTable] = useState(false);
@@ -102,7 +102,7 @@ export const useSavedLists = () => {
       });
       return;
     }
-    
+
     try {
       const response = await axios.delete(
         `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_REMOVE_LISTS_ROUTE}`,
@@ -117,6 +117,7 @@ export const useSavedLists = () => {
         );
         setSelectedSavedLists([]);
         toast.success(response.data.message || 'List deleted successfully!');
+        refetchUsers();
       } else {
         toast.error(response.data?.message || "Update failed.");
       }
@@ -144,59 +145,43 @@ export const useSavedLists = () => {
     }
 
     const listId = selectedSavedLists[0];
-    const newListItems = selectedUsers.map(userId => {
+
+    // Build companies array with IDs and contact info
+    const companies = selectedUsers.map(userId => {
       const user = users.find(user => user._id === userId);
       return {
-        email: show ? user.email : user.companyEmail,
+        company: userId, // Company ID
+        contactEmail: show ? user.email : user.companyEmail,
         contactName: show ? user.fullName : user.companyContactPersonName,
       };
     });
 
     if (isUsingDummyData) {
-      // Handle locally for demo mode
       setSavedLists(prevLists =>
         prevLists.map(list =>
           list._id === listId
-            ? { ...list, listItems: [...list.listItems, ...newListItems] }
+            ? { ...list, listItems: [...list.listItems, ...companies] }
             : list
         )
       );
-      toast.success('➕ Demo: Items added to list locally', {
-        style: {
-          background: 'linear-gradient(135deg, rgba(255, 107, 53, 0.1), rgba(255, 107, 53, 0.05))',
-          backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(255, 107, 53, 0.2)',
-          color: '#fff'
-        }
-      });
+      toast.success('➕ Demo: Items added to list locally');
       return true;
     }
 
-    const existingList = savedLists.find(list => list._id === listId);
-    const combinedListItems = existingList
-      ? [...existingList.listItems, ...newListItems]
-      : newListItems;
-
     try {
       const response = await axios.put(
-        `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_UPDATE_LIST_ROUTE}`,
-        { id: listId, listItems: combinedListItems },
-        {
-          withCredentials: true
-        }
+        `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_ADD_ITEMS_TO_LIST_ROUTE}`,
+        { id: listId, listItems: companies }, // Send company objects with IDs
+        { withCredentials: true }
       );
       if (response.data?.success === true) {
         setSavedLists(prevLists =>
           prevLists.map(list =>
-            list._id === listId
-              ? { ...list, listItems: combinedListItems }
-              : list
+            list._id === listId ? response.data.data : list
           )
         );
-
-        toast.success(
-          response.data.message || 'Items added to the list successfully!'
-        );
+        toast.success(response.data.message || 'Items added to the list successfully!');
+        refetchUsers();
         return true;
       } else {
         toast.error(response.data?.message || "Update failed.");
@@ -212,8 +197,62 @@ export const useSavedLists = () => {
     }
   };
 
+  const removeItemsFromList = async (listId, itemIds) => {
+    if (!listId || !itemIds || itemIds.length === 0) {
+      toast.error('⚠️ No items selected to remove!');
+      return false;
+    }
+    
+    if (isUsingDummyData) {
+      setSavedLists(prevLists =>
+        prevLists.map(list =>
+          list._id === listId
+            ? {
+              ...list,
+              listItems: list.listItems.filter(item => {
+                // Match by _id, company, or contactEmail
+                const itemIdentifier = item._id || item.company;
+                return !itemIds.includes(itemIdentifier) && !itemIds.includes(item.contactEmail);
+              }),
+            }
+            : list
+        )
+      );
+      toast.success('🗑️ Demo: Items removed from list locally');
+      return true;
+    }
+
+    try {
+      const response = await axios.put(
+        `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_REMOVE_ITEMS_FROM_LIST_ROUTE}`,
+        { listId, itemIds },
+        { withCredentials: true }
+      );
+      if (response.data?.success === true) {
+        setSavedLists(prevLists =>
+          prevLists.map(list =>
+            list._id === listId ? response.data.data : list
+          )
+        );
+        toast.success(response.data.message || 'Items removed from list successfully!');
+        refetchUsers();
+        return true;
+      } else {
+        toast.error(response.data?.message || "Update failed.");
+        return false;
+      }
+    } catch (error) {
+      if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else {
+        toast.error("Something went wrong. Please try again.");
+      }
+      return false;
+    }
+  };
+
   // Create new list
-  const createNewList = async (listName, listItems) => {
+  const createNewList = async (listName, listItems, companyIds) => {
     if (!listName.trim()) {
       toast.error('⚠️ List name cannot be empty!');
       return false;
@@ -224,9 +263,15 @@ export const useSavedLists = () => {
       return false;
     }
 
+    const listItemsWithCompanyIds = listItems.map((item, index) => ({
+      company: companyIds[index], // Add company ID
+      contactEmail: item.email,
+      contactName: item.contactName,
+    }));
+
     const listData = {
       listName: listName.trim(),
-      listItems: listItems.filter(item => item.email && item.email.trim()),
+      listItems: listItemsWithCompanyIds,
     };
 
     if (isUsingDummyData) {
@@ -244,6 +289,7 @@ export const useSavedLists = () => {
           color: '#fff'
         }
       });
+      refetchUsers();
       return true;
     }
 
@@ -306,6 +352,7 @@ export const useSavedLists = () => {
     closeSavedListsTable,
     deleteSavedList,
     addToExistingList,
+    removeItemsFromList,
     createNewList,
     mailSavedList,
   };

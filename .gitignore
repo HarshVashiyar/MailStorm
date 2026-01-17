@@ -1,5 +1,6 @@
 .env
 *.xlsx
+server/public
 
 # Logs
 logs

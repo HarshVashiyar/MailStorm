@@ -6,24 +6,35 @@ const ManualListFormModal = ({
   initialListName = '',
   initialTypedEmail = '',
   initialContactNames = '',
+  initialListItems = [],
   onSave,
   onClose,
 }) => {
   const [listName, setListName] = useState(initialListName);
   const [typedEmail, setTypedEmail] = useState(initialTypedEmail);
   const [contactNames, setContactNames] = useState(initialContactNames);
+  const [listItems, setListItems] = useState([]);
+  const [removedCompanyIds, setRemovedCompanyIds] = useState([]);
 
   // Update state when initial values change
   useEffect(() => {
+    if (!showManualListForm) return;
+
     setListName(initialListName);
     setTypedEmail(initialTypedEmail);
     setContactNames(initialContactNames);
-  }, [initialListName, initialTypedEmail, initialContactNames]);
-
+    setListItems(initialListItems);
+    setRemovedCompanyIds([]);
+  }, [showManualListForm]);
   if (!showManualListForm) return null;
 
   const handleSave = async () => {
-    const success = await onSave(listName, typedEmail, contactNames);
+    const success = await onSave(
+      listName,
+      typedEmail,
+      contactNames,
+      removedCompanyIds
+    );
     // Only clear form if save was successful
     if (success) {
       setListName('');
@@ -39,7 +50,29 @@ const ManualListFormModal = ({
     setContactNames('');
   };
 
-  const emailCount = typedEmail.split(',').filter(email => email.trim()).length;
+  const emailArray = typedEmail.split(',').map(email => email.trim()).filter(email => email);
+  const contactNamesArray = contactNames.split(',').map(name => name.trim()).filter(name => name);
+
+  const handleRemoveEmail = (indexToRemove) => {
+    const removedItem = listItems[indexToRemove];
+    if (removedItem?.company?._id) {
+      setRemovedCompanyIds(prev => [...prev, removedItem.company._id]);
+    }
+
+    const updatedItems = listItems.filter((_, i) => i !== indexToRemove);
+    setListItems(updatedItems);
+
+    setTypedEmail(updatedItems.map(i => i.contactEmail).join(', '));
+    setContactNames(updatedItems.map(i => i.contactName).join(', '));
+  };
+
+  const handleRemoveContactName = (indexToRemove) => {
+    const updatedEmails = emailArray.filter((_, index) => index !== indexToRemove);
+    const updatedContacts = contactNamesArray.filter((_, index) => index !== indexToRemove);
+
+    setTypedEmail(updatedEmails.join(', '));
+    setContactNames(updatedContacts.join(', '));
+  };
 
   return (
     <div
@@ -59,63 +92,106 @@ const ManualListFormModal = ({
             Save your selected items as a reusable email list
           </p>
         </div>
-        
+
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto pr-2 -mr-2">
           {/* List Name Input */}
           <div className="mb-6">
-          <label className="block text-white font-medium mb-3 flex items-center space-x-2">
-            <MdLabel className="text-orange-400" />
-            <span>List Name:</span>
-          </label>
-          <input
-            type="text"
-            value={listName}
-            onChange={(e) => setListName(e.target.value)}
-            placeholder="Enter a name for your list..."
-            className="w-full px-4 py-3 bg-gray-800/60 backdrop-blur-sm border border-orange-500/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300 shadow-inner"
-          />
-        </div>
-        
-        {/* Emails Input */}
-        <div className="mb-6">
-          <label className="block text-white font-medium mb-3 flex items-center space-x-2">
-            <MdEmail className="text-orange-400" />
-            <span>Emails (comma-separated):</span>
-          </label>
-          <textarea
+            <label className="text-white font-medium mb-3 flex items-center space-x-2">
+              <MdLabel className="text-orange-400" />
+              <span>List Name:</span>
+            </label>
+            <input
+              type="text"
+              value={listName}
+              onChange={(e) => setListName(e.target.value)}
+              placeholder="Enter a name for your list..."
+              className="w-full px-4 py-3 bg-gray-800/60 backdrop-blur-sm border border-orange-500/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300 shadow-inner"
+            />
+          </div>
+
+          {/* Emails Input */}
+          <div className="mb-6">
+            <label className="text-white font-medium mb-3 flex items-center space-x-2">
+              <MdEmail className="text-orange-400" />
+              <span>Emails:</span>
+            </label>
+            {/* <textarea
             value={typedEmail}
             onChange={(e) => setTypedEmail(e.target.value)}
             placeholder="Enter email addresses separated by commas..."
             rows={3}
             className="w-full px-4 py-3 bg-gray-800/60 backdrop-blur-sm border border-orange-500/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300 resize-none shadow-inner"
-          />
-          <p className="text-orange-300 text-xs mt-2 flex items-center space-x-2">
-            <MdEmail className="text-sm" />
-            <span>{emailCount} email(s) ready to save</span>
-          </p>
-        </div>
-        
-        {/* Contact Names Input */}
-        <div className="mb-8">
-          <label className="block text-white font-medium mb-3 flex items-center space-x-2">
-            <MdPerson className="text-orange-400" />
-            <span>Contact Names (comma-separated, optional):</span>
-          </label>
-          <textarea
+          /> */}
+
+            {/* Email Chips Display */}
+            {emailArray.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {emailArray.map((email, index) => (
+                  <div
+                    key={index}
+                    className="bg-gradient-to-r from-orange-500/20 to-amber-500/20 border border-orange-500/50 rounded-full px-4 py-2 flex items-center gap-3 group hover:border-orange-500 transition-all duration-200"
+                  >
+                    <span className="text-white text-sm font-medium">{email}</span>
+                    <button
+                      onClick={() => handleRemoveEmail(index)}
+                      className="text-gray-400 hover:text-red-400 transition-colors duration-200 ml-1"
+                      title="Remove email"
+                    >
+                      {emailArray.length > 1 && <MdClose className="text-lg" />}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <p className="text-orange-300 text-xs mt-2 flex items-center space-x-2">
+              <MdEmail className="text-sm" />
+              <span>{emailArray.length} email(s) ready to save</span>
+            </p>
+          </div>
+
+          <div className="mb-8">
+            <label className="text-white font-medium mb-3 flex items-center space-x-2">
+              <MdPerson className="text-orange-400" />
+              <span>Contact Names:</span>
+            </label>
+            {/* <textarea
             value={contactNames}
             onChange={(e) => setContactNames(e.target.value)}
             placeholder="Enter contact names separated by commas (should match email order)..."
             rows={3}
             className="w-full px-4 py-3 bg-gray-800/60 backdrop-blur-sm border border-orange-500/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300 resize-none shadow-inner"
-          />
+          /> */}
+
+            {/* Contact Names Chips Display */}
+            {contactNamesArray.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {contactNamesArray.map((name, index) => (
+                  <div
+                    key={index}
+                    className="bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/50 rounded-full px-4 py-2 flex items-center gap-3 group hover:border-blue-500 transition-all duration-200"
+                  >
+                    <span className="text-white text-sm font-medium">{name}</span>
+                    <button
+                      onClick={() => handleRemoveContactName(index)}
+                      className="text-gray-400 hover:text-red-400 transition-colors duration-200 ml-1"
+                      title="Remove contact name"
+                    >
+                      {contactNamesArray.length > 1 && <MdClose className="text-lg" />}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <p className="text-gray-400 text-xs mt-2 flex items-center space-x-2">
               <MdPerson className="text-sm" />
               <span>Names should be in the same order as emails above</span>
             </p>
           </div>
         </div>
-        
+
         {/* Action Buttons */}
         <div className="flex justify-between gap-4 mt-6 flex-shrink-0 pt-4 border-t border-orange-500/20">
           <button

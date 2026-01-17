@@ -2,20 +2,19 @@ const List = require("../models/listDB");
 
 const handleAddList = async (req, res) => {
   const user = req.user;
+  const { listName, listItems = [] } = req.body;
   try {
-    const { listName, listItems } = req.body;
-    const existingList = await List.findOne({ listName, createdBy: user.id });
-    if (existingList) {
-      return res.status(400).json({ success: false, message: "List already exists!" });
-    }
     const newList = await List.create({
       listName,
       listItems,
-      createdBy: user.id,
+      createdBy: user.id
     });
     return res.status(201).json({ success: true, message: "List added successfully!", data: newList });
   } catch (err) {
     console.error("Add list error:", err);
+    if (err.code === 11000) {
+      return res.status(400).json({ success: false, message: "List already exists" });
+    }
     return res.status(500).json({ success: false, message: err.message });
   }
 };
@@ -23,7 +22,8 @@ const handleAddList = async (req, res) => {
 const handleGetAllLists = async (req, res) => {
   const user = req.user;
   try {
-    const lists = await List.find({ createdBy: user.id });
+    const lists = await List.find({ createdBy: user.id })
+      .populate("listItems.company", "companyName companyEmail");
     return res.status(200).send({ success: true, message: "Lists retrieved successfully", data: lists });
   } catch (err) {
     console.error("Get all lists error:", err);
@@ -31,30 +31,85 @@ const handleGetAllLists = async (req, res) => {
   }
 };
 
-const handleUpdateList = async (req, res) => {
+const handleAddItemsToList = async (req, res) => {
   const { id, listItems } = req.body;
   const user = req.user;
   try {
-    const updatedList = await List.findOne({ _id: id, createdBy: user.id });
-    if (!updatedList) return res.status(404).send({ success: false, message: "List not found" });
-    updatedList.listItems = listItems;
-    await updatedList.save();
-    return res.status(200).send({ success: true, message: "List updated successfully", data: updatedList });
+    const list = await List.findOneAndUpdate(
+      { _id: id, createdBy: user.id },
+      {
+        $addToSet: {
+          listItems: { $each: listItems },
+        },
+      },
+      { new: true }
+    );
+    if (!list) {
+      return res.status(404).json({ success: false, message: "List not found" });
+    }
+    res.json({ success: true, message: "Item(s) added to list", data: list });
   } catch (err) {
-    console.error("Update list error:", err);
+    console.error("Get all lists error:", err);
     return res.status(500).send({ success: false, message: err.message });
+  }
+}
+
+const handleRemoveItemsFromList = async (req, res) => {
+  const { listId, itemIds } = req.body;
+  const user = req.user;
+  
+  if (!listId || !Array.isArray(itemIds) || itemIds.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid listId or itemIds"
+    });
+  }
+
+  try {
+    const list = await List.findOneAndUpdate(
+      { _id: listId, createdBy: user.id },
+      {
+        $pull: {
+          listItems: {
+            company: { $in: itemIds }
+          }
+        }
+      },
+      { new: true }
+    );
+
+    if (!list) {
+      return res.status(404).json({ success: false, message: "List not found" });
+    }
+
+    return res.json({
+      success: true,
+      message: "Item(s) removed from list successfully!",
+      data: list
+    });
+
+  } catch (err) {
+    console.error("Remove items error:", err);
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
 
 const handleRemoveLists = async (req, res) => {
+  const { listIds } = req.body;
   const user = req.user;
   try {
-    const { listIds } = req.body;
     if (!listIds || listIds.length === 0) {
       return res.status(400).json({ success: false, message: "No lists selected" });
     }
-    const deletedLists = await List.deleteMany({ _id: { $in: listIds }, createdBy: user.id });
-    return res.status(200).send({ success: true, message: "Lists deleted successfully", data: deletedLists });
+    const deletedLists = await List.deleteMany({
+      _id: { $in: listIds },
+      createdBy: user.id,
+    });
+    res.status(200).json({
+      success: true,
+      message: `${deletedLists.deletedCount} list(s) deleted`,
+      data: deletedLists
+    });
   } catch (err) {
     console.error("Remove lists error:", err);
     return res.status(500).send({ success: false, message: err.message });
@@ -64,6 +119,7 @@ const handleRemoveLists = async (req, res) => {
 module.exports = {
   handleAddList,
   handleGetAllLists,
-  handleUpdateList,
+  handleAddItemsToList,
+  handleRemoveItemsFromList,
   handleRemoveLists,
 };

@@ -63,7 +63,7 @@ const ManualTemplateFormModal = ({
         <div className="flex-1 overflow-y-auto pr-2 -mr-2">
           {/* Template Name Input */}
           <div className="mb-6">
-            <label className="block text-white font-medium mb-3 flex items-center space-x-2">
+            <label className="text-white font-medium mb-3 flex items-center space-x-2">
               <MdLabel className="text-orange-400" />
               <span>Template Name:</span>
             </label>
@@ -85,7 +85,7 @@ const ManualTemplateFormModal = ({
         
           {/* Template Subject Input */}
           <div className="mb-6">
-            <label className="block text-white font-medium mb-3 flex items-center space-x-2">
+            <label className="text-white font-medium mb-3 flex items-center space-x-2">
               <MdEdit className="text-orange-400" />
               <span>Template Subject:</span>
             </label>
@@ -100,7 +100,7 @@ const ManualTemplateFormModal = ({
         
           {/* Template Content Editor */}
           <div className="mb-8">
-            <label className="block text-white font-medium mb-3 flex items-center space-x-2">
+            <label className="text-white font-medium mb-3 flex items-center space-x-2">
               <MdDescription className="text-orange-400" />
               <span>Template Content:</span>
             </label>

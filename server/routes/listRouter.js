@@ -3,7 +3,8 @@ const app = express.Router();
 const {
     handleAddList,
     handleGetAllLists,
-    handleUpdateList,
+    handleAddItemsToList,
+    handleRemoveItemsFromList,
     handleRemoveLists
 } = require('../controllers/listController');
 const { authenticateUser } = require("../utilities/userUtil");
@@ -16,7 +17,9 @@ app.get('/getall', authenticateUser, handleGetAllLists);
 
 app.post('/add', authenticateUser, handleAddList);
 
-app.put('/update', authenticateUser, handleUpdateList);
+app.put('/additems', authenticateUser, handleAddItemsToList);
+
+app.put('/removeitems', authenticateUser, handleRemoveItemsFromList);
 
 app.delete('/remove', authenticateUser, handleRemoveLists);
 
