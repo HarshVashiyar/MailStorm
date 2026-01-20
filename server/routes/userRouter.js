@@ -17,7 +17,7 @@ const {
   authorizeAdmin,
   loginLimiter,
 } = require("../utilities/userUtil");
-const { profilePhotoUpload } = require("../middlewares/storeFiles");
+const { profilePhotoUpload, processProfilePhoto } = require("../middlewares/storeFiles");
 
 app.get("/", (req, res) => {
   res.send("Welcome to User Router!");
@@ -43,6 +43,7 @@ app.post(
   "/addpp",
   authenticateUser,
   profilePhotoUpload.single("profilePhoto"),
+  processProfilePhoto,
   handleUploadProfilePhoto
 );
 

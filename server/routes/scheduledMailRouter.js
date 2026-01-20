@@ -28,9 +28,9 @@ app.post(
   "/add",
   authenticateUser,
   scheduledUpload.array("files", 5),
-  multerErrorHandler,
   processFiles,
-  handleAddScheduledMail
+  handleAddScheduledMail,
+  multerErrorHandler
 );
 
 // app.put("/update", authenticateUser, handleUpdateScheduledMail);
