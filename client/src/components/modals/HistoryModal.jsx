@@ -45,8 +45,10 @@ const HistoryModal = ({ user, show, close, id }) => {
     const filteredHistory = history.filter((item) => {
         const searchLower = searchTerm.toLowerCase();
         const subject = item.subject?.toLowerCase() || '';
-        const sendTime = new Date(item.lastSent).toLocaleDateString().toLowerCase();
-        return subject.includes(searchLower) || sendTime.includes(searchLower);
+        const date = new Date(item.lastSent);
+        const sendDate = date.toLocaleDateString().toLowerCase();
+        const sendTime = date.toLocaleTimeString().toLowerCase();
+        return subject.includes(searchLower) || sendDate.includes(searchLower) || sendTime.includes(searchLower);
     });
 
     return (
@@ -64,8 +66,11 @@ const HistoryModal = ({ user, show, close, id }) => {
                                 Email History
                             </span>
                         </h3>
-                        <p className="text-gray-300 text-sm">
+                        <p className="text-gray-300 text-sm mb-2">
                             View all sent emails for {user?.companyName || user?.fullName}
+                        </p>
+                        <p className="text-yellow-400 text-xs bg-yellow-400/10 border border-yellow-400/30 rounded-lg px-3 py-2 inline-block">
+                            💡 Always refresh the page to see updated history
                         </p>
                     </div>
                     {/* Search Bar - Top Right */}
