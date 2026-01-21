@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import NotesModal from '../modals/NotesModal';
+import HistoryModal from '../modals/HistoryModal';
 
 const DataTable = ({
   filteredUsers,
@@ -14,6 +15,8 @@ const DataTable = ({
   const [note, setNote] = useState('');
   const [noteId, setNoteId] = useState('');
   const [viewNote, setViewNote] = useState(false);
+  const [viewHistory, setViewHistory] = useState(false);
+  const [historyUserId, setHistoryUserId] = useState('');
   const userSelectAllRef = useRef(null);
   const companySelectAllRef = useRef(null);
 
@@ -37,6 +40,16 @@ const DataTable = ({
     setViewNote(false);
     setNoteId('');
     setNote('');
+  };
+
+  const handleHistory = (userId) => {
+    setHistoryUserId(userId);
+    setViewHistory(true);
+  };
+
+  const closeHistory = () => {
+    setViewHistory(false);
+    setHistoryUserId('');
   };
 
   const UsersTableHeader = () => (
@@ -72,15 +85,16 @@ const DataTable = ({
 
   const CompaniesTableHeader = () => (
     <tr>
-      <th className="py-2 px-2 text-center w-1/6">Company</th>
-      <th className="py-2 px-2 text-center w-1/6">Address</th>
-      <th className="py-2 px-2 text-center w-1/6">Email</th>
-      <th className="py-2 px-2 text-center w-1/6">Contact</th>
-      <th className="py-2 px-2 text-center w-1/12">Procurement</th>
-      <th className="py-2 px-2 text-center w-1/12">Lists</th>
-      <th className="py-2 px-2 text-center w-1/6">Products</th>
-      <th className="py-2 px-1 text-center w-12">Notes</th>
-      <th className="py-2 px-1 text-center w-16">
+      <th className="py-3 px-2 text-center w-[12%] text-s">Company</th>
+      <th className="py-3 px-2 text-center w-[12%] text-s">Address</th>
+      <th className="py-3 px-2 text-center w-[16%] text-s">Email</th>
+      <th className="py-3 px-2 text-center w-[14%] text-s">Contact</th>
+      <th className="py-3 px-2 text-center w-[16%] text-s">Products</th>
+      <th className="py-3 px-2 text-center w-[6%] text-s leading-tight">Procure<br/>ment</th>
+      <th className="py-3 px-2 text-center w-[6%] text-s">Lists</th>
+      <th className="py-3 px-1 text-center w-[6%] text-s">Notes</th>
+      <th className="py-3 px-2 text-center w-[6%] text-s">History</th>
+      <th className="py-3 px-1 text-center w-[6%] text-s">
         <input
           ref={companySelectAllRef}
           type="checkbox"
@@ -184,6 +198,26 @@ const DataTable = ({
           </div>
         </div>
       </td>
+      <td className="py-4 px-3 text-center">
+        <div className="space-y-1">
+          <div className="truncate text-gray-300" title={user.companyProductGroup?.join(', ')}>
+            {user.companyProductGroup?.slice(0, 2).join(', ')}
+            {user.companyProductGroup?.length > 2 && '...'}
+          </div>
+          <div>
+            <a
+              href={user.companyWebsite?.startsWith('http') ? user.companyWebsite : `https://${user.companyWebsite}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center space-x-1 text-xs text-accent-400 hover:text-accent-300 transition-colors hover:underline"
+              title={user.companyWebsite}
+            >
+              <span>🌐</span>
+              <span>Visit</span>
+            </a>
+          </div>
+        </div>
+      </td>
       {/* Procurement team indicator (★ = has procurement team, ☆ = none) */}
       <td className="py-4 px-3 text-center">
         <div title={
@@ -206,26 +240,6 @@ const DataTable = ({
           <span className="opacity-50">0</span>
         )}
       </td>
-      <td className="py-4 px-3 text-center">
-        <div className="space-y-1">
-          <div className="truncate text-gray-300" title={user.companyProductGroup?.join(', ')}>
-            {user.companyProductGroup?.slice(0, 2).join(', ')}
-            {user.companyProductGroup?.length > 2 && '...'}
-          </div>
-          <div>
-            <a
-              href={user.companyWebsite?.startsWith('http') ? user.companyWebsite : `https://${user.companyWebsite}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center space-x-1 text-xs text-accent-400 hover:text-accent-300 transition-colors hover:underline"
-              title={user.companyWebsite}
-            >
-              <span>🌐</span>
-              <span>Visit</span>
-            </a>
-          </div>
-        </div>
-      </td>
       <td className="py-4 px-2 text-center">
         <div className="flex items-center justify-center">
           <button
@@ -243,6 +257,25 @@ const DataTable = ({
               </span>
             ) : (
               '✏️'
+            )}
+          </button>
+        </div>
+      </td>
+      <td className="py-4 px-2 text-center">
+        <div className="flex items-center justify-center">
+          <button
+            onClick={() => handleHistory(user._id)}
+            className="relative w-8 h-8 rounded-lg text-sm transition-all duration-300 transform hover:scale-110 shadow-lg border border-primary-400/30 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white"
+            title={user.history && user.history.length > 0
+              ? `Last Sent: ${new Date(user.history[user.history.length - 1].lastSent).toLocaleDateString()}\nSubject: ${user.history[user.history.length - 1].subject}`
+              : 'No email history'}
+          >
+            {user.history && user.history.length > 0 ? (
+              <span className="relative">
+                📧
+              </span>
+            ) : (
+              '📧'
             )}
           </button>
         </div>
@@ -356,6 +389,15 @@ const DataTable = ({
           noteId={noteId}
           closeForm={closeNote}
           updatedNoteInList={updateUserNote}
+        />
+      )}
+
+      {viewHistory && (
+        <HistoryModal
+          user={filteredUsers.find((u) => u._id === historyUserId)}
+          show={viewHistory}
+          close={closeHistory}
+          id={historyUserId}
         />
       )}
     </>

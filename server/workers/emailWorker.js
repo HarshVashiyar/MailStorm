@@ -1,6 +1,7 @@
 require('dotenv').config();
 const nodemailer = require('nodemailer');
 const { emailQueue, scheduledEmailQueue } = require('../config/queue');
+const Company = require('../models/companyDB');
 
 // Email transporter setup
 const createTransporter = () => {
@@ -38,6 +39,12 @@ const processSingleEmail = async (job) => {
     
     // Update job progress
     await job.progress(100);
+
+    const companies = await Company.find({ companyEmail: { $in: to } });
+    companies.forEach(async (company) => {
+      company.history.push({ lastSent: new Date(), subject });
+      await company.save();
+    });
     
     return {
       success: true,

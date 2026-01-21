@@ -35,7 +35,7 @@ const companySchema = new mongoose.Schema(
     companyEmail: {
       type: String,
       //required: true,
-      //unique: true,
+      unique: true,
       trim: true,
       validate: {
         validator: function (v) {
@@ -79,6 +79,16 @@ const companySchema = new mongoose.Schema(
       //required: true,
       trim: true,
     },
+    history: [
+      {
+        lastSent: {
+          type: Date,
+        },
+        subject: {
+          type: String,
+        },
+      },
+    ],
     hasProcurementTeam: {
       type: Boolean,
       required: true,
@@ -92,6 +102,11 @@ const companySchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+companySchema.pre("save", function (next) {
+  this.history.sort((a, b) => new Date(b.lastSent) - new Date(a.lastSent));
+  next();
+});
 
 const Company = mongoose.model("Company", companySchema);
 module.exports = Company;

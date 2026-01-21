@@ -33,6 +33,16 @@ const dummyCompanies = [
     companyProductGroup: ['Software Development', 'Cloud Services', 'AI Solutions'],
     companyWebsite: 'https://techcorp.com',
     companyNote: 'Interested in enterprise solutions. Follow up monthly.',
+    history: [
+      {
+        lastSent: new Date('2024-05-01').toISOString(),
+        subject: 'Introducing Our New AI Platform'
+      },
+      {
+        lastSent: new Date('2024-03-15').toISOString(),
+        subject: 'Cloud Services Discount Offer'
+      }
+    ],
     hasProcurementTeam: true,
     includedIn: 'N/A'
   },
@@ -48,6 +58,16 @@ const dummyCompanies = [
     companyProductGroup: ['Digital Marketing', 'SEO Services', 'Social Media'],
     companyWebsite: 'https://digitalmarketingpro.com',
     companyNote: '',
+    history: [
+      {
+        lastSent: new Date('2024-05-01').toISOString(),
+        subject: 'Introducing Our New AI Platform'
+      },
+      {
+        lastSent: new Date('2024-03-15').toISOString(),
+        subject: 'Cloud Services Discount Offer'
+      }
+    ],
     hasProcurementTeam: false,
     includedIn: 'N/A'
   },
@@ -63,6 +83,16 @@ const dummyCompanies = [
     companyProductGroup: ['Solar Panels', 'Wind Energy', 'Battery Storage'],
     companyWebsite: 'https://greenenergy.com',
     companyNote: 'Large scale projects only. Quarterly reviews.',
+    history: [
+      {
+        lastSent: new Date('2024-05-01').toISOString(),
+        subject: 'Introducing Our New AI Platform'
+      },
+      {
+        lastSent: new Date('2024-03-15').toISOString(),
+        subject: 'Cloud Services Discount Offer'
+      }
+    ],
     hasProcurementTeam: true,
     includedIn: 'N/A'
   },
