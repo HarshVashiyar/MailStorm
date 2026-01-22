@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 
-// Dummy data with MailStorm styling
 const dummyUsers = [
   {
     _id: 'user1',
@@ -32,7 +31,7 @@ const dummyCompanies = [
     companyContactPersonPhone: '+1-555-0124',
     companyProductGroup: ['Software Development', 'Cloud Services', 'AI Solutions'],
     companyWebsite: 'https://techcorp.com',
-    companyNote: 'Interested in enterprise solutions. Follow up monthly.',
+    companyNotes: 'Interested in enterprise solutions. Follow up monthly.',
     history: [
       {
         lastSent: new Date('2024-05-01').toISOString(),
@@ -44,7 +43,7 @@ const dummyCompanies = [
       }
     ],
     hasProcurementTeam: true,
-    includedIn: 'N/A'
+    lists: []
   },
   {
     _id: 'company2',
@@ -57,7 +56,7 @@ const dummyCompanies = [
     companyContactPersonPhone: '+1-555-0235',
     companyProductGroup: ['Digital Marketing', 'SEO Services', 'Social Media'],
     companyWebsite: 'https://digitalmarketingpro.com',
-    companyNote: '',
+    companyNotes: '',
     history: [
       {
         lastSent: new Date('2024-05-01').toISOString(),
@@ -69,7 +68,7 @@ const dummyCompanies = [
       }
     ],
     hasProcurementTeam: false,
-    includedIn: 'N/A'
+    lists: []
   },
   {
     _id: 'company3',
@@ -82,7 +81,7 @@ const dummyCompanies = [
     companyContactPersonPhone: '+1-555-0346',
     companyProductGroup: ['Solar Panels', 'Wind Energy', 'Battery Storage'],
     companyWebsite: 'https://greenenergy.com',
-    companyNote: 'Large scale projects only. Quarterly reviews.',
+    companyNotes: 'Large scale projects only. Quarterly reviews.',
     history: [
       {
         lastSent: new Date('2024-05-01').toISOString(),
@@ -94,7 +93,7 @@ const dummyCompanies = [
       }
     ],
     hasProcurementTeam: true,
-    includedIn: 'N/A'
+    lists: []
   },
 ];
 
@@ -105,9 +104,14 @@ export const useUsers = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterProcurement, setFilterProcurement] = useState(false);
   const [isUsingDummyData, setIsUsingDummyData] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
 
-  // Fetch users/companies from API or use dummy data
   const fetchUsers = async () => {
+    if (isFetching) {
+      return;
+    }
+    
+    setIsFetching(true);
     try {
       const response = await axios.get(
         show
@@ -117,19 +121,38 @@ export const useUsers = () => {
           withCredentials: true
         }
       );
-      // Handle empty response gracefully - backend returns { success: true, data: [...] }
-      const responseData = response.data?.data || response.data || [];
-      const normalizedData = (Array.isArray(responseData) ? responseData : []).map(item => ({
-        ...item,
-        lists: Array.isArray(item.lists) ? item.lists : []
-      }));
-      setUsers(Array.isArray(normalizedData) ? normalizedData : []);
+      
+      const responseData = Array.isArray(response.data?.data)
+        ? response.data.data
+        : [];
+
+      if (responseData.length > 0 && responseData[0] && Object.keys(responseData[0]).length < 3) {
+        setIsFetching(false);
+        // toast.error('⚠️ Received incomplete data from server');
+        return;
+      }
+
+      const normalizedData = responseData.map((item, index) => {
+        return {
+          ...item,
+          _id: item._id || `generated-${Date.now()}-${index}`,
+          lists: Array.isArray(item.lists) 
+            ? item.lists 
+            : Array.isArray(item.includedLists) 
+              ? item.includedLists 
+              : []
+        };
+      });
+
+      setUsers(normalizedData);
       setIsUsingDummyData(false);
+      setIsFetching(false);
     } catch (error) {
-      console.warn('API call failed, using dummy data:', error);
-      setUsers(show ? dummyUsers : dummyCompanies);
+      const fallback = show ? dummyUsers : dummyCompanies;
+      setUsers(fallback);
       setIsUsingDummyData(true);
-      toast.info('🔄 Using demo data - API unavailable', {
+      setIsFetching(false);
+      toast.info('📄 Using demo data - API unavailable', {
         style: {
           background: 'linear-gradient(135deg, rgba(255, 107, 53, 0.1), rgba(255, 107, 53, 0.05))',
           backdropFilter: 'blur(10px)',
@@ -144,13 +167,11 @@ export const useUsers = () => {
     fetchUsers();
   }, [show]);
 
-  // Toggle between users and companies
   const toggleView = () => {
     setShow(prev => !prev);
     setSelectedUsers([]);
   };
 
-  // Toggle user selection
   const toggleUserSelection = (userId) => {
     setSelectedUsers(prevSelected =>
       prevSelected.includes(userId)
@@ -159,7 +180,6 @@ export const useUsers = () => {
     );
   };
 
-  // Select all users
   const selectAllUsers = (userList) => {
     if (Array.isArray(userList)) {
       setSelectedUsers(userList.map(user => user._id));
@@ -168,15 +188,12 @@ export const useUsers = () => {
     }
   };
 
-  // Clear selection
   const clearSelection = () => {
     setSelectedUsers([]);
   };
 
-  // Delete selected users
   const deleteSelectedUsers = async () => {
     if (isUsingDummyData) {
-      // Handle locally for demo mode
       setUsers(prevUsers =>
         prevUsers.filter(user => !selectedUsers.includes(user._id))
       );
@@ -226,7 +243,6 @@ export const useUsers = () => {
     }
   };
 
-  // Update user note
   const updateUserNote = (id, updatedNote) => {
     setUsers(prevUsers =>
       prevUsers.map(user =>
@@ -235,12 +251,9 @@ export const useUsers = () => {
     );
   };
 
-  // Filter users based on search term
   const filteredUsers = (users || []).filter((user) => {
     if (!user) return false;
 
-    // Build searchable fields with sensible fallbacks so search works even
-    // if the API returns slightly different user field names.
     const searchFields = show
       ? [
         user.fullName,
@@ -262,14 +275,12 @@ export const useUsers = () => {
         ...(user.companyProductGroup || []),
       ];
 
-    // Normalize search input into keywords (support both array and space-separated string)
     const keywords = Array.isArray(searchTerm)
       ? searchTerm.map(k => String(k).trim().toLowerCase()).filter(Boolean)
       : String(searchTerm || '').split(/\s+/).map(k => k.trim().toLowerCase()).filter(Boolean);
 
-    if (keywords.length === 0 && !filterProcurement) return true;
+    if (!searchTerm && !filterProcurement) return true;
 
-    // If procurement filter is enabled for companies, require procurement=true
     if (!show && filterProcurement) {
       const hasProcurement = Boolean(
         user.hasProcurementTeam ?? user.procurementTeam ?? user.procurement ?? user.hasProcurement
@@ -277,13 +288,11 @@ export const useUsers = () => {
       if (!hasProcurement) return false;
     }
 
-    // Combine all searchable fields into one string to allow matching keywords across fields
     const haystack = searchFields
       .filter(Boolean)
       .map(f => String(f).toLowerCase())
       .join(' ');
 
-    // Require that every keyword appears somewhere in the combined fields
     return keywords.every(k => haystack.includes(k));
   });
 

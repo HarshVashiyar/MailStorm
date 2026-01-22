@@ -55,7 +55,6 @@ const DataTable = ({
   const UsersTableHeader = () => (
     <tr>
       <th className="py-2 px-4 text-center w-1/5">Full Name</th>
-      {/* <th className="py-2 px-4 text-center w-1/5">Username</th> */}
       <th className="py-2 px-4 text-center w-1/4">Email</th>
       <th className="py-2 px-4 text-center w-1/5">Created</th>
       <th className="py-2 px-4 text-center w-1/5">Updated</th>
@@ -90,7 +89,7 @@ const DataTable = ({
       <th className="py-3 px-2 text-center w-[16%] text-s">Email</th>
       <th className="py-3 px-2 text-center w-[14%] text-s">Contact</th>
       <th className="py-3 px-2 text-center w-[16%] text-s">Products</th>
-      <th className="py-3 px-2 text-center w-[6%] text-s leading-tight">Procure<br/>ment</th>
+      <th className="py-3 px-2 text-center w-[6%] text-s leading-tight">Procure<br />ment</th>
       <th className="py-3 px-2 text-center w-[6%] text-s">Lists</th>
       <th className="py-3 px-1 text-center w-[6%] text-s">Notes</th>
       <th className="py-3 px-2 text-center w-[6%] text-s">History</th>
@@ -118,170 +117,32 @@ const DataTable = ({
     </tr>
   );
 
-  const UserRow = ({ user, index, isSelected }) => (
-    <tr
-      key={user._id}
-      className={`group transition-all duration-300 hover:bg-primary-500/10 ${isSelected
-        ? 'bg-gradient-to-r from-primary-500/20 to-accent-500/20 border-l-4 border-primary-400'
-        : index % 2 === 0 ? 'bg-glass-dark/20' : 'bg-transparent'
-        }`}
-    >
-      <td className="py-4 px-4 text-center">
-        <div className="truncate font-medium text-white" title={user.fullName}>{user.fullName}</div>
-      </td>
-      {/* <td className="py-4 px-4 text-center">
-        <div className="truncate text-accent-300" title={user.userName}>@{user.userName}</div>
-      </td> */}
-      <td className="py-4 px-4 text-center">
-        <div className="truncate text-gray-300" title={user.email}>{user.email}</div>
-      </td>
-      <td className="py-4 px-4 text-center text-xs text-gray-400">
-        {new Date(user.createdAt).toLocaleDateString()}
-      </td>
-      <td className="py-4 px-4 text-center text-xs text-gray-400">
-        {new Date(user.updatedAt).toLocaleDateString()}
-      </td>
-      <td className="py-4 px-4 text-center">
-        <input
-          type="checkbox"
-          className={`w-5 h-5 rounded border-2 transition-all duration-300 ${isSelected
-            ? 'bg-primary-500 border-primary-500 text-white'
-            : 'border-gray-400 hover:border-primary-400'
-            }`}
-          checked={isSelected}
-          onChange={() => toggleUserSelection(user._id)}
-        />
-      </td>
-    </tr>
-  );
-
-  const CompanyRow = ({ user, index, isSelected }) => (
-    <tr
-      key={user._id}
-      className={`group transition-all duration-300 hover:bg-primary-500/10 ${isSelected
-        ? 'bg-gradient-to-r from-primary-500/20 to-accent-500/20 border-l-4 border-primary-400'
-        : index % 2 === 0 ? 'bg-glass-dark/20' : 'bg-transparent'
-        }`}
-    >
-      <td className="py-4 px-3 text-center">
-        <div className="space-y-1">
-          <div className="truncate font-semibold text-white" title={user.companyName}>
-            {user.companyName}
-          </div>
-          <div className="truncate text-xs text-accent-300" title={user.companyContactPersonName}>
-            👤 {user.companyContactPersonName}
-          </div>
-        </div>
-      </td>
-      <td className="py-4 px-3 text-center">
-        <div className="space-y-1">
-          <div className="truncate text-gray-300" title={user.companyAddress}>
-            {user.companyAddress}
-          </div>
-          <div className="truncate text-xs text-gray-400" title={user.companyCountry}>
-            🌍 {user.companyCountry}
-          </div>
-        </div>
-      </td>
-      <td className="py-4 px-3 text-center">
-        <div className="truncate text-accent-300 hover:text-accent-200 transition-colors" title={user.companyEmail}>
-          {user.companyEmail}
-        </div>
-      </td>
-      <td className="py-4 px-3 text-center">
-        <div className="space-y-1">
-          <div className="truncate text-gray-300" title={user.companyPhone}>
-            📞 {user.companyPhone}
-          </div>
-          <div className="truncate text-xs text-gray-400" title={user.companyContactPersonPhone}>
-            📱 {user.companyContactPersonPhone}
-          </div>
-        </div>
-      </td>
-      <td className="py-4 px-3 text-center">
-        <div className="space-y-1">
-          <div className="truncate text-gray-300" title={user.companyProductGroup?.join(', ')}>
-            {user.companyProductGroup?.slice(0, 2).join(', ')}
-            {user.companyProductGroup?.length > 2 && '...'}
-          </div>
-          <div>
-            <a
-              href={user.companyWebsite?.startsWith('http') ? user.companyWebsite : `https://${user.companyWebsite}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center space-x-1 text-xs text-accent-400 hover:text-accent-300 transition-colors hover:underline"
-              title={user.companyWebsite}
-            >
-              <span>🌐</span>
-              <span>Visit</span>
-            </a>
-          </div>
-        </div>
-      </td>
-      {/* Procurement team indicator (★ = has procurement team, ☆ = none) */}
-      <td className="py-4 px-3 text-center">
-        <div title={
-          user.hasProcurementTeam
-            ? 'Has procurement team' : 'No procurement team'
-        }>
-          {user.hasProcurementTeam ? '⭐️' : '☆'}
-        </div>
-      </td>
-
-      <td className="text-center">
-        {user.lists?.length > 0 ? (
-          <span
-            title={user.lists.map(l => l.listName).join('\n')}
-            className="cursor-pointer"
-          >
-            {user.lists.length}
-          </span>
-        ) : (
-          <span className="opacity-50">0</span>
-        )}
-      </td>
-      <td className="py-4 px-2 text-center">
-        <div className="flex items-center justify-center">
-          <button
-            onClick={() => handleNote(user._id, user.companyNotes)}
-            className={`relative w-8 h-8 rounded-lg text-sm transition-all duration-300 transform hover:scale-110 shadow-lg border border-primary-400/30 ${user.companyNotes && user.companyNotes.trim()
-              ? 'bg-gradient-to-r from-accent-500 to-primary-600 hover:from-accent-600 hover:to-primary-700 text-white animate-glow'
-              : 'bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white'
-              }`}
-            title={user.companyNotes && user.companyNotes.trim() ? 'Edit Notes (Has Content)' : 'Add Notes (Empty)'}
-          >
-            {user.companyNotes && user.companyNotes.trim() ? (
-              <span className="relative">
-                📝
-                <span className="absolute -top-1 -right-1 w-2 h-2 bg-green-400 rounded-full border border-white/50 animate-pulse"></span>
-              </span>
-            ) : (
-              '✏️'
-            )}
-          </button>
-        </div>
-      </td>
-      <td className="py-4 px-2 text-center">
-        <div className="flex items-center justify-center">
-          <button
-            onClick={() => handleHistory(user._id)}
-            className="relative w-8 h-8 rounded-lg text-sm transition-all duration-300 transform hover:scale-110 shadow-lg border border-primary-400/30 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white"
-            title={user.history && user.history.length > 0
-              ? `Last Sent: ${new Date(user.history[user.history.length - 1].lastSent).toLocaleDateString()}\nSubject: ${user.history[user.history.length - 1].subject}`
-              : 'No email history'}
-          >
-            {user.history && user.history.length > 0 ? (
-              <span className="relative">
-                📧
-              </span>
-            ) : (
-              '📧'
-            )}
-          </button>
-        </div>
-      </td>
-      <td className="py-4 px-2 text-center">
-        <div className="flex justify-center">
+  const UserRow = ({ user, index, isSelected }) => {
+    const fullName = user?.fullName || user?.full_name || user?.name || 'N/A';
+    const email = user?.email || 'N/A';
+    const createdAt = user?.createdAt || user?.created_at || new Date().toISOString();
+    const updatedAt = user?.updatedAt || user?.updated_at || new Date().toISOString();
+    
+    return (
+      <tr
+        className={`group transition-all duration-300 hover:bg-primary-500/10 ${isSelected
+          ? 'bg-gradient-to-r from-primary-500/20 to-accent-500/20 border-l-4 border-primary-400'
+          : index % 2 === 0 ? 'bg-glass-dark/20' : 'bg-transparent'
+          }`}
+      >
+        <td className="py-4 px-4 text-center">
+          <div className="truncate font-medium text-white" title={fullName}>{fullName}</div>
+        </td>
+        <td className="py-4 px-4 text-center">
+          <div className="truncate text-gray-300" title={email}>{email}</div>
+        </td>
+        <td className="py-4 px-4 text-center text-xs text-gray-400">
+          {new Date(createdAt).toLocaleDateString()}
+        </td>
+        <td className="py-4 px-4 text-center text-xs text-gray-400">
+          {new Date(updatedAt).toLocaleDateString()}
+        </td>
+        <td className="py-4 px-4 text-center">
           <input
             type="checkbox"
             className={`w-5 h-5 rounded border-2 transition-all duration-300 ${isSelected
@@ -291,14 +152,161 @@ const DataTable = ({
             checked={isSelected}
             onChange={() => toggleUserSelection(user._id)}
           />
-        </div>
-      </td>
-    </tr>
-  );
+        </td>
+      </tr>
+    );
+  };
+
+  const CompanyRow = ({ user, index, isSelected }) => {
+    const companyName = user?.companyName || user?.company_name || user?.name || 'N/A';
+    const companyContactPersonName = user?.companyContactPersonName || user?.contactPersonName || user?.contact_person_name || 'N/A';
+    const companyAddress = user?.companyAddress || user?.address || 'N/A';
+    const companyCountry = user?.companyCountry || user?.country || 'N/A';
+    const companyEmail = user?.companyEmail || user?.email || 'N/A';
+    const companyPhone = user?.companyPhone || user?.phone || 'N/A';
+    const companyContactPersonPhone = user?.companyContactPersonPhone || user?.contactPersonPhone || user?.contact_phone || 'N/A';
+    const companyProductGroup = user?.companyProductGroup || user?.productGroup || user?.products || [];
+    const companyWebsite = user?.companyWebsite || user?.website || '';
+    const hasProcurementTeam = user?.hasProcurementTeam || user?.procurementTeam || user?.procurement || false;
+    const lists = user?.lists || user?.includedLists || [];
+    const history = user?.history || [];
+    const companyNotes = user?.companyNotes || user?.notes || '';
+
+    return (
+      <tr
+        className={`group transition-all duration-300 hover:bg-primary-500/10 ${isSelected
+          ? 'bg-gradient-to-r from-primary-500/20 to-accent-500/20 border-l-4 border-primary-400'
+          : index % 2 === 0 ? 'bg-glass-dark/20' : 'bg-transparent'
+          }`}
+      >
+        <td className="py-4 px-3 text-center">
+          <div className="space-y-1">
+            <div className="truncate font-semibold text-white" title={companyName}>
+              {companyName}
+            </div>
+            <div className="truncate text-xs text-accent-300" title={companyContactPersonName}>
+              👤 {companyContactPersonName}
+            </div>
+          </div>
+        </td>
+        <td className="py-4 px-3 text-center">
+          <div className="space-y-1">
+            <div className="truncate text-gray-300" title={companyAddress}>
+              {companyAddress}
+            </div>
+            <div className="truncate text-xs text-gray-400" title={companyCountry}>
+              🌍 {companyCountry}
+            </div>
+          </div>
+        </td>
+        <td className="py-4 px-3 text-center">
+          <div className="truncate text-accent-300 hover:text-accent-200 transition-colors" title={companyEmail}>
+            {companyEmail}
+          </div>
+        </td>
+        <td className="py-4 px-3 text-center">
+          <div className="space-y-1">
+            <div className="truncate text-gray-300" title={companyPhone}>
+              📞 {companyPhone}
+            </div>
+            <div className="truncate text-xs text-gray-400" title={companyContactPersonPhone}>
+              📱 {companyContactPersonPhone}
+            </div>
+          </div>
+        </td>
+        <td className="py-4 px-3 text-center">
+          <div className="space-y-1">
+            <div className="truncate text-gray-300" title={companyProductGroup.join(', ')}>
+              {companyProductGroup.slice(0, 2).join(', ')}
+              {companyProductGroup.length > 2 && '...'}
+            </div>
+            <div>
+              {companyWebsite && (
+                <a
+                  href={companyWebsite.startsWith('http') ? companyWebsite : `https://${companyWebsite}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center space-x-1 text-xs text-accent-400 hover:text-accent-300 transition-colors hover:underline"
+                  title={companyWebsite}
+                >
+                  <span>🌐</span>
+                  <span>Visit</span>
+                </a>
+              )}
+            </div>
+          </div>
+        </td>
+        <td className="py-4 px-3 text-center">
+          <div title={hasProcurementTeam ? 'Has procurement team' : 'No procurement team'}>
+            {hasProcurementTeam ? '⭐️' : '☆'}
+          </div>
+        </td>
+        <td className="text-center">
+          {lists.length > 0 ? (
+            <span
+              title={lists.map(l => l.listName || l.name || 'Unnamed').join('\n')}
+              className="cursor-pointer"
+            >
+              {lists.length}
+            </span>
+          ) : (
+            <span className="opacity-50">0</span>
+          )}
+        </td>
+        <td className="py-4 px-2 text-center">
+          <div className="flex items-center justify-center">
+            <button
+              onClick={() => handleNote(user._id, companyNotes)}
+              className={`relative w-8 h-8 rounded-lg text-sm transition-all duration-300 transform hover:scale-110 shadow-lg border border-primary-400/30 ${companyNotes && companyNotes.trim()
+                ? 'bg-gradient-to-r from-accent-500 to-primary-600 hover:from-accent-600 hover:to-primary-700 text-white animate-glow'
+                : 'bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white'
+                }`}
+              title={companyNotes && companyNotes.trim() ? 'Edit Notes (Has Content)' : 'Add Notes (Empty)'}
+            >
+              {companyNotes && companyNotes.trim() ? (
+                <span className="relative">
+                  📝
+                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-green-400 rounded-full border border-white/50 animate-pulse"></span>
+                </span>
+              ) : (
+                '✏️'
+              )}
+            </button>
+          </div>
+        </td>
+        <td className="py-4 px-2 text-center">
+          <div className="flex items-center justify-center">
+            <button
+              onClick={() => handleHistory(user._id)}
+              className="relative w-8 h-8 rounded-lg text-sm transition-all duration-300 transform hover:scale-110 shadow-lg border border-primary-400/30 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white"
+              title={history.length > 0
+                ? `Last Sent: ${new Date(history[history.length - 1].lastSent).toLocaleDateString()}\nSubject: ${history[history.length - 1].subject}`
+                : 'No email history'}
+            >
+              📧
+            </button>
+          </div>
+        </td>
+        <td className="py-4 px-2 text-center">
+          <div className="flex justify-center">
+            <input
+              type="checkbox"
+              className={`w-5 h-5 rounded border-2 transition-all duration-300 ${isSelected
+                ? 'bg-primary-500 border-primary-500 text-white'
+                : 'border-gray-400 hover:border-primary-400'
+                }`}
+              checked={isSelected}
+              onChange={() => toggleUserSelection(user._id)}
+            />
+          </div>
+        </td>
+      </tr>
+    );
+  };
 
   const EmptyState = () => (
     <tr>
-      <td colSpan={show ? "5" : "9"} className="py-16 px-6 text-center text-gray-400">
+      <td colSpan={show ? "5" : "10"} className="py-16 px-6 text-center text-gray-400">
         <div className="flex flex-col items-center space-y-4">
           <div className="w-16 h-16 bg-gradient-to-br from-primary-400/20 to-accent-400/20 rounded-full flex items-center justify-center animate-pulse">
             <span className="text-3xl opacity-50">{show ? '👥' : '🏢'}</span>
@@ -313,16 +321,14 @@ const DataTable = ({
                 : `Your ${show ? 'users' : 'companies'} will appear here once they're added`
               }
             </p>
-            {!searchTerm && (
+            {!searchTerm && !show && (
               <button
-                onClick={show ? null : openAddCompanyModal}
-                className={`bg-gradient-to-r from-primary-500 to-accent-500 hover:from-primary-600 hover:to-accent-600 text-white px-6 py-2 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg ${show ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
-                disabled={show}
+                onClick={openAddCompanyModal}
+                className="bg-gradient-to-r from-primary-500 to-accent-500 hover:from-primary-600 hover:to-accent-600 text-white px-6 py-2 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg"
               >
                 <span className="flex items-center space-x-2">
                   <span>➕</span>
-                  <span>{show ? 'Users auto-register' : 'Add First Company'}</span>
+                  <span>Add First Company</span>
                 </span>
               </button>
             )}
@@ -359,11 +365,26 @@ const DataTable = ({
                 <EmptyState />
               ) : (
                 filteredUsers.map((user, index) => {
+                  if (!user?._id) {
+                    return null;
+                  }
+                  
                   const isSelected = selectedUsers.includes(user._id);
+                  
                   return show ? (
-                    <UserRow key={user._id} user={user} index={index} isSelected={isSelected} />
+                    <UserRow 
+                      key={user._id} 
+                      user={user} 
+                      index={index} 
+                      isSelected={isSelected} 
+                    />
                   ) : (
-                    <CompanyRow key={user._id} user={user} index={index} isSelected={isSelected} />
+                    <CompanyRow 
+                      key={user._id} 
+                      user={user} 
+                      index={index} 
+                      isSelected={isSelected} 
+                    />
                   );
                 })
               )}
