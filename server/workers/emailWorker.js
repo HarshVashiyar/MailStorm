@@ -5,6 +5,7 @@ const { emailQueue, scheduledEmailQueue } = require('../config/queue');
 const Company = require('../models/companyDB');
 const SmtpAccount = require('../models/SmtpAccount');
 const smtpUtil = require('../utilities/smtpUtil');
+const axios = require('axios');
 
 // Create transporter dynamically based on SMTP account
 const createTransporter = async (smtpAccount) => {
@@ -36,21 +37,56 @@ const createTransporter = async (smtpAccount) => {
         oauth2Client.setCredentials(newCreds);
       }
 
-      // Return a custom transporter that uses Gmail API
+      // Return a custom transporter that uses Gmail API with attachment support
       return {
         sendMail: async (mailOptions) => {
           const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
 
-          // Build email with proper MIME structure
-          const messageParts = [
+          // Build MIME message with attachment support
+          const boundary = `boundary_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+          let messageParts = [
             `From: ${mailOptions.from}`,
             `To: ${mailOptions.to}`,
             `Subject: ${mailOptions.subject}`,
             'MIME-Version: 1.0',
-            'Content-Type: text/html; charset=utf-8',
-            '',
-            mailOptions.html
           ];
+
+          // Check if there are attachments
+          if (mailOptions.attachments && mailOptions.attachments.length > 0) {
+            // Multipart message with attachments
+            messageParts.push(`Content-Type: multipart/mixed; boundary="${boundary}"`);
+            messageParts.push('');
+
+            // HTML body part
+            messageParts.push(`--${boundary}`);
+            messageParts.push('Content-Type: text/html; charset=utf-8');
+            messageParts.push('Content-Transfer-Encoding: 7bit');
+            messageParts.push('');
+            messageParts.push(mailOptions.html);
+            messageParts.push('');
+
+            // Add each attachment
+            for (const attachment of mailOptions.attachments) {
+              messageParts.push(`--${boundary}`);
+              messageParts.push(`Content-Type: ${attachment.contentType || 'application/octet-stream'}`);
+              messageParts.push('Content-Transfer-Encoding: base64');
+              messageParts.push(`Content-Disposition: attachment; filename="${attachment.filename}"`);
+              messageParts.push('');
+
+              // The content is already base64 from mailController.js
+              messageParts.push(attachment.content);
+              messageParts.push('');
+            }
+
+            // Close boundary
+            messageParts.push(`--${boundary}--`);
+          } else {
+            // Simple HTML message without attachments
+            messageParts.push('Content-Type: text/html; charset=utf-8');
+            messageParts.push('Content-Transfer-Encoding: 7bit');
+            messageParts.push('');
+            messageParts.push(mailOptions.html);
+          }
 
           const message = messageParts.join('\n');
 
@@ -250,6 +286,23 @@ const processScheduledEmail = async (job) => {
     const totalEmails = to.length;
     const results = [];
 
+    // Convert Cloudinary URLs to base64
+    const processedAttachments = await Promise.all(
+      (attachments || []).map(async (att) => {
+        if (att.path && att.path.startsWith('http')) {
+          // Fetch from Cloudinary and convert to base64
+          const response = await axios.get(att.path, { responseType: 'arraybuffer' });
+          return {
+            filename: att.filename,
+            content: Buffer.from(response.data).toString('base64'),
+            encoding: 'base64',
+            contentType: att.contentType,
+          };
+        }
+        return att;
+      })
+    );
+
     // Send emails with rate limiting (handled by queue limiter)
     for (let i = 0; i < to.length; i++) {
       const recipientName = recipientPeople[i] || 'User';
@@ -261,7 +314,7 @@ const processScheduledEmail = async (job) => {
           recipientName,
           subject,
           html,
-          attachments,
+          attachments: processedAttachments,
           smtpAccountId, // Pass SMTP account ID
         },
         {
