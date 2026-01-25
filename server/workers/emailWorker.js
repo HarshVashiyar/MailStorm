@@ -1,34 +1,149 @@
 require('dotenv').config();
 const nodemailer = require('nodemailer');
+const { google } = require('googleapis');
 const { emailQueue, scheduledEmailQueue } = require('../config/queue');
 const Company = require('../models/companyDB');
+const SmtpAccount = require('../models/SmtpAccount');
+const smtpUtil = require('../utilities/smtpUtil');
 
-// Email transporter setup
-const createTransporter = () => {
-  return nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.MAIL_USER_1,
-      pass: process.env.MAIL_PASS_1,
-    },
-    pool: true, // Use pooled connections
-    maxConnections: 5, // Limit concurrent connections
-    maxMessages: 100, // Limit messages per connection
-  });
+// Create transporter dynamically based on SMTP account
+const createTransporter = async (smtpAccount) => {
+  if (smtpAccount.authType === 'oauth') {
+    // Decrypt OAuth tokens
+    const accessToken = smtpAccount.decryptData(smtpAccount.oauthTokens.accessToken);
+    const refreshToken = smtpAccount.decryptData(smtpAccount.oauthTokens.refreshToken);
+
+    if (smtpAccount.provider === 'gmail') {
+      // For Gmail OAuth, use Gmail API instead of SMTP
+      const oauth2Client = new google.auth.OAuth2(
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET,
+        process.env.GOOGLE_REDIRECT_URI
+      );
+
+      oauth2Client.setCredentials({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        expiry_date: smtpAccount.oauthTokens.tokenExpiry.getTime(),
+      });
+
+      // Check and refresh token if needed
+      if (new Date() >= smtpAccount.oauthTokens.tokenExpiry) {
+        const { credentials: newCreds } = await oauth2Client.refreshAccessToken();
+        smtpAccount.oauthTokens.accessToken = newCreds.access_token;
+        smtpAccount.oauthTokens.tokenExpiry = new Date(newCreds.expiry_date);
+        await smtpAccount.save();
+        oauth2Client.setCredentials(newCreds);
+      }
+
+      // Return a custom transporter that uses Gmail API
+      return {
+        sendMail: async (mailOptions) => {
+          const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+
+          // Build email with proper MIME structure
+          const messageParts = [
+            `From: ${mailOptions.from}`,
+            `To: ${mailOptions.to}`,
+            `Subject: ${mailOptions.subject}`,
+            'MIME-Version: 1.0',
+            'Content-Type: text/html; charset=utf-8',
+            '',
+            mailOptions.html
+          ];
+
+          const message = messageParts.join('\n');
+
+          // Encode the message in base64url format
+          const encodedMessage = Buffer.from(message)
+            .toString('base64')
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=+$/, '');
+
+          const result = await gmail.users.messages.send({
+            userId: 'me',
+            requestBody: {
+              raw: encodedMessage,
+            },
+          });
+
+          return {
+            messageId: result.data.id,
+            response: '250 OK - Gmail API',
+          };
+        }
+      };
+    } else if (smtpAccount.provider === 'outlook') {
+      // OAuth handling for Outlook
+      return nodemailer.createTransport({
+        host: 'smtp.office365.com',
+        port: 587,
+        secure: false,
+        auth: {
+          type: 'OAuth2',
+          user: smtpAccount.email,
+          clientId: process.env.MICROSOFT_CLIENT_ID,
+          clientSecret: process.env.MICROSOFT_CLIENT_SECRET,
+          refreshToken: refreshToken,
+          accessToken: accessToken,
+        },
+      });
+    } else if (smtpAccount.provider === 'yahoo') {
+      // OAuth handling for Yahoo
+      return nodemailer.createTransport({
+        host: 'smtp.mail.yahoo.com',
+        port: 465,
+        secure: true,
+        auth: {
+          type: 'OAuth2',
+          user: smtpAccount.email,
+          clientId: process.env.YAHOO_CLIENT_ID,
+          clientSecret: process.env.YAHOO_CLIENT_SECRET,
+          refreshToken: refreshToken,
+          accessToken: accessToken,
+        },
+      });
+    } else {
+      throw new Error(`Unsupported OAuth provider: ${smtpAccount.provider}`);
+    }
+  } else {
+    // Handle password-based SMTP (custom)
+    const password = smtpAccount.decryptData(smtpAccount.smtpConfig.encryptedPassword);
+
+    return nodemailer.createTransport({
+      host: smtpAccount.smtpConfig.host,
+      port: smtpAccount.smtpConfig.port,
+      secure: smtpAccount.smtpConfig.secure,
+      auth: {
+        user: smtpAccount.email,
+        pass: password,
+      },
+    });
+  }
 };
-
-const transporter = createTransporter();
 
 // Process single email job
 const processSingleEmail = async (job) => {
-  const { to, subject, html, recipientName, attachments, from } = job.data;
-  
+  const { to, subject, html, recipientName, attachments, smtpAccountId } = job.data;
+
   try {
-    const MAIL_FROM = from || process.env.MAIL_FROM_1;
-    const MAIL_USER = process.env.MAIL_USER_1;
-    
+    // Get SMTP account from database
+    const smtpAccount = await SmtpAccount.findById(smtpAccountId);
+
+    if (!smtpAccount) {
+      throw new Error('SMTP account not found');
+    }
+
+    if (!smtpUtil.canSendEmail(smtpAccount)) {
+      throw new Error(`SMTP account cannot send emails. Status: ${smtpAccount.status}`);
+    }
+
+    // Create transporter dynamically
+    const transporter = await createTransporter(smtpAccount);
+
     const mailOptions = {
-      from: `${MAIL_FROM} <${MAIL_USER}>`,
+      from: `${smtpAccount.email}`,
       to,
       subject,
       html: `<p>Dear ${recipientName || 'Sir/Madam'},</p>${html}`,
@@ -36,8 +151,10 @@ const processSingleEmail = async (job) => {
     };
 
     const info = await transporter.sendMail(mailOptions);
-    
-    // Update job progress
+
+    // Increment email count for this SMTP account
+    await smtpUtil.incrementEmailCount(smtpAccount, 1);
+
     await job.progress(100);
 
     const companies = await Company.find({ companyEmail: { $in: to } });
@@ -45,37 +162,48 @@ const processSingleEmail = async (job) => {
       company.history.push({ lastSent: new Date(), subject });
       await company.save();
     });
-    
+
     return {
       success: true,
       messageId: info.messageId,
       to,
+      sentFrom: smtpAccount.email,
       timestamp: new Date().toISOString(),
     };
   } catch (error) {
     console.error(`Failed to send email to ${to}:`, error.message);
-    
-    // If this is the last attempt, log the error
-    if (job.attemptsMade >= job.opts.attempts) {
-      console.error(`Max retries reached for email to ${to}`);
+
+    // Log error to SMTP account
+    if (smtpAccountId) {
+      try {
+        const smtpAccount = await SmtpAccount.findById(smtpAccountId);
+        if (smtpAccount) {
+          smtpAccount.errorLog.lastError = error.message;
+          smtpAccount.errorLog.lastErrorAt = new Date();
+          smtpAccount.status = 'error';
+          await smtpAccount.save();
+        }
+      } catch (logError) {
+        console.error('Failed to log error to SMTP account:', logError);
+      }
     }
-    
+
     throw error; // Re-throw to mark job as failed
   }
 };
 
 // Process bulk email job (adds individual emails to queue)
 const processBulkEmail = async (job) => {
-  const { emails, subject, html, attachments, from, userId } = job.data;
-  
+  const { emails, subject, html, attachments, smtpAccountId, userId } = job.data;
+
   try {
     const jobIds = [];
     const totalEmails = emails.length;
-    
+
     // Add individual email jobs to the queue
     for (let i = 0; i < emails.length; i++) {
       const email = emails[i];
-      
+
       const emailJob = await emailQueue.add(
         'single-email',
         {
@@ -84,7 +212,7 @@ const processBulkEmail = async (job) => {
           subject,
           html,
           attachments,
-          from,
+          smtpAccountId, // Pass SMTP account ID to single email jobs
           userId,
           bulkJobId: job.id,
         },
@@ -93,14 +221,14 @@ const processBulkEmail = async (job) => {
           attempts: 3,
         }
       );
-      
+
       jobIds.push(emailJob.id);
-      
+
       // Update progress
       const progress = Math.round(((i + 1) / totalEmails) * 100);
       await job.progress(progress);
     }
-    
+
     return {
       success: true,
       message: `${totalEmails} emails queued successfully`,
@@ -116,16 +244,16 @@ const processBulkEmail = async (job) => {
 
 // Process scheduled email job
 const processScheduledEmail = async (job) => {
-  const { to, recipientPeople, subject, html, attachments, scheduledMailId } = job.data;
-  
+  const { to, recipientPeople, subject, html, attachments, scheduledMailId, smtpAccountId } = job.data;
+
   try {
     const totalEmails = to.length;
     const results = [];
-    
+
     // Send emails with rate limiting (handled by queue limiter)
     for (let i = 0; i < to.length; i++) {
       const recipientName = recipientPeople[i] || 'User';
-      
+
       const emailJob = await emailQueue.add(
         'single-email',
         {
@@ -134,25 +262,26 @@ const processScheduledEmail = async (job) => {
           subject,
           html,
           attachments,
+          smtpAccountId, // Pass SMTP account ID
         },
         {
           priority: 3, // Medium priority
         }
       );
-      
+
       results.push({ email: to[i], jobId: emailJob.id });
-      
+
       // Update progress
       const progress = Math.round(((i + 1) / totalEmails) * 100);
       await job.progress(progress);
     }
-    
+
     // Update scheduled mail status in database
     if (scheduledMailId) {
       const ScheduledMail = require('../models/scheduledMailDB');
       await ScheduledMail.findByIdAndUpdate(scheduledMailId, { status: 'Sent' });
     }
-    
+
     return {
       success: true,
       message: `${totalEmails} scheduled emails queued successfully`,

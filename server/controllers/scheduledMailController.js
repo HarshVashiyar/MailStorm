@@ -45,7 +45,29 @@ const handleAddScheduledMail = async (req, res) => {
       sendAt,
       status,
       timeZone,
+      smtpSlotId,
     } = req.body;
+
+    // Validate SMTP slot
+    if (!smtpSlotId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please select an email account to send from'
+      });
+    }
+
+    const SmtpAccount = require('../models/SmtpAccount');
+    const smtpAccount = await SmtpAccount.findOne({
+      _id: smtpSlotId,
+      userId: user.id,
+    });
+
+    if (!smtpAccount) {
+      return res.status(404).json({
+        success: false,
+        message: 'Selected email account not found'
+      });
+    }
     
     if (!sendAt || !timeZone) {
       return res.status(400).json({ 
@@ -79,7 +101,7 @@ const handleAddScheduledMail = async (req, res) => {
     
     // Save to database
     const newScheduledMail = await ScheduledMail.create({
-      from: "dynamictechnocast@gmail.com",
+      from: smtpAccount.email,  // Use selected account's email
       to: to.split(",").map(email => email.trim()),
       subject,
       recipientPeople: recipientPeople ? JSON.parse(recipientPeople) : [],
@@ -89,6 +111,7 @@ const handleAddScheduledMail = async (req, res) => {
       sendAt: utcSendAt,
       status: 'Pending',
       createdBy: user.id,
+      smtpAccountId: smtpAccount._id,
     });
     
     // Calculate delay in milliseconds
@@ -108,6 +131,7 @@ const handleAddScheduledMail = async (req, res) => {
           path: att.path,
           contentType: att.contentType,
         })),
+        smtpAccountId: smtpAccount._id.toString(),
         userId: user.id,
       },
       {

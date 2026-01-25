@@ -8,6 +8,7 @@ const cors = require("cors");
 const staticRouter = require("./routes/staticRouter");
 const path = require("path");
 const cookieParser = require("cookie-parser");
+const session = require('express-session');
 
 app.use(cookieParser());
 
@@ -22,9 +23,22 @@ app.use(
   })
 );
 
+app.use(session({
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production', // true in production with HTTPS
+    httpOnly: true,
+    maxAge: 10 * 60 * 1000 // 10 minutes
+  }
+}));
+
+
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "public/uploads")));
 app.use("/api", staticRouter);
+
 app.get("/", (req, res) => {
   res.send("Welcome to Main Backend Server!");
 });

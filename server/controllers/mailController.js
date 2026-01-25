@@ -7,6 +7,9 @@ const { emailQueue, scheduledEmailQueue } = require("../config/queue");
 const User = require("../models/userDB");
 const { GoogleGenAI } = require("@google/genai");
 const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
+// Get and validate SMTP account
+const SmtpAccount = require('../models/SmtpAccount');
+const smtpUtil = require('../utilities/smtpUtil');
 
 const handleSendOTP = async (req, res) => {
   const { email, isNew } = req.body;
@@ -64,7 +67,7 @@ const handleResetPassword = async (req, res) => {
 }
 
 const handleSendMail = async (req, res) => {
-  const { to, subject, recipientPeople, html } = req.body;
+  const { to, subject, recipientPeople, html, smtpSlotId } = req.body;
   const user = req.user;
   try {
     if (!to || !subject || !html) {
@@ -73,11 +76,44 @@ const handleSendMail = async (req, res) => {
         message: "Recipient email(s), subject, and content are required.",
       });
     }
+    // Validate SMTP slot selection
+    if (!smtpSlotId) {
+      return res.status(400).json({
+        success: false,
+        message: "Please select an email account (SMTP slot) to send from.",
+      });
+    }
+    
+    const smtpAccount = await SmtpAccount.findOne({
+      _id: smtpSlotId,
+      userId: user.id,
+    });
+
+    if (!smtpAccount) {
+      return res.status(404).json({
+        success: false,
+        message: "Selected email account not found.",
+      });
+    }
+    // Check if account can send emails
+    if (!smtpUtil.canSendEmail(smtpAccount)) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot send from this account. Status: ${smtpAccount.status}, Daily limit: ${smtpAccount.emailsSentToday}/${smtpAccount.dailyLimit}`,
+      });
+    }
 
     const emailAddresses = to.split(",").map((mail) => mail.trim());
     const recipients = recipientPeople ? JSON.parse(recipientPeople) : [];
+    // Check if total emails exceed remaining limit
+    const remainingLimit = smtpAccount.dailyLimit - smtpAccount.emailsSentToday;
+    if (emailAddresses.length > remainingLimit) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot send ${emailAddresses.length} emails. Only ${remainingLimit} emails remaining in daily limit.`,
+      });
+    }
     
-    // Prepare attachments from uploaded files
     const attachments = req.files?.map((file) => ({
       filename: file.originalname,
       content: file.buffer.toString('base64'),  // ← Convert to base64
@@ -100,7 +136,7 @@ const handleSendMail = async (req, res) => {
         html,
         attachments,
         userId: user.id,
-        from: process.env.MAIL_FROM_1,
+        smtpAccountId: smtpAccount._id.toString(), // Pass SMTP account ID
       },
       {
         priority: 1, // High priority for direct sends
@@ -134,11 +170,14 @@ const handleSendMail = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: `Email job queued successfully! ${emailAddresses.length} email(s) will be sent.`,
+      message: `Email job queued successfully! ${emailAddresses.length} email(s) will be sent from ${smtpAccount.email}.`,
       jobId: job.id,
       totalEmails: emailAddresses.length,
-      // queuePosition: job.getPosition,
-      queuePosition,
+      queuePosition, // Get job position in queue
+      smtpAccount: {
+        email: smtpAccount.email,
+        provider: smtpAccount.provider,
+      },
     });
   } catch (error) {
     console.error("Error queuing emails:", error);

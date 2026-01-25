@@ -6,6 +6,8 @@ const companyRouter = require("./companyRouter");
 const listRouter = require("./listRouter");
 const scheduledMailRouter = require("./scheduledMailRouter");
 const templateRouter = require("./templateRouter");
+const smtpRouter = require("./smtpRouter");
+const oAuthRouter = require("./oAuthRouter");
 
 app.get("/", (req, res) => {
   res.send("Welcome to Static Router!");
@@ -22,5 +24,9 @@ app.use("/list", listRouter);
 app.use("/scheduled", scheduledMailRouter);
 
 app.use("/template", templateRouter);
+
+app.use("/smtp", smtpRouter);
+
+app.use("/oauth", oAuthRouter);
 
 module.exports = app;

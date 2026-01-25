@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { 
@@ -64,6 +64,40 @@ const ScheduledEmailsModal = ({ isOpen, onClose }) => {
     );
   };
 
+  // Sort emails by sendAt date, latest first
+  const sortedScheduledEmails = useMemo(() => {
+    return [...scheduledEmails].sort((a, b) => {
+      const dateA = new Date(a.sendAt);
+      const dateB = new Date(b.sendAt);
+      return dateB - dateA; // Latest first
+    });
+  }, [scheduledEmails]);
+
+  // Filter emails based on search term
+  const filteredEmails = useMemo(() => {
+    return sortedScheduledEmails.filter((email) => {
+      const searchLower = searchTerm.toLowerCase();
+      
+      // Handle 'to' field - could be string or array
+      const toField = Array.isArray(email.to) 
+        ? email.to.join(', ').toLowerCase() 
+        : (email.to || '').toLowerCase();
+      
+      // Format date/time for searching
+      const dateTimeString = email.sendAt 
+        ? new Date(email.sendAt).toLocaleString().toLowerCase() 
+        : '';
+      
+      return (
+        (email.from || '').toLowerCase().includes(searchLower) ||
+        toField.includes(searchLower) ||
+        (email.subject || '').toLowerCase().includes(searchLower) ||
+        (email.status || '').toLowerCase().includes(searchLower) ||
+        dateTimeString.includes(searchLower)
+      );
+    });
+  }, [sortedScheduledEmails, searchTerm]);
+
   const selectAllEmails = () => {
     const filteredEmailIds = filteredEmails.map(email => email._id);
     if (selectedEmails.length === filteredEmailIds.length && filteredEmailIds.length > 0) {
@@ -72,29 +106,6 @@ const ScheduledEmailsModal = ({ isOpen, onClose }) => {
       setSelectedEmails(filteredEmailIds);
     }
   };
-
-  // Filter emails based on search term
-  const filteredEmails = scheduledEmails.filter((email) => {
-    const searchLower = searchTerm.toLowerCase();
-    
-    // Handle 'to' field - could be string or array
-    const toField = Array.isArray(email.to) 
-      ? email.to.join(', ').toLowerCase() 
-      : (email.to || '').toLowerCase();
-    
-    // Format date/time for searching
-    const dateTimeString = email.sendAt 
-      ? new Date(email.sendAt).toLocaleString().toLowerCase() 
-      : '';
-    
-    return (
-      (email.from || '').toLowerCase().includes(searchLower) ||
-      toField.includes(searchLower) ||
-      (email.subject || '').toLowerCase().includes(searchLower) ||
-      (email.status || '').toLowerCase().includes(searchLower) ||
-      dateTimeString.includes(searchLower)
-    );
-  });
 
   const deleteSelectedEmails = async () => {
     setIsLoading(true);

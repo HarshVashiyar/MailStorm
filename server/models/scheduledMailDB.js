@@ -15,6 +15,11 @@ const scheduledMailSchema = new mongoose.Schema(
             minlength: [5, 'Email must be at least 5 characters long!'],
             maxlength: [100, 'Email cannot exceed 100 characters!']
         },
+        smtpAccountId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'SmtpAccount',
+            required: false,
+        },
         to: {
             type: [String],
             required: [true, "Recipient emails are required!"],

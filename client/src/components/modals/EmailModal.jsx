@@ -56,6 +56,36 @@ const EmailModal = ({
   const MIN_RIGHT = 200; // px
   const MIN_LEFT = 320; // px
 
+  const [smtpSlots, setSmtpSlots] = useState([]);
+  const [selectedSlot, setSelectedSlot] = useState(null);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+
+  // Fetch available SMTP slots on mount
+  useEffect(() => {
+    const fetchSmtpSlots = async () => {
+      setLoadingSlots(true);
+      try {
+        const response = await axios.get(
+          `${import.meta.env.VITE_BASE_URL}smtp/slots`,
+          { withCredentials: true }
+        );
+        if (response.data?.success === true) {
+          setSmtpSlots(response.data.data.slots || []);
+          // Auto-select first active slot
+          const activeSlot = response.data.data.slots.find(
+            slot => slot.status === 'active' && slot.isVerified
+          );
+          if (activeSlot) setSelectedSlot(activeSlot.slotNumber);
+        }
+      } catch (error) {
+        console.error("Error fetching SMTP slots:", error);
+      } finally {
+        setLoadingSlots(false);
+      }
+    };
+    fetchSmtpSlots();
+  }, []);
+
   // Fetch available templates on mount
   useEffect(() => {
     const fetchTemplates = async () => {
@@ -348,6 +378,11 @@ const EmailModal = ({
     formData.append("signature", signature);
     formData.append("mState", mState);
 
+    if (selectedSlot) {
+      const slot = smtpSlots.find(s => s.slotNumber === selectedSlot);
+      if (slot) formData.append("smtpSlotId", slot._id);
+    }
+
     attachments.forEach((file) => formData.append("files", file));
 
     try {
@@ -408,6 +443,11 @@ const EmailModal = ({
     formData.append("timeZone", timeZone);
 
     attachments.forEach((file) => formData.append("files", file));
+
+    if (selectedSlot) {
+      const slot = smtpSlots.find(s => s.slotNumber === selectedSlot);
+      if (slot) formData.append("smtpSlotId", slot._id);
+    }
 
     try {
       const response = await axios.post(
@@ -635,6 +675,54 @@ const EmailModal = ({
                   </div>
                 </div>
               )}
+
+              {/* SMTP Slot Selection */}
+              <div>
+                <label className="text-white font-medium mb-2 flex items-center space-x-2 text-sm">
+                  <FaEnvelope className="text-blue-400" />
+                  <span>Slot:</span>
+                </label>
+                <div className="bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 p-3">
+                  <div className="grid grid-cols-5 gap-2">
+                    {[1, 2, 3, 4, 5].map((slotNum) => {
+                      const slot = smtpSlots.find(s => s.slotNumber === slotNum);
+                      const isActive = slot?.status === 'active' && slot?.isVerified;
+                      const isDisabled = !slot || !isActive;
+
+                      return (
+                        <button
+                          key={slotNum}
+                          onClick={() => !isDisabled && setSelectedSlot(slotNum)}
+                          disabled={isDisabled || loadingSlots}
+                          className={`
+              px-2 py-2 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow text-xs
+              ${selectedSlot === slotNum
+                              ? 'bg-gradient-to-r from-blue-500 to-cyan-600 text-white ring-2 ring-white/50'
+                              : isDisabled
+                                ? 'bg-white/5 text-gray-500 cursor-not-allowed opacity-50'
+                                : 'bg-white/10 text-white hover:bg-white/20 border border-white/20'
+                            }
+            `}
+                          title={slot ? `${slot.email} (${slot.emailsSentToday}/${slot.dailyLimit})` : 'Empty slot'}
+                        >
+                          {slotNum}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {selectedSlot && smtpSlots.find(s => s.slotNumber === selectedSlot) && (
+                    <div className="mt-2 p-2 bg-white/5 rounded-lg border border-white/10">
+                      <p className="text-white text-xs truncate">
+                        {smtpSlots.find(s => s.slotNumber === selectedSlot)?.email}
+                      </p>
+                      <p className="text-gray-400 text-xs mt-1">
+                        {smtpSlots.find(s => s.slotNumber === selectedSlot)?.emailsSentToday || 0}/
+                        {smtpSlots.find(s => s.slotNumber === selectedSlot)?.dailyLimit || 0} sent today
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
 
               {/* Attachments Section (always visible in right column) */}
               <div>

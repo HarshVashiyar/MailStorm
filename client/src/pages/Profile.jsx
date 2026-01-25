@@ -4,6 +4,20 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAuth } from "../context/authContext";
 import ProfileAvatar from "../components/ProfileAvatar";
+import SmtpSlotCard from "../components/SmtpSlotCard";
+import EmptySlotCard from "../components/EmptySlotCard";
+import AddSmtpModal from "../components/modals/AddSmtpModal";
+import DeleteAccountModal from "../components/modals/DeleteAccountModal";
+import {
+  FaGoogle,
+  FaMicrosoft,
+  FaYahoo,
+  FaServer,
+  FaCheckCircle,
+  FaExclamationCircle,
+  FaTimesCircle,
+  FaPowerOff
+} from "react-icons/fa";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -14,14 +28,20 @@ const Profile = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  // SMTP States
+  const [smtpSlots, setSmtpSlots] = useState([]);
+  const [smtpStats, setSmtpStats] = useState(null);
+  const [showAddSmtpModal, setShowAddSmtpModal] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState(null);
+  const [availableSlots, setAvailableSlots] = useState([]);
+
   useEffect(() => {
     const fetchUserData = async () => {
       setIsLoading(true);
       const toastID = toast.loading("Loading user data...");
       try {
         const response = await axios.get(
-          `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_USER_PROFILE_ROUTE
-          }`,
+          `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_USER_PROFILE_ROUTE}`,
           { withCredentials: true }
         );
         if (response.data?.success === true) {
@@ -32,6 +52,7 @@ const Profile = () => {
             toast.success("Welcome to your profile!");
             isFirstMount.current = false;
           }
+          fetchSmtpSlots();
           return;
         } else {
           toast.dismiss(toastID);
@@ -70,6 +91,119 @@ const Profile = () => {
 
     fetchUserData();
   }, []);
+
+  const fetchSmtpSlots = async () => {
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_BASE_URL}smtp/slots`,
+        { withCredentials: true }
+      );
+      if (response.data?.success) {
+        setSmtpSlots(response.data.data.slots);
+        setSmtpStats(response.data.data.stats);
+      }
+    } catch (error) {
+      console.error("Error fetching SMTP slots:", error);
+    }
+  };
+
+  const fetchAvailableSlots = async () => {
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_BASE_URL}smtp/available-slots`,
+        { withCredentials: true }
+      );
+      if (response.data?.success) {
+        setAvailableSlots(response.data.data);
+      }
+    } catch (error) {
+      console.error("Error fetching available slots:", error);
+    }
+  };
+
+  const handleAddSlot = async (slotNumber) => {
+    setSelectedSlot(slotNumber);
+    await fetchAvailableSlots();
+    setShowAddSmtpModal(true);
+  };
+
+  const handleConnectOAuth = async (provider) => {
+    const toastID = toast.loading(`Connecting to ${provider}...`);
+    try {
+      const url = `${import.meta.env.VITE_BASE_URL}/oauth/${provider}/initiate`;
+      
+      const response = await axios.get(
+        url,
+        { 
+          params: { slotNumber: selectedSlot },
+          withCredentials: true 
+        }
+      );
+
+      if (response.data?.success) {
+        toast.dismiss(toastID);
+        window.location.href = response.data.data.authUrl;
+      }
+    } catch (error) {
+      console.error('OAuth error:', error);
+      toast.dismiss(toastID);
+      toast.error(error.response?.data?.message || `Failed to connect ${provider}`);
+    }
+  };
+
+  const handleDeleteSlot = async (slotNumber) => {
+    const toastID = toast.loading("Deleting SMTP slot...");
+    try {
+      const response = await axios.delete(
+        `${import.meta.env.VITE_BASE_URL}smtp/slot/${slotNumber}`,
+        { withCredentials: true }
+      );
+
+      if (response.data?.success) {
+        toast.dismiss(toastID);
+        toast.success("SMTP slot deleted successfully!");
+        fetchSmtpSlots();
+      }
+    } catch (error) {
+      toast.dismiss(toastID);
+      toast.error(error.response?.data?.message || "Failed to delete slot");
+    }
+  };
+
+  const handleToggleStatus = async (slotNumber, currentStatus) => {
+    const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+    try {
+      const response = await axios.patch(
+        `${import.meta.env.VITE_BASE_URL}smtp/slot/${slotNumber}/status`,
+        { status: newStatus },
+        { withCredentials: true }
+      );
+
+      if (response.data?.success) {
+        toast.success(`Slot ${newStatus === 'active' ? 'activated' : 'deactivated'}`);
+        fetchSmtpSlots();
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to update status");
+    }
+  };
+
+  const getProviderIcon = (provider) => {
+    switch (provider) {
+      case 'gmail': return <FaGoogle className="text-red-500" />;
+      case 'outlook': return <FaMicrosoft className="text-blue-500" />;
+      case 'yahoo': return <FaYahoo className="text-purple-500" />;
+      case 'custom': return <FaServer className="text-green-500" />;
+      default: return <FaServer />;
+    }
+  };
+
+  const getStatusIcon = (status, isVerified) => {
+    if (!isVerified) return <FaExclamationCircle className="text-yellow-500" />;
+    if (status === 'active') return <FaCheckCircle className="text-green-500" />;
+    if (status === 'error' || status === 'needs_reauth') return <FaTimesCircle className="text-red-500" />;
+    return <FaPowerOff className="text-gray-500" />;
+  };
 
   const handleGoToAdmin = () => {
     navigate("/Admin");
@@ -194,9 +328,9 @@ const Profile = () => {
 
   return user ? (
     <div className="flex flex-col min-h-screen px-4 sm:px-6 lg:px-8 py-6">
-      <div className="max-w-4xl mx-auto w-full">
+      <div className="max-w-6xl mx-auto w-full">
         {/* Main Profile Card */}
-        <div className="bg-dark-800/30 backdrop-blur-xl border border-white/10 rounded-3xl shadow-glass overflow-hidden">
+        <div className="bg-dark-800/30 backdrop-blur-xl border border-white/10 rounded-3xl shadow-glass overflow-hidden mb-6">
           {/* Profile Content */}
           <div className="px-6 md:px-10 py-6">
             {/* Avatar Section */}
@@ -378,69 +512,69 @@ const Profile = () => {
                   Logout
                 </button>
               </div>
-
             </div>
           </div>
         </div>
 
-        {/* Additional Info Card */}
-        {/* <div className="mt-4 bg-dark-900/20 backdrop-blur-sm border border-white/5 rounded-2xl p-6 text-center">
-          <p className="text-gray-400 text-sm">
-            Need help? Visit our{" "}
-            <span className="text-primary-400 hover:text-primary-300 cursor-pointer font-medium">Support Center</span>
-            {" "}or{" "}
-            <span className="text-primary-400 hover:text-primary-300 cursor-pointer font-medium">Contact Us</span>
-          </p>
-        </div> */}
+        {/* SMTP Slots Section */}
+        <div className="bg-dark-800/30 backdrop-blur-xl border border-white/10 rounded-3xl shadow-glass overflow-hidden">
+          <div className="px-6 md:px-10 py-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-bold text-white mb-1">Email Sending Accounts</h2>
+                <p className="text-gray-400 text-sm">Manage up to 5 SMTP accounts</p>
+              </div>
+              {smtpStats && (
+                <div className="text-right">
+                  <p className="text-sm text-gray-400">Today: {smtpStats.emailsSentToday} emails</p>
+                  <p className="text-sm text-gray-400">Active: {smtpStats.activeSlots}/5</p>
+                </div>
+              )}
+            </div>
+
+            {/* Slots Grid */}
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[1, 2, 3, 4, 5].map((slotNum) => {
+                const slot = smtpSlots.find(s => s.slotNumber === slotNum);
+
+                return slot ? (
+                  <SmtpSlotCard
+                    key={slotNum}
+                    slot={slot}
+                    onToggleStatus={handleToggleStatus}
+                    onDelete={handleDeleteSlot}
+                    getProviderIcon={getProviderIcon}
+                    getStatusIcon={getStatusIcon}
+                  />
+                ) : (
+                  <EmptySlotCard
+                    key={slotNum}
+                    slotNumber={slotNum}
+                    onClick={() => handleAddSlot(slotNum)}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4">
-          <div className="bg-gray-900/80 backdrop-blur-lg p-8 rounded-3xl shadow-2xl shadow-red-500/20 max-w-md w-full border border-red-500/20 animate-glow">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="p-3 bg-red-500/20 rounded-full border border-red-500/30">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-8 w-8 text-red-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                  />
-                </svg>
-              </div>
-              <h3 className="text-2xl font-bold bg-gradient-to-r from-red-400 to-pink-400 bg-clip-text text-transparent">Delete Account?</h3>
-            </div>
-            <p className="text-gray-300 mb-8 leading-relaxed text-base">
-              This action <span className="text-red-400 font-semibold">cannot be undone</span>.
-              Your Account and all the associated data will be <span className="text-red-400 font-semibold">permanently deleted</span>.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 px-6 py-3 rounded-xl font-semibold bg-gradient-to-r from-gray-700 to-gray-800 hover:from-gray-600 hover:to-gray-700 text-white transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-gray-400/40 border border-gray-600/30 shadow-lg"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  setShowDeleteConfirm(false);
-                  handleDeleteAccount();
-                }}
-                className="flex-1 px-6 py-3 rounded-xl font-semibold bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-400/40 border border-red-400/30 shadow-lg hover:shadow-red-500/50"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modals */}
+      <AddSmtpModal
+        show={showAddSmtpModal}
+        onClose={() => setShowAddSmtpModal(false)}
+        selectedSlot={selectedSlot}
+        onConnectOAuth={handleConnectOAuth}
+      />
+
+      <DeleteAccountModal
+        show={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={() => {
+          setShowDeleteConfirm(false);
+          handleDeleteAccount();
+        }}
+      />
     </div>
   ) : (
     <div className="flex flex-col min-h-screen items-center justify-center px-4">
