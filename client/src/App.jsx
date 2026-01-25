@@ -50,7 +50,7 @@ export default function App() {
             <Route path="/Profile" element={<Profile />} />
           </Routes>
         </main>
-        <Footer />
+        {/* <Footer /> */}
       </div>
     </AuthProvider>
   );
