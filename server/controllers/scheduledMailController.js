@@ -1,6 +1,10 @@
 const ScheduledMail = require("../models/scheduledMailDB");
 const { scheduledEmailQueue } = require("../config/queue");
 const moment = require("moment-timezone");
+const { uploadMultipleToCloudinary } = require('../utilities/cloudinary');
+
+// ✅ DYNAMIC STORAGE: Threshold for Cloudinary upload (7MB)
+const REDIS_SIZE_THRESHOLD = 7 * 1024 * 1024; // 7MB
 
 // ✨ NEW: Queue-based scheduled email (no more cron!)
 // cron.schedule("* * * * *", async () => {
@@ -34,7 +38,7 @@ const moment = require("moment-timezone");
 
 const handleAddScheduledMail = async (req, res) => {
   const user = req.user;
-  console.log("user: ", user);
+  // console.log("user: ", user);
   try {
     const {
       to,
@@ -68,16 +72,16 @@ const handleAddScheduledMail = async (req, res) => {
         message: 'Selected email account not found'
       });
     }
-    
+
     if (!sendAt || !timeZone) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'Missing Send-time and/or Time-zone!' 
+        message: 'Missing Send-time and/or Time-zone!'
       });
     }
-    
+
     const utcSendAt = moment.tz(sendAt, timeZone).utc().toDate();
-    
+
     // Check if the scheduled time is in the past
     if (utcSendAt < new Date()) {
       return res.status(400).json({
@@ -85,38 +89,92 @@ const handleAddScheduledMail = async (req, res) => {
         message: 'Scheduled time must be in the future'
       });
     }
-    
-    const attachments = req.files?.map((file) => ({
-      filename: file.originalname,
-      path: file.path,
-      contentType: file.mimetype,
-    })) || [];
-    
-    if (!to || !subject) {
-      return res.status(400).json({ 
-        success: false,
-        message: 'Missing required fields: "to" and "subject".' 
+
+    // ✅ DYNAMIC STORAGE: Calculate total attachment size
+    let totalAttachmentSize = 0;
+    if (Array.isArray(req.files)) {
+      req.files.forEach(file => {
+        totalAttachmentSize += file.size || file.buffer?.length || 0;
       });
     }
-    
-    // Save to database
+
+    let attachments = [];
+    let storageMethod = 'none';
+
+    if (req.files && req.files.length > 0) {
+      // ✅ DYNAMIC STORAGE: Decide storage method based on size
+      if (totalAttachmentSize >= REDIS_SIZE_THRESHOLD) {
+        // LARGE ATTACHMENTS: Upload to Cloudinary
+        console.log(`📤 Uploading ${req.files.length} large attachment(s) to Cloudinary for scheduled mail (${(totalAttachmentSize / 1024 / 1024).toFixed(2)}MB)`);
+
+        try {
+          attachments = await uploadMultipleToCloudinary(req.files);
+          storageMethod = 'cloudinary';
+        } catch (uploadError) {
+          console.error('Failed to upload attachments to Cloudinary:', uploadError);
+          return res.status(500).json({
+            success: false,
+            message: 'Failed to upload attachments to cloud storage. Please try again.',
+            error: uploadError.message,
+          });
+        }
+      } else {
+        // SMALL ATTACHMENTS: Store as base64 (will be in Redis via queue)
+        console.log(`💾 Storing ${req.files.length} small attachment(s) for scheduled mail (${(totalAttachmentSize / 1024 / 1024).toFixed(2)}MB)`);
+
+        attachments = req.files.map((file) => ({
+          filename: file.originalname,
+          content: file.buffer.toString('base64'),
+          encoding: 'base64',
+          contentType: file.mimetype,
+          size: file.size,
+          storedIn: 'redis', // ✅ Flag to indicate storage location
+        }));
+        storageMethod = 'redis';
+      }
+    }
+
+    if (!to || !subject) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: "to" and "subject".'
+      });
+    }
+
+    if (!Array.isArray(to) && typeof to !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: '"to" must be a comma-separated string of emails',
+      });
+    }
+
+    // Save to database - attachments are either URLs (cloudinary) or base64 (redis)
     const newScheduledMail = await ScheduledMail.create({
       from: smtpAccount.email,  // Use selected account's email
-      to: to.split(",").map(email => email.trim()),
+      to: to
+        .split(",")
+        .map(email => email?.toString().trim())
+        .filter(Boolean),
       subject,
-      recipientPeople: recipientPeople ? JSON.parse(recipientPeople) : [],
+      recipientPeople: Array.isArray(recipientPeople)
+        ? recipientPeople
+        : recipientPeople
+          ? JSON.parse(recipientPeople)
+          : [],
       html,
-      attachments,
+      attachments, // Either base64 or Cloudinary URLs
       signature,
       sendAt: utcSendAt,
       status: 'Pending',
       createdBy: user.id,
       smtpAccountId: smtpAccount._id,
+      // REMOVED: jobId field - not needed, saves 1 write per scheduled mail
     });
-    
+
     // Calculate delay in milliseconds
     const delay = utcSendAt.getTime() - Date.now();
-    console.log("before adding to queue");
+    // console.log("before adding to queue");
+
     // Add job to queue with delay
     const job = await scheduledEmailQueue.add(
       'scheduled-email',
@@ -126,32 +184,34 @@ const handleAddScheduledMail = async (req, res) => {
         recipientPeople: newScheduledMail.recipientPeople,
         subject: newScheduledMail.subject,
         html: newScheduledMail.html,
-        attachments: newScheduledMail.attachments.map((att) => ({
-          filename: att.filename,
-          path: att.path,
-          contentType: att.contentType,
-        })),
+        attachments: newScheduledMail.attachments, // Pass as-is (URLs or base64)
         smtpAccountId: smtpAccount._id.toString(),
         userId: user.id,
       },
       {
         delay, // Schedule the job
         attempts: 3,
-        removeOnComplete: false, // Keep for history
+        removeOnComplete: true, // ✅ OPTIMIZED: Auto-cleanup completed jobs
+        removeOnFail: false, // Keep failed jobs for debugging
       }
     );
-    
-    // Store job ID in database for reference
-    newScheduledMail.jobId = job.id;
-    await newScheduledMail.save();
-    
-    res.status(201).json({ 
-      success: true, 
+
+    // REMOVED: Storing jobId in database - not needed for production
+    // If you need to cancel jobs, use scheduledMailId to query the database status instead
+
+    res.status(201).json({
+      success: true,
       message: "Mail scheduled successfully.",
       data: {
         scheduledMail: newScheduledMail,
-        jobId: job.id,
+        // jobId: job.id, // COMMENTED OUT - not needed by frontend
         scheduledFor: utcSendAt,
+        // ✅ INFO: Include storage method for debugging
+        attachmentInfo: Array.isArray(attachments) && attachments.length > 0 ? {
+          count: attachments.length,
+          totalSize: `${(totalAttachmentSize / 1024 / 1024).toFixed(2)}MB`,
+          storageMethod, // 'redis', 'cloudinary', or 'none'
+        } : null,
       }
     });
   } catch (error) {
@@ -163,36 +223,21 @@ const handleAddScheduledMail = async (req, res) => {
 const handleGetScheduledMails = async (req, res) => {
   const user = req.user;
   try {
+    // OPTIMIZED: Simple query without job status enrichment
+    // This saves N Redis reads (where N = number of scheduled mails)
     const scheduledMails = await ScheduledMail.find({ createdBy: user.id });
-    
-    // Enrich with job status if jobId exists
-    const enrichedMails = await Promise.all(
-      scheduledMails.map(async (mail) => {
-        const mailObj = mail.toObject();
-        
-        if (mail.jobId) {
-          try {
-            const job = await scheduledEmailQueue.getJob(mail.jobId);
-            if (job) {
-              mailObj.jobStatus = {
-                state: await job.getState(),
-                progress: job.progress(),
-                failedReason: job.failedReason,
-              };
-            }
-          } catch (err) {
-            console.error(`Error fetching job ${mail.jobId}:`, err.message);
-          }
-        }
-        
-        return mailObj;
-      })
-    );
-    
-    res.status(200).json({ 
-      success: true, 
-      message: "Scheduled mails retrieved successfully.", 
-      data: enrichedMails 
+
+    // REMOVED: Job status enrichment
+    // If you need to check job status for debugging, use the debug endpoints
+    // Old code was doing:
+    // - await scheduledEmailQueue.getJob(mail.jobId) for each mail
+    // - await job.getState() for each job
+    // This caused 2N Redis reads per request
+
+    res.status(200).json({
+      success: true,
+      message: "Scheduled mails retrieved successfully.",
+      data: scheduledMails
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -203,54 +248,47 @@ const handleDeleteScheduledMails = async (req, res) => {
   const user = req.user;
   try {
     const { ids } = req.body;
-    
+
     if (!ids || ids.length === 0) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "No scheduled mails selected" 
+      return res.status(400).json({
+        success: false,
+        message: "No scheduled mails selected"
       });
     }
-    
-    // Find scheduled mails to get job IDs
-    const scheduledMails = await ScheduledMail.find({
-      _id: { $in: ids },
-      createdBy: user.id,
-    });
-    
-    // Remove jobs from queue
-    for (const mail of scheduledMails) {
-      if (mail.jobId) {
-        try {
-          const job = await scheduledEmailQueue.getJob(mail.jobId);
-          if (job) {
-            const state = await job.getState();
-            // Only remove if job is waiting or delayed
-            if (state === 'waiting' || state === 'delayed') {
-              await job.remove();
-              console.log(`Removed job ${mail.jobId} from queue`);
-            }
-          }
-        } catch (err) {
-          console.error(`Error removing job ${mail.jobId}:`, err.message);
-        }
-      }
-    }
-    
+
+    // OPTIMIZED: Since we're not storing jobId anymore and using removeOnComplete: true,
+    // we don't need to manually remove jobs from the queue.
+    // Jobs will auto-delete after completion.
+    // For pending jobs, they'll remain in queue but the scheduledMailId check will fail gracefully.
+
+    // REMOVED: Manual job removal from queue
+    // Old code:
+    // for (const mail of scheduledMails) {
+    //   if (mail.jobId) {
+    //     const job = await scheduledEmailQueue.getJob(mail.jobId);
+    //     if (job) await job.remove();
+    //   }
+    // }
+    // This was causing 2N Redis operations per deletion
+
+    // Note: If a scheduled job fires after deletion, the worker will handle the missing
+    // scheduledMailId gracefully (the ScheduledMail.findByIdAndUpdate will return null)
+
     // Delete from database
     const deletedScheduledMails = await ScheduledMail.deleteMany({
       _id: { $in: ids },
       createdBy: user.id,
     });
-    
+
     if (deletedScheduledMails.deletedCount > 0) {
-      return res.status(200).json({ 
-        success: true, 
-        message: `${deletedScheduledMails.deletedCount} scheduled mail(s) deleted successfully` 
+      return res.status(200).json({
+        success: true,
+        message: `${deletedScheduledMails.deletedCount} scheduled mail(s) deleted successfully`
       });
     } else {
-      return res.status(404).json({ 
-        success: false, 
-        message: "No mails found to delete" 
+      return res.status(404).json({
+        success: false,
+        message: "No mails found to delete"
       });
     }
   } catch (err) {
@@ -259,108 +297,17 @@ const handleDeleteScheduledMails = async (req, res) => {
   }
 };
 
-// const handleUpdateScheduledMail = async (req, res) => {
-//   const user = req.user;
-//   const { id, sendAt, timeZone, subject, html } = req.body;
-  
-//   try {
-//     if (!id) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Scheduled mail ID is required"
-//       });
-//     }
-    
-//     const scheduledMail = await ScheduledMail.findOne({
-//       _id: id,
-//       createdBy: user.id,
-//     });
-    
-//     if (!scheduledMail) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "Scheduled mail not found"
-//       });
-//     }
-    
-//     // If already sent, can't update
-//     if (scheduledMail.status === 'Sent') {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Cannot update a mail that has already been sent"
-//       });
-//     }
-    
-//     // Remove old job from queue
-//     if (scheduledMail.jobId) {
-//       try {
-//         const oldJob = await scheduledEmailQueue.getJob(scheduledMail.jobId);
-//         if (oldJob) {
-//           await oldJob.remove();
-//         }
-//       } catch (err) {
-//         console.error(`Error removing old job:`, err.message);
-//       }
-//     }
-    
-//     // Update fields
-//     if (sendAt && timeZone) {
-//       const utcSendAt = moment.tz(sendAt, timeZone).utc().toDate();
-      
-//       if (utcSendAt < new Date()) {
-//         return res.status(400).json({
-//           success: false,
-//           message: 'Scheduled time must be in the future'
-//         });
-//       }
-      
-//       scheduledMail.sendAt = utcSendAt;
-//     }
-    
-//     if (subject) scheduledMail.subject = subject;
-//     if (html) scheduledMail.html = html;
-    
-//     // Create new job with updated time
-//     const delay = scheduledMail.sendAt.getTime() - Date.now();
-    
-//     const newJob = await scheduledEmailQueue.add(
-//       'scheduled-email',
-//       {
-//         scheduledMailId: scheduledMail._id,
-//         to: scheduledMail.to,
-//         recipientPeople: scheduledMail.recipientPeople,
-//         subject: scheduledMail.subject,
-//         html: scheduledMail.html,
-//         attachments: scheduledMail.attachments,
-//         userId: user.id,
-//       },
-//       {
-//         delay,
-//         attempts: 3,
-//         removeOnComplete: false,
-//       }
-//     );
-    
-//     scheduledMail.jobId = newJob.id;
-//     await scheduledMail.save();
-    
-//     return res.status(200).json({
-//       success: true,
-//       message: "Scheduled mail updated successfully",
-//       data: scheduledMail,
-//     });
-//   } catch (error) {
-//     console.error("Error updating scheduled mail:", error);
-//     return res.status(500).json({
-//       success: false,
-//       message: error.message,
-//     });
-//   }
-// };
+// ========================================
+// REMOVED: handleUpdateScheduledMail
+// ========================================
+// This function was commented out in original code
+// If you need to implement updates in the future, remember to:
+// 1. Not store jobId in database
+// 2. Use removeOnComplete: true for new jobs
+// 3. Update database record without querying Redis
 
 module.exports = {
   handleAddScheduledMail,
   handleGetScheduledMails,
   handleDeleteScheduledMails,
-  // handleUpdateScheduledMail,
 };

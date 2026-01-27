@@ -159,6 +159,61 @@ const createTransporter = async (smtpAccount) => {
   }
 };
 
+// ✅ DYNAMIC STORAGE: Process attachments based on storage type
+const processAttachments = async (attachments) => {
+  if (!attachments || attachments.length === 0) {
+    return [];
+  }
+
+  return Promise.all(
+    attachments.map(async (att) => {
+      // Check if attachment is stored in Cloudinary (has URL)
+      if (att.storedIn === 'cloudinary' && att.path && att.path.startsWith('http')) {
+        // Fetch from Cloudinary and convert to base64
+        console.log(`📥 Fetching attachment from Cloudinary: ${att.filename}`);
+        try {
+          const response = await axios.get(att.path, { responseType: 'arraybuffer' });
+          return {
+            filename: att.filename,
+            content: Buffer.from(response.data).toString('base64'),
+            encoding: 'base64',
+            contentType: att.contentType,
+          };
+        } catch (error) {
+          console.error(`Failed to fetch attachment from Cloudinary: ${att.filename}`, error);
+          throw new Error(`Failed to fetch attachment: ${att.filename}`);
+        }
+      }
+      
+      // Attachment is already base64 (stored in Redis)
+      if (att.storedIn === 'redis' && att.content) {
+        console.log(`💾 Using attachment from Redis: ${att.filename}`);
+        return {
+          filename: att.filename,
+          content: att.content, // Already base64
+          encoding: att.encoding || 'base64',
+          contentType: att.contentType,
+        };
+      }
+
+      // Legacy support: check if it's a Cloudinary URL without storedIn flag
+      if (att.path && att.path.startsWith('http')) {
+        console.log(`📥 Fetching attachment (legacy): ${att.filename}`);
+        const response = await axios.get(att.path, { responseType: 'arraybuffer' });
+        return {
+          filename: att.filename,
+          content: Buffer.from(response.data).toString('base64'),
+          encoding: 'base64',
+          contentType: att.contentType,
+        };
+      }
+
+      // If attachment has content already, return as-is
+      return att;
+    })
+  );
+};
+
 // Process single email job
 const processSingleEmail = async (job) => {
   const { to, subject, html, recipientName, attachments, smtpAccountId } = job.data;
@@ -178,12 +233,15 @@ const processSingleEmail = async (job) => {
     // Create transporter dynamically
     const transporter = await createTransporter(smtpAccount);
 
+    // ✅ DYNAMIC STORAGE: Process attachments based on storage type
+    const processedAttachments = await processAttachments(attachments);
+
     const mailOptions = {
       from: `${smtpAccount.email}`,
       to,
       subject,
       html: `<p>Dear ${recipientName || 'Sir/Madam'},</p>${html}`,
-      attachments: attachments || [],
+      attachments: processedAttachments,
     };
 
     const info = await transporter.sendMail(mailOptions);
@@ -191,7 +249,7 @@ const processSingleEmail = async (job) => {
     // Increment email count for this SMTP account
     await smtpUtil.incrementEmailCount(smtpAccount, 1);
 
-    await job.progress(100);
+    // REMOVED: await job.progress(100); - Saves 1 Redis write per email
 
     const companies = await Company.find({ companyEmail: { $in: to } });
     companies.forEach(async (company) => {
@@ -233,43 +291,38 @@ const processBulkEmail = async (job) => {
   const { emails, subject, html, attachments, smtpAccountId, userId } = job.data;
 
   try {
-    const jobIds = [];
-    const totalEmails = emails.length;
+    // OPTIMIZED: Use Promise.all for batch job creation (faster)
+    const emailJobs = await Promise.all(
+      emails.map((email) =>
+        emailQueue.add(
+          'single-email',
+          {
+            to: email.to,
+            recipientName: email.recipientName,
+            subject,
+            html,
+            attachments, // Pass as-is (already processed by controller)
+            smtpAccountId,
+            userId,
+            bulkJobId: job.id,
+          },
+          {
+            priority: 5,
+            attempts: 3,
+            removeOnComplete: true, // ✅ Auto-cleanup completed jobs
+            removeOnFail: false, // Keep failed jobs for debugging
+          }
+        )
+      )
+    );
 
-    // Add individual email jobs to the queue
-    for (let i = 0; i < emails.length; i++) {
-      const email = emails[i];
-
-      const emailJob = await emailQueue.add(
-        'single-email',
-        {
-          to: email.to,
-          recipientName: email.recipientName,
-          subject,
-          html,
-          attachments,
-          smtpAccountId, // Pass SMTP account ID to single email jobs
-          userId,
-          bulkJobId: job.id,
-        },
-        {
-          priority: 5, // Lower priority than direct single emails
-          attempts: 3,
-        }
-      );
-
-      jobIds.push(emailJob.id);
-
-      // Update progress
-      const progress = Math.round(((i + 1) / totalEmails) * 100);
-      await job.progress(progress);
-    }
+    // REMOVED: Progress updates in loop - Saves N Redis writes (where N = email count)
+    // REMOVED: jobIds array collection - not needed
 
     return {
       success: true,
-      message: `${totalEmails} emails queued successfully`,
-      jobIds,
-      totalEmails,
+      message: `${emails.length} emails queued successfully`,
+      totalEmails: emails.length,
       timestamp: new Date().toISOString(),
     };
   } catch (error) {
@@ -283,51 +336,35 @@ const processScheduledEmail = async (job) => {
   const { to, recipientPeople, subject, html, attachments, scheduledMailId, smtpAccountId } = job.data;
 
   try {
-    const totalEmails = to.length;
-    const results = [];
+    // ✅ DYNAMIC STORAGE: Process attachments (handles both Cloudinary and Redis)
+    const processedAttachments = await processAttachments(attachments);
 
-    // Convert Cloudinary URLs to base64
-    const processedAttachments = await Promise.all(
-      (attachments || []).map(async (att) => {
-        if (att.path && att.path.startsWith('http')) {
-          // Fetch from Cloudinary and convert to base64
-          const response = await axios.get(att.path, { responseType: 'arraybuffer' });
-          return {
-            filename: att.filename,
-            content: Buffer.from(response.data).toString('base64'),
-            encoding: 'base64',
-            contentType: att.contentType,
-          };
-        }
-        return att;
+    // OPTIMIZED: Use Promise.all for batch job creation
+    await Promise.all(
+      to.map((email, i) => {
+        const recipientName = recipientPeople[i] || 'User';
+
+        return emailQueue.add(
+          'single-email',
+          {
+            to: email,
+            recipientName,
+            subject,
+            html,
+            attachments: processedAttachments,
+            smtpAccountId,
+          },
+          {
+            priority: 3,
+            removeOnComplete: true, // ✅ Auto-cleanup completed jobs
+            removeOnFail: false,
+          }
+        );
       })
     );
 
-    // Send emails with rate limiting (handled by queue limiter)
-    for (let i = 0; i < to.length; i++) {
-      const recipientName = recipientPeople[i] || 'User';
-
-      const emailJob = await emailQueue.add(
-        'single-email',
-        {
-          to: to[i],
-          recipientName,
-          subject,
-          html,
-          attachments: processedAttachments,
-          smtpAccountId, // Pass SMTP account ID
-        },
-        {
-          priority: 3, // Medium priority
-        }
-      );
-
-      results.push({ email: to[i], jobId: emailJob.id });
-
-      // Update progress
-      const progress = Math.round(((i + 1) / totalEmails) * 100);
-      await job.progress(progress);
-    }
+    // REMOVED: Progress updates in loop - Saves N Redis writes
+    // REMOVED: results array collection - not needed
 
     // Update scheduled mail status in database
     if (scheduledMailId) {
@@ -337,8 +374,7 @@ const processScheduledEmail = async (job) => {
 
     return {
       success: true,
-      message: `${totalEmails} scheduled emails queued successfully`,
-      results,
+      message: `${to.length} scheduled emails queued successfully`,
       timestamp: new Date().toISOString(),
     };
   } catch (error) {
@@ -348,22 +384,34 @@ const processScheduledEmail = async (job) => {
 };
 
 // Email queue processor
-emailQueue.process('single-email', 5, processSingleEmail); // Process 5 concurrent emails
-emailQueue.process('bulk-email', 2, processBulkEmail); // Process 2 bulk jobs concurrently
+emailQueue.process('single-email', 5, processSingleEmail);
+emailQueue.process('bulk-email', 2, processBulkEmail);
 
 // Scheduled email queue processor
 scheduledEmailQueue.process('scheduled-email', processScheduledEmail);
 
-// Error handlers
+// OPTIMIZED: Simplified error handlers - only log errors, not every completion
 emailQueue.on('error', (error) => {
-  console.error('Email queue error:', error);
+  console.error('❌ Email queue error:', error);
+});
+
+emailQueue.on('failed', (job, err) => {
+  console.error(`❌ Email job ${job.id} failed:`, err.message);
 });
 
 scheduledEmailQueue.on('error', (error) => {
-  console.error('Scheduled email queue error:', error);
+  console.error('❌ Scheduled email queue error:', error);
 });
 
-console.log('✅ Email workers started successfully');
+scheduledEmailQueue.on('failed', (job, err) => {
+  console.error(`❌ Scheduled email job ${job.id} failed:`, err.message);
+});
+
+// REMOVED: Verbose completion logging to reduce console noise
+// emailQueue.on('completed', (job, result) => { ... });
+// scheduledEmailQueue.on('completed', (job, result) => { ... });
+
+console.log('✅ Email workers started successfully with dynamic attachment storage');
 
 module.exports = {
   emailQueue,

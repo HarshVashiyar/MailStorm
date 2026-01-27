@@ -69,9 +69,40 @@ const scheduledMailSchema = new mongoose.Schema(
         attachments: [
             {
                 filename: { type: String, required: true },
-                path: { type: String, required: true },
-                contentType: { type: String, default: "application/octet-stream" },
-            },
+
+                // Cloudinary
+                path: {
+                    type: String,
+                    required: function () {
+                        return this.storedIn === 'cloudinary';
+                    },
+                },
+
+                // Redis (base64)
+                content: {
+                    type: String,
+                    required: function () {
+                        return this.storedIn === 'redis';
+                    },
+                },
+
+                encoding: {
+                    type: String,
+                    default: 'base64',
+                },
+
+                contentType: String,
+
+                size: Number,
+
+                storedIn: {
+                    type: String,
+                    enum: ['cloudinary', 'redis'],
+                    required: true,
+                },
+
+                publicId: String, // optional (cloudinary)
+            }
         ],
         sendAt: {
             type: Date,
