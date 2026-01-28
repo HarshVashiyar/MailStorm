@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { useAuth } from "../Context/AuthContext";
+import { useAuth } from "../context/authContext"
 
 const Navbar = () => {
   const { isAuthenticated } = useAuth();
