@@ -60,6 +60,8 @@ const EmailModal = ({
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [loadingSlots, setLoadingSlots] = useState(false);
 
+  const MAX_ATTACHMENTS_SIZE = 6.7 * 1024 * 1024; // 6.7 MB in bytes
+
   // Fetch available SMTP slots on mount
   useEffect(() => {
     const fetchSmtpSlots = async () => {
@@ -221,11 +223,11 @@ const EmailModal = ({
       if (response.data?.success === true) {
         toast.dismiss(toastId);
         setGeneratingHTML(false);
-        
+
         // Clean up the HTML content by removing any markdown code blocks
         let cleanHTML = response.data.HTMLContent;
         cleanHTML = cleanHTML.replace(/^```html\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/g, '').trim();
-        
+
         setHtml(cleanHTML);
         toast.success("✨ Email content generated successfully!");
       } else {
@@ -253,7 +255,18 @@ const EmailModal = ({
 
   const handleFileChange = (e) => {
     const newFiles = Array.from(e.target.files);
-    setAttachments((prevAttachments) => [...prevAttachments, ...newFiles]);
+
+    const existingSize = attachments.reduce((sum, file) => sum + file.size, 0);
+    const newSize = newFiles.reduce((sum, file) => sum + file.size, 0);
+    const totalSize = existingSize + newSize;
+
+    if (totalSize > MAX_ATTACHMENTS_SIZE) {
+      toast.warning("Total size of attachments should be less than 6.7 MB when scheduling.");
+      e.target.value = "";
+      return; // ❌ do NOT update state
+    }
+
+    setAttachments((prev) => [...prev, ...newFiles]);
     e.target.value = "";
   };
 
@@ -638,52 +651,62 @@ const EmailModal = ({
             </div>
 
             {/* Right column: Schedule (optional) + Attachments */}
-            <div className="w-full flex-shrink-0 flex flex-col gap-3 min-w-0" style={{ width: rightWidth }}>
+            <div className="w-full flex-shrink-0 flex flex-col gap-2 min-w-0 text-xs" style={{ width: rightWidth }}>
               {schedule && (
-                <div>
-                  <label className="text-white font-medium mb-3 flex items-center space-x-2">
-                    <FaClock className="text-purple-400" />
-                    <span>Schedule Settings:</span>
-                  </label>
-                  <div className="bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 p-3">
-                    <div className="grid grid-cols-1 gap-3">
-                      <div>
-                        <label className="text-white font-medium mb-2 flex items-center space-x-2 text-sm">
-                          <FaGlobeAmericas className="text-cyan-400" />
-                          <span>Time Zone:</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={timeZone}
-                          disabled
-                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-300 transition-all duration-300 text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-white font-medium mb-2 flex items-center space-x-2 text-sm">
-                          <FaCalendarAlt className="text-pink-400" />
-                          <span>Schedule Date & Time:</span>
-                        </label>
-                        <input
-                          type="datetime-local"
-                          value={scheduledDateTime}
-                          onChange={(e) => setScheduledDateTime(e.target.value)}
-                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 text-sm"
-                        />
+                <div className="w-full flex-shrink-0 flex flex-col gap-1 min-w-0 text-xs" style={{ width: rightWidth }}>
+                  {schedule && (
+                    <div>
+                      <label className="text-white font-medium mb-1 flex items-center space-x-1 text-xs">
+                        <FaClock className="text-purple-400 text-xs" />
+                        <span>Schedule</span>
+                      </label>
+
+                      <div className="bg-white/5 backdrop-blur-sm rounded-md border border-white/10 p-1.5">
+                        <div className="grid grid-cols-1 gap-1">
+
+                          {/* Timezone */}
+                          <div>
+                            <label className="text-gray-300 mb-0.5 flex items-center space-x-1 text-[10px]">
+                              <FaGlobeAmericas className="text-cyan-400" />
+                              <span>Timezone</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={timeZone}
+                              disabled
+                              className="w-full px-2 py-1 bg-white/10 border border-white/20 rounded-md text-white text-xs leading-tight"
+                            />
+                          </div>
+
+                          {/* DateTime */}
+                          <div>
+                            <label className="text-gray-300 mb-0.5 flex items-center space-x-1 text-[10px]">
+                              <FaCalendarAlt className="text-pink-400" />
+                              <span>Date & Time</span>
+                            </label>
+                            <input
+                              type="datetime-local"
+                              value={scheduledDateTime}
+                              onChange={(e) => setScheduledDateTime(e.target.value)}
+                              className="w-full px-2 py-1 bg-white/10 border border-white/20 rounded-md text-white text-xs leading-tight"
+                            />
+                          </div>
+
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
 
               {/* SMTP Slot Selection */}
               <div>
-                <label className="text-white font-medium mb-2 flex items-center space-x-2 text-sm">
-                  <FaEnvelope className="text-blue-400" />
+                <label className="text-white font-medium mb-0.5 flex items-center space-x-1 text-[11px]">
+                  <FaEnvelope className="text-blue-400 text-xs" />
                   <span>Slot:</span>
                 </label>
-                <div className="bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 p-3">
-                  <div className="grid grid-cols-5 gap-2">
+                <div className="bg-white/5 backdrop-blur-sm rounded-md border border-white/10 p-1.5">
+                  <div className="grid grid-cols-5 gap-0.5">
                     {[1, 2, 3, 4, 5].map((slotNum) => {
                       const slot = smtpSlots.find(s => s.slotNumber === slotNum);
                       const isActive = slot?.status === 'active' && slot?.isVerified;
@@ -695,14 +718,14 @@ const EmailModal = ({
                           onClick={() => !isDisabled && setSelectedSlot(slotNum)}
                           disabled={isDisabled || loadingSlots}
                           className={`
-              px-2 py-2 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow text-xs
-              ${selectedSlot === slotNum
-                              ? 'bg-gradient-to-r from-blue-500 to-cyan-600 text-white ring-2 ring-white/50'
+px-1.5 py-0.5 rounded-md font-medium transition-all duration-150 transform hover:scale-105 shadow-sm text-[11px]
+${selectedSlot === slotNum
+                              ? 'bg-gradient-to-r from-blue-500 to-cyan-600 text-white ring-1 ring-white/40'
                               : isDisabled
                                 ? 'bg-white/5 text-gray-500 cursor-not-allowed opacity-50'
                                 : 'bg-white/10 text-white hover:bg-white/20 border border-white/20'
                             }
-            `}
+`}
                           title={slot ? `${slot.email} (${slot.emailsSentToday}/${slot.dailyLimit})` : 'Empty slot'}
                         >
                           {slotNum}
@@ -711,13 +734,13 @@ const EmailModal = ({
                     })}
                   </div>
                   {selectedSlot && smtpSlots.find(s => s.slotNumber === selectedSlot) && (
-                    <div className="mt-2 p-2 bg-white/5 rounded-lg border border-white/10">
-                      <p className="text-white text-xs truncate">
+                    <div className="mt-0.5 p-1 bg-white/5 rounded-md border border-white/10">
+                      <p className="text-white text-[11px] truncate">
                         {smtpSlots.find(s => s.slotNumber === selectedSlot)?.email}
                       </p>
-                      <p className="text-gray-400 text-xs mt-1">
+                      <p className="text-gray-400 text-[10px] leading-tight">
                         {smtpSlots.find(s => s.slotNumber === selectedSlot)?.emailsSentToday || 0}/
-                        {smtpSlots.find(s => s.slotNumber === selectedSlot)?.dailyLimit || 0} sent today
+                        {smtpSlots.find(s => s.slotNumber === selectedSlot)?.dailyLimit || 0} sent
                       </p>
                     </div>
                   )}
@@ -726,36 +749,43 @@ const EmailModal = ({
 
               {/* Attachments Section (always visible in right column) */}
               <div>
-                <label className="text-white font-medium mb-2 flex items-center space-x-2 text-sm">
-                  <FaPaperclip className="text-orange-400" />
+                <label className="text-white font-medium mb-0.5 flex items-center space-x-1 text-[11px]">
+                  <FaPaperclip className="text-orange-400 text-xs" />
                   <span>Attachments:</span>
                 </label>
-                <div className="bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white px-3 py-1 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow cursor-pointer flex items-center space-x-2 text-sm">
+                {schedule && (
+                  <p className="text-yellow-400 text-[10px] mb-1 leading-tight">
+                    ⚠ Total size of attachments should be less than 6.7 MB when scheduling.
+                  </p>
+                )}
+                <div className="bg-white/5 backdrop-blur-sm rounded-md border border-white/10 p-1.5">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white px-2 py-0.5 rounded-md font-medium transition-all duration-150 transform hover:scale-105 shadow-sm cursor-pointer flex items-center space-x-1 text-[11px]">
                       <FaPaperclip />
-                      <span>Choose Files</span>
+                      <span>Choose</span>
                       <input type="file" multiple onChange={handleFileChange} className="hidden" />
                     </label>
-                    <span className="text-gray-400 text-xs flex items-center space-x-1">
+                    <span className="text-gray-400 text-[11px] flex items-center space-x-1">
                       <FaPaperclip />
-                      <span>{attachments.length} file(s)</span>
+                      <span>{attachments.length}</span>
                     </span>
                   </div>
 
                   {attachments.length > 0 && (
-                    <div className="space-y-1 max-h-40 overflow-y-auto">
+                    <div className="space-y-0.5 max-h-24 overflow-y-auto">
                       {attachments.map((file, index) => (
-                        <div key={index} className="bg-white/10 backdrop-blur-sm rounded-lg p-2 flex items-center justify-between border border-white/10 min-w-0 overflow-hidden">
-                          <div className="flex items-center space-x-2 min-w-0">
-                            <FaPaperclip className="text-blue-300 flex-shrink-0" />
-                            <span className="text-white font-medium truncate text-sm">{file.name}</span>
-                            <span className="text-gray-400 text-xs flex-shrink-0">({(file.size / 1024).toFixed(1)} KB)</span>
+                        <div key={index} className="bg-white/10 backdrop-blur-sm rounded-md p-1 flex items-center justify-between border border-white/10 min-w-0 overflow-hidden">
+                          <div className="flex items-center space-x-1 min-w-0">
+                            <FaPaperclip className="text-blue-300 flex-shrink-0 text-xs" />
+                            <span className="text-white font-medium truncate text-[11px]">{file.name}</span>
+                            <span className="text-gray-400 text-[10px] flex-shrink-0">
+                              ({(file.size / 1024).toFixed(1)} KB)
+                            </span>
                           </div>
                           <button
                             type="button"
                             onClick={() => removeFile(index)}
-                            className="bg-red-500/20 hover:bg-red-500/40 text-red-300 px-1 py-0.5 rounded-md transition-all duration-200 transform hover:scale-105 flex items-center space-x-1 text-xs"
+                            className="bg-red-500/20 hover:bg-red-500/40 text-red-300 px-1 py-0.5 rounded-sm transition-all duration-150 transform hover:scale-105 flex items-center space-x-1 text-[10px]"
                           >
                             <FaTrashAlt />
                           </button>

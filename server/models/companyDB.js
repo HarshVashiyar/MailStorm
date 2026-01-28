@@ -7,7 +7,7 @@ const companySchema = new mongoose.Schema(
       required: true,
       //unique: true,
       trim: true,
-      minLength: 3,
+      minLength: 1,
       maxLength: 100,
     },
     companyWebsite: {
@@ -15,21 +15,21 @@ const companySchema = new mongoose.Schema(
       //required: true,
       //unique: true,
       trim: true,
-      minLength: 3,
+      // minLength: 1,
       maxLength: 100,
     },
     companyCountry: {
       type: String,
       //required: true,
       trim: true,
-      minLength: 3,
+      // minLength: 1,
       maxLength: 100,
     },
     companyAddress: {
       type: String,
       //required: true,
       trim: true,
-      minLength: 3,
+      // minLength: 1,
       maxLength: 300,
     },
     companyEmail: {
@@ -52,8 +52,8 @@ const companySchema = new mongoose.Schema(
       //required: true,
       //unique: true,
       trim: true,
-      minLength: 5,
-      maxLength: 20,
+      // minLength: 5,
+      maxLength: 13,
     },
     companyProductGroup: {
       type: [String],
@@ -62,7 +62,7 @@ const companySchema = new mongoose.Schema(
     },
     companyContactPersonName: {
       type: String,
-      //required: true,
+      required: true,
       trim: true,
       minLength: 3,
       maxLength: 100,
@@ -71,7 +71,7 @@ const companySchema = new mongoose.Schema(
       type: String,
       //required: true,
       trim: true,
-      minLength: 5,
+      // minLength: 5,
       maxLength: 20,
     },
     companyNotes: {

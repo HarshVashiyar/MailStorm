@@ -62,22 +62,22 @@ const AddCompanyModal = ({
     let tempErrors = {};
     if (!formData.companyName)
       tempErrors.companyName = "Company Name is required";
-    if (!formData.companyWebsite)
-      tempErrors.companyWebsite = "Company Website is required";
-    if (!formData.companyCountry)
-      tempErrors.companyCountry = "Company Country is required";
-    if (!formData.companyAddress)
-      tempErrors.companyAddress = "Company Address is required";
+    // if (!formData.companyWebsite)
+    //   tempErrors.companyWebsite = "Company Website is required";
+    // if (!formData.companyCountry)
+    //   tempErrors.companyCountry = "Company Country is required";
+    // if (!formData.companyAddress)
+    //   tempErrors.companyAddress = "Company Address is required";
     if (!formData.companyEmail)
       tempErrors.companyEmail = "Company Email is required";
-    if (!formData.companyPhone)
-      tempErrors.companyPhone = "Company Phone is required";
+    // if (!formData.companyPhone)
+    //   tempErrors.companyPhone = "Company Phone is required";
     if (!productGroupString.trim())
       tempErrors.companyProductGroup = "Company Product Group is required";
     if (!formData.companyContactPersonName)
       tempErrors.companyContactPersonName = "Contact Person Name is required";
-    if (!formData.companyContactPersonPhone)
-      tempErrors.companyContactPersonPhone = "Contact Person Phone is required";
+    // if (!formData.companyContactPersonPhone)
+    //   tempErrors.companyContactPersonPhone = "Contact Person Phone is required";
     setErrors(tempErrors);
     return Object.keys(tempErrors).length === 0;
   };

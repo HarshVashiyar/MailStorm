@@ -124,13 +124,13 @@ const SavedListsModal = ({
           {/* Action Buttons - Fixed Height Container */}
           <div className="h-20 mb-2 flex items-start">
             <div className="flex flex-wrap gap-2">
-              <button
+              {/* <button
                 onClick={() => { }}
                 className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white px-4 py-2 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 border border-orange-400/30 flex items-center space-x-2 text-sm"
               >
                 <MdAdd className="text-base" />
                 <span>Add New List</span>
-              </button>
+              </button> */}
 
               {selectedSavedLists.length === 1 && (
                 <>

@@ -21,11 +21,12 @@ const handleUserSignUp = async (req, res) => {
         if (!fullName || !email || !password) {
             return res.status(400).json({ success: false, message: "Full name, email and password are required" });
         }
-        const existingUser = await User.findOne({ email });
+        normalisedEmail = email.toLowerCase().trim();
+        const existingUser = await User.findOne({ email: normalisedEmail });
         if (existingUser) {
             return res.status(400).json({ success: false, message: "User with the provided email already exists" });
         }
-        const newUser = new User({ fullName, email, password });
+        const newUser = new User({ fullName, email: normalisedEmail, password });
         await newUser.save();
         return res.status(201).json({ success: true, message: "User created successfully" });
     }
@@ -45,11 +46,12 @@ const handleUserSignIn = async (req, res) => {
         if (!email || !password) {
             return res.status(400).json({ success: false, message: "All fields are required" });
         }
-        const token = await User.matchPasswordAndGenerateToken(email, password);
+        const normalisedEmail = email.toLowerCase().trim();
+        const token = await User.matchPasswordAndGenerateToken(normalisedEmail, password);
         res.cookie("token", token, {
             httpOnly: true,
-            secure: true,
-            sameSite: "none",
+            secure: process.env.NODE_ENV === "production",
+            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
             maxAge: 24 * 60 * 60 * 1000
         });
         res.status(200).json({ success: true, message: 'Logged in successfully' });

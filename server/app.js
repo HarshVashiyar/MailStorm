@@ -1,6 +1,7 @@
 require("dotenv").config();
 const PORT = process.env.PORT || 8080;
 const mongo_URI = process.env.MONGO_URI;
+const FRONTEND_URL = process.env.FRONTEND_URL;
 const express = require("express");
 const app = express();
 const mongoose = require("mongoose");
@@ -8,14 +9,15 @@ const cors = require("cors");
 const staticRouter = require("./routes/staticRouter");
 const path = require("path");
 const cookieParser = require("cookie-parser");
-const session = require('express-session');
+// const session = require('express-session');
 
 app.use(cookieParser());
 
 app.use(
   cors({
     origin: [
-      'http://localhost:5173'
+      'http://localhost:5173',
+      FRONTEND_URL
     ],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -23,16 +25,16 @@ app.use(
   })
 );
 
-app.use(session({
-  secret: process.env.SESSION_SECRET,
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production', // true in production with HTTPS
-    httpOnly: true,
-    maxAge: 10 * 60 * 1000 // 10 minutes
-  }
-}));
+// app.use(session({
+//   secret: process.env.SESSION_SECRET,
+//   resave: false,
+//   saveUninitialized: false,
+//   cookie: {
+//     secure: process.env.NODE_ENV === 'production', // true in production with HTTPS
+//     httpOnly: true,
+//     maxAge: 10 * 60 * 1000 // 10 minutes
+//   }
+// }));
 
 
 app.use(express.json());
