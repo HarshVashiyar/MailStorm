@@ -46,6 +46,7 @@ const EmailModal = ({
   const [formalityLevelForContent, setFormalityLevelForContent] = useState("neutral");
   const [enhancingSubject, setEnhancingSubject] = useState(false);
   const [generatingHTML, setGeneratingHTML] = useState(false);
+  const [editorKey, setEditorKey] = useState(0);
 
   // Resizer refs/state for left/right columns
   const containerRef = useRef(null);
@@ -142,6 +143,7 @@ const EmailModal = ({
         if (template) {
           setSubject(template.templateSubject);
           setHtml(template.templateContent);
+          setEditorKey(prev => prev + 1);
           setSelectedTemplate(templateName);
           toast.success(`✅ Template "${templateName}" loaded!`);
         }
@@ -632,7 +634,7 @@ const EmailModal = ({
                   </div>
                 </div>
                 <div className="bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 overflow-hidden">
-                  <NewPost setHtml={setHtml} initialContent={html} />
+                  <NewPost key={editorKey} setHtml={setHtml} initialContent={html} />
                 </div>
               </div>
             </div>
