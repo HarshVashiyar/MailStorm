@@ -260,14 +260,15 @@ const EmailModal = ({
 
     const existingSize = attachments.reduce((sum, file) => sum + file.size, 0);
     const newSize = newFiles.reduce((sum, file) => sum + file.size, 0);
-    const totalSize = existingSize + newSize;
+    if (schedule) {
+      const totalSize = existingSize + newSize;
 
-    if (totalSize > MAX_ATTACHMENTS_SIZE) {
-      toast.warning("Total size of attachments should be less than 6.7 MB when scheduling.");
-      e.target.value = "";
-      return; // ❌ do NOT update state
+      if (totalSize > MAX_ATTACHMENTS_SIZE) {
+        toast.warning("Total size of attachments should be less than 6.7 MB when scheduling.");
+        e.target.value = "";
+        return; // ❌ do NOT update state
+      }
     }
-
     setAttachments((prev) => [...prev, ...newFiles]);
     e.target.value = "";
   };
