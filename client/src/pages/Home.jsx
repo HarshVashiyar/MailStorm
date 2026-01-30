@@ -4,7 +4,7 @@ const Home = () => {
       {/* Animated background elements */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary-500/10 via-accent-500/5 to-primary-600/10 animate-pulse-slow pointer-events-none"></div>
       <div className="absolute inset-0 bg-gradient-radial from-primary-400/20 via-transparent to-transparent pointer-events-none"></div>
-      
+
       {/* Floating orbs */}
       <div className="absolute top-40 -left-20 w-96 h-96 bg-primary-500/20 rounded-full blur-3xl animate-pulse-slow"></div>
       <div className="absolute top-1/3 -right-20 w-[500px] h-[500px] bg-accent-500/20 rounded-full blur-3xl animate-pulse-slow" style={{ animationDelay: '1s' }}></div>
@@ -13,40 +13,62 @@ const Home = () => {
       {/* Main Content */}
       <div className="relative z-10 px-4 sm:px-6 lg:px-8 py-16">
         <div className="max-w-7xl mx-auto">
-          
+
           {/* Hero Section */}
           <div className="text-center mb-20 relative">
             {/* Decorative elements */}
             <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-32 h-1 bg-gradient-to-r from-transparent via-primary-400 to-transparent"></div>
-            
+
             <div className="inline-block mb-6 px-6 py-2 bg-glass-dark backdrop-blur-lg border border-primary-500/30 rounded-full shadow-glow">
               <span className="text-primary-400 font-semibold text-sm">⚡ Next-Gen Email Management Platform</span>
             </div>
-            
+
             <h1 className="text-6xl md:text-7xl lg:text-8xl font-black mb-6 leading-tight">
               <span className="block bg-gradient-to-r from-primary-300 via-accent-400 to-primary-500 bg-clip-text text-transparent animate-glow">
                 MailStorm
               </span>
             </h1>
-            
+
             <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto leading-relaxed">
               The complete email orchestration platform for managing clients, campaigns, and communications with unprecedented power and simplicity.
             </p>
-            
+
             <div className="flex flex-wrap justify-center gap-4 mb-12">
-              <button onClick={() => window.location.href = '/signin'} className="group relative px-8 py-4 bg-gradient-to-r from-primary-500 to-accent-500 text-white font-bold rounded-xl shadow-glow hover:shadow-glow-lg transition-all duration-300 hover:scale-105 overflow-hidden">
+              {/* Get Started */}
+              <a
+                href="/signin"
+                className="group relative px-8 py-4 bg-gradient-to-r from-primary-500 to-accent-500 text-white font-bold rounded-xl shadow-glow hover:shadow-glow-lg transition-all duration-300 hover:scale-105 overflow-hidden"
+              >
                 <span className="relative z-10 flex items-center gap-2">
                   🚀 Get Started Free
-                  <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg
+                    className="w-5 h-5 group-hover:translate-x-1 transition-transform"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                   </svg>
                 </span>
-                <div className="absolute inset-0 bg-gradient-to-r from-accent-500 to-primary-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              </button>
-              
-              <button onClick={() => window.location.href = '/privacy'} className="px-8 py-4 bg-glass-dark backdrop-blur-lg border border-primary-500/30 text-white font-semibold rounded-xl hover:border-primary-400/60 transition-all duration-300 hover:shadow-glow">
-                📖 View Privacy Policy
-              </button>
+              </a>
+
+              {/* Privacy Policy */}
+              <a
+                href="https://mailstorm.keshavturnomatics.com/privacy"
+                className="px-8 py-4 bg-glass-dark backdrop-blur-lg border border-primary-500/30 text-white font-semibold rounded-xl hover:border-primary-400/60 transition-all duration-300 hover:shadow-glow"
+                target="_blank" rel="noopener noreferrer"
+              >
+                📖 Privacy Policy
+              </a>
+
+              {/* Terms of Service */}
+              <a
+                href="https://mailstorm.keshavturnomatics.com/terms"
+                className="px-8 py-4 bg-glass-dark backdrop-blur-lg border border-primary-500/30 text-white font-semibold rounded-xl hover:border-accent-400/60 transition-all duration-300 hover:shadow-glow"
+                target="_blank" rel="noopener noreferrer"
+              >
+                📄 Terms of Service
+              </a>
             </div>
 
             {/* Stats */}
@@ -78,7 +100,7 @@ const Home = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              
+
               {/* Feature Card 1 */}
               <FeatureCard
                 icon="🔐"
@@ -186,7 +208,7 @@ const Home = () => {
             <div className="relative">
               {/* Connecting line */}
               <div className="absolute top-1/2 left-0 right-0 h-1 bg-gradient-to-r from-primary-500/30 via-accent-500/30 to-primary-500/30 transform -translate-y-1/2 hidden lg:block"></div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 relative z-10">
                 <WorkflowStep
                   number="1"
@@ -224,7 +246,7 @@ const Home = () => {
                   🔧 Integrated Technologies
                 </h2>
               </div>
-              
+
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                 <TechBadge icon="🔑" name="OAuth 2.0" />
                 <TechBadge icon="📮" name="SMTP" />
@@ -244,11 +266,11 @@ const Home = () => {
               <div className="inline-block mb-6 px-6 py-2 bg-glass-dark backdrop-blur-lg border border-accent-500/30 rounded-full shadow-glow">
                 <span className="text-accent-400 font-semibold text-sm">🚧 Coming Soon</span>
               </div>
-              
+
               <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary-400 to-accent-400 bg-clip-text text-transparent mb-6">
                 More Features on the Horizon
               </h2>
-              
+
               <p className="text-gray-300 text-lg mb-8 max-w-2xl mx-auto">
                 We're constantly innovating to bring you more powerful tools for email management and client communications
               </p>
@@ -277,16 +299,16 @@ const Home = () => {
           <div className="text-center">
             <div className="bg-glass-dark backdrop-blur-lg border border-primary-500/30 rounded-3xl p-12 shadow-glow relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-primary-500/20 to-accent-500/20"></div>
-              
+
               <div className="relative z-10">
                 <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary-300 to-accent-400 bg-clip-text text-transparent mb-6">
                   Ready to Transform Your Email Workflow?
                 </h2>
-                
+
                 <p className="text-gray-300 text-xl mb-8 max-w-2xl mx-auto">
                   Join MailStorm today and experience the future of email management
                 </p>
-                
+
                 <button onClick={() => window.location.href = '/signin'} className="group relative px-10 py-5 bg-gradient-to-r from-primary-500 to-accent-500 text-white font-bold text-lg rounded-xl shadow-glow hover:shadow-glow-lg transition-all duration-300 hover:scale-105 overflow-hidden">
                   <span className="relative z-10 flex items-center gap-2">
                     Get Started Now
@@ -312,7 +334,7 @@ const FeatureCard = ({ icon, title, description, gradient, borderGradient }) => 
     <div className="group relative bg-glass-dark backdrop-blur-lg border border-primary-500/20 rounded-2xl p-6 hover:border-primary-400/40 transition-all duration-300 hover:shadow-glow overflow-hidden">
       {/* Gradient background on hover */}
       <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
-      
+
       <div className="relative z-10">
         <div className="text-4xl mb-4 group-hover:scale-110 transition-transform duration-300">
           {icon}
@@ -339,7 +361,7 @@ const WorkflowStep = ({ number, icon, title, description }) => {
       <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 w-10 h-10 bg-gradient-to-r from-primary-500 to-accent-500 text-white rounded-full flex items-center justify-center font-bold text-lg shadow-glow">
         {number}
       </div>
-      
+
       <div className="text-5xl mb-4 mt-2">{icon}</div>
       <h3 className="text-lg font-bold text-white mb-2">{title}</h3>
       <p className="text-gray-400 text-sm">{description}</p>
