@@ -329,6 +329,30 @@ const Profile = () => {
   return user ? (
     <div className="flex flex-col min-h-screen px-4 sm:px-6 lg:px-8 py-6">
       <div className="max-w-6xl mx-auto w-full">
+        
+        {/* Scroll Down Notice - Compact */}
+        <div className="mb-4 bg-dark-800/40 backdrop-blur-md border border-primary-500/20 rounded-lg px-4 py-2 shadow-sm">
+          <div className="flex items-center justify-center gap-2 text-sm">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-4 w-4 text-primary-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <p className="text-gray-300 text-center">
+              Scroll down to manage your email sending account slots
+            </p>
+          </div>
+        </div>
+
         {/* Main Profile Card */}
         <div className="bg-dark-800/30 backdrop-blur-xl border border-white/10 rounded-3xl shadow-glass overflow-hidden mb-6">
           {/* Profile Content */}
@@ -464,7 +488,7 @@ const Profile = () => {
                       d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
                     />
                   </svg>
-                  Go to Admin Dashboard
+                  Go to Dashboard
                 </button>
 
                 {/* Delete button moved here between Admin and Logout */}
