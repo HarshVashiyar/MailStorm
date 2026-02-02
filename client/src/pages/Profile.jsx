@@ -62,7 +62,7 @@ const Profile = () => {
       } catch (error) {
         setIsLoading(false);
         toast.dismiss(toastID);
-        
+
         // Check if user profile was deleted or authentication failed
         if (error?.response?.status === 401 || error?.response?.status === 404) {
           logout();
@@ -72,7 +72,7 @@ const Profile = () => {
           }, 1500);
           return;
         }
-        
+
         if (error?.response?.data?.message) {
           if (isFirstMount.current) {
             toast.error(error.response.data.message);
@@ -131,12 +131,12 @@ const Profile = () => {
     const toastID = toast.loading(`Connecting to ${provider}...`);
     try {
       const url = `${import.meta.env.VITE_BASE_URL}/oauth/${provider}/initiate`;
-      
+
       const response = await axios.get(
         url,
-        { 
+        {
           params: { slotNumber: selectedSlot },
-          withCredentials: true 
+          withCredentials: true
         }
       );
 
@@ -235,18 +235,18 @@ const Profile = () => {
     try {
       const formData = new FormData();
       formData.append("profilePhoto", file);
-      
+
       const response = await axios.post(
         `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_ADD_PROFILE_PHOTO_ROUTE}`,
         formData,
-        { 
+        {
           withCredentials: true,
           headers: {
             "Content-Type": "multipart/form-data"
           }
         }
       );
-      
+
       if (response.data?.success === true) {
         toast.dismiss(toastID);
         toast.success("Profile photo updated successfully!");
@@ -273,7 +273,7 @@ const Profile = () => {
         `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_DELETE_PROFILE_PHOTO_ROUTE}`,
         { withCredentials: true }
       );
-      
+
       if (response.data?.success === true) {
         toast.dismiss(toastID);
         toast.success("Profile photo deleted successfully!");
@@ -329,7 +329,7 @@ const Profile = () => {
   return user ? (
     <div className="flex flex-col min-h-screen px-4 sm:px-6 lg:px-8 py-6">
       <div className="max-w-6xl mx-auto w-full">
-        
+
         {/* Scroll Down Notice - Compact */}
         <div className="mb-4 bg-dark-800/40 backdrop-blur-md border border-primary-500/20 rounded-lg px-4 py-2 shadow-sm">
           <div className="flex items-center justify-center gap-2 text-sm">
@@ -589,6 +589,10 @@ const Profile = () => {
         onClose={() => setShowAddSmtpModal(false)}
         selectedSlot={selectedSlot}
         onConnectOAuth={handleConnectOAuth}
+        onSmtpAdded={() => {
+          fetchSmtpSlots();
+          setShowAddSmtpModal(false);
+        }}
       />
 
       <DeleteAccountModal

@@ -65,7 +65,7 @@ const SelectedItemsActionBar = ({
         >
           <span className="inline-flex items-center gap-1">
             <span className="text-sm">📋</span>
-            <span>Save</span>
+            <span>New List</span>
           </span>
         </button>
       </div>
