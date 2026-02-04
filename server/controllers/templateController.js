@@ -3,13 +3,14 @@ const Template = require("../models/templateDB");
 const handleGetAllTemplates = async (req, res) => {
     const user = req.user;
     try {
-        const templates = await Template.find({ createdBy: user.id }).select('templateName templateSubject -_id');
+        const templates = await Template.find({ createdBy: user.id }).select('templateName templateSubject templateContent -_id');
         if (!templates || !Array.isArray(templates) || templates.length === 0) {
             return res.status(404).json({ success: false, message: "No templates found" });
         }
         const data = templates.map(t => ({
             templateName: t.templateName,
-            templateSubject: t.templateSubject
+            templateSubject: t.templateSubject,
+            templateContent: t.templateContent
         }));
         return res.status(200).json({ success: true, message: "Templates retrieved successfully", data });
     } catch (error) {

@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { exportCompaniesToExcel } from '../../utils/exportCompanies';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { exportCompaniesToExcel } from '../../services/exportCompanies';
 
 const ActionBar = ({
   show,
@@ -24,6 +24,7 @@ const ActionBar = ({
 
   // Local input state preserves spaces/typing while we still update the normalized parent state
   const [localSearch, setLocalSearch] = useState(displayValue);
+  const debounceTimer = useRef(null);
 
   useEffect(() => {
     setLocalSearch(displayValue);
@@ -31,14 +32,31 @@ const ActionBar = ({
 
   const handleSearchChange = (e) => {
     const raw = e.target.value;
-    setLocalSearch(raw); // preserve what user types (including spaces)
-    const keywords = parseKeywords(raw); // normalize for parent
-    setSearchTerm(keywords.length ? keywords : '');
+    setLocalSearch(raw); // preserve what user types (including spaces) - instant feedback
+
+    // Debounce the parent state update to reduce CPU usage
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+
+    debounceTimer.current = setTimeout(() => {
+      const keywords = parseKeywords(raw); // normalize for parent
+      setSearchTerm(keywords.length ? keywords : '');
+    }, 300); // 300ms delay
   };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1">
         <button
           onClick={toggleView}
           className="group bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white inline-flex items-center gap-2 px-3 py-1 rounded-md transition-all duration-200 transform hover:scale-105 border border-primary-400/20 text-sm"
@@ -47,13 +65,15 @@ const ActionBar = ({
           <span className="font-medium whitespace-nowrap">{show ? 'Companies' : 'Users'}</span>
         </button>
 
-        <button
-          onClick={fetchSavedLists}
-          className="group bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 text-white inline-flex items-center gap-2 px-3 py-1 rounded-md transition-all duration-200 transform hover:scale-105 border border-accent-400/20 text-sm"
-        >
-          <span className="text-sm">📁</span>
-          <span className="font-medium whitespace-nowrap">Lists</span>
-        </button>
+        {!show && (
+          <button
+            onClick={fetchSavedLists}
+            className="group bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 text-white inline-flex items-center gap-2 px-3 py-1 rounded-md transition-all duration-200 transform hover:scale-105 border border-accent-400/20 text-sm"
+          >
+            <span className="text-sm">📁</span>
+            <span className="font-medium whitespace-nowrap">Lists</span>
+          </button>
+        )}
 
         <button
           onClick={onScheduledClick}

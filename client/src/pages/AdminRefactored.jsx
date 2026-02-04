@@ -1,80 +1,206 @@
-import { useState } from 'react';
+import { useState, useMemo, useRef, useCallback, useDeferredValue, lazy, Suspense, useEffect } from 'react';
 import { toast } from 'react-toastify';
+import axios from 'axios';
 
-// Components
-import AddCompanyModal from '../components/modals/AddCompanyModal';
-import EmailModal from '../components/modals/EmailModal';
-import DummyDataBanner from '../components/admin/DummyDataBanner';
+// 🚀 PERFORMANCE: Lazy load modals to reduce initial bundle size
+const AddCompanyModal = lazy(() => import('../components/modals/AddCompanyModal'));
+const EmailModal = lazy(() => import('../components/modals/EmailModal'));
+const ManualListFormModal = lazy(() => import('../components/admin/modals/ManualListFormModal'));
+const SavedListsModal = lazy(() => import('../components/admin/modals/SavedListsModal'));
+const SavedTemplatesModal = lazy(() => import('../components/admin/modals/SavedTemplatesModal'));
+const ManualTemplateFormModal = lazy(() => import('../components/admin/modals/ManualTemplateFormModal'));
+const ScheduledEmailsModal = lazy(() => import('../components/admin/modals/ScheduledEmailsModal').then(module => ({ default: module.default })));
+
+// Eager load components used immediately
 import ActionBar from '../components/admin/ActionBar';
 import SelectedItemsActionBar from '../components/admin/SelectedItemsActionBar';
 import DataTable from '../components/admin/DataTable';
-import ManualListFormModal from '../components/admin/modals/ManualListFormModal';
-import SavedListsModal from '../components/admin/modals/SavedListsModal';
-import SavedTemplatesModal from '../components/admin/modals/SavedTemplatesModal';
-import ManualTemplateFormModal from '../components/admin/modals/ManualTemplateFormModal';
-import ScheduledEmailsModal from '../components/admin/modals/ScheduledEmailsModal';
+import { DataTableSkeleton } from '../components/SkeletonLoaders';
 
-// Hooks
-import { useUsers } from '../hooks/useUsers';
-import { useSavedLists } from '../hooks/useSavedLists';
-import { useSavedTemplates } from '../hooks/useSavedTemplates';
-import useScheduledEmailsModal from '../hooks/useScheduledEmailsModal';
+// ✅ Context providers - mount locally in this component
+import { UserProvider, useUserContext } from '../context/UserContext';
+import { ListsProvider, useLists } from '../context/ListsContext';
+import { useTemplates } from '../context/TemplatesContext';
 
-const AdminRefactored = () => {
-  // Custom hooks for state management
+// Lazy load hook
+import { useScheduledEmailsModal } from '../components/admin/modals/ScheduledEmailsModal';
+
+// ✅ Inner component that uses the contexts
+const AdminContent = () => {
+  // 🎯 Use contexts
   const {
-    users,
-    setUsers,
-    selectedUsers,
-    setSelectedUsers,
-    show,
-    searchTerm,
-    setSearchTerm,
-    filteredUsers,
-    isUsingDummyData,
-    toggleView,
-    toggleUserSelection,
-    selectAllUsers,
-    clearSelection,
-    deleteSelectedUsers,
-    updateUserNote,
+    users: contextUsers,
+    companies: contextCompanies,
+    currentView,
+    setCurrentView,
+    loading,
+    refresh,
+    fetchCompanies,
     fetchUsers,
-    filterProcurement,
-    setFilterProcurement,
-  } = useUsers();
+  } = useUserContext();
 
-  // Scheduled emails modal hook
+  // ✅ Fetch companies on mount
+  useEffect(() => {
+    // console.log('AdminRefactored: Fetching initial data...');
+    fetchCompanies();
+  }, [fetchCompanies]);
+
+  // Local UI state
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterProcurement, setFilterProcurement] = useState(false);
+
+  // 🚀 PERFORMANCE: Debounce search to prevent filtering on every keystroke
+  const debouncedSearchTerm = useDeferredValue(searchTerm);
+
+  // Derived state
+  const show = currentView === 'users';
+  const users = currentView === 'users' ? contextUsers : contextCompanies;
+
+  // Memoized filtered users (now using debounced search)
+  const filteredUsers = useMemo(() => {
+    return (users || []).filter((user) => {
+      if (!user) return false;
+
+      const searchFields = show
+        ? [
+          user.fullName,
+          user.email,
+          user.name,
+          user.userName,
+          user.username,
+          `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+        ]
+        : [
+          user.companyName,
+          user.companyContactPersonName,
+          user.companyAddress,
+          user.companyCountry,
+          user.companyEmail,
+          user.companyPhone,
+          user.companyContactPersonPhone,
+          user.companyWebsite,
+          ...(user.companyProductGroup || []),
+        ];
+
+      const keywords = Array.isArray(debouncedSearchTerm)
+        ? debouncedSearchTerm.map(k => String(k).trim().toLowerCase()).filter(Boolean)
+        : String(debouncedSearchTerm || '').split(/\s+/).map(k => k.trim().toLowerCase()).filter(Boolean);
+
+      if (!debouncedSearchTerm && !filterProcurement) return true;
+
+      if (!show && filterProcurement) {
+        const hasProcurement = Boolean(
+          user.hasProcurementTeam ?? user.procurementTeam ?? user.procurement ?? user.hasProcurement
+        );
+        if (!hasProcurement) return false;
+      }
+
+      const haystack = searchFields
+        .filter(Boolean)
+        .map(f => String(f).toLowerCase())
+        .join(' ');
+
+      return keywords.every(k => haystack.includes(k));
+    });
+  }, [users, debouncedSearchTerm, show, filterProcurement]);
+
+  // Actions
+  // Track if we've fetched users at least once (local to this component)
+  const hasFetchedUsersRef = useRef(false);
+
+  const toggleView = useCallback(() => {
+    const newView = currentView === 'users' ? 'companies' : 'users';
+    setCurrentView(newView);
+    setSelectedUsers([]);
+    // Only fetch users the first time we switch to that view
+    if (newView === 'users' && !hasFetchedUsersRef.current) {
+      hasFetchedUsersRef.current = true;
+      fetchUsers();
+    }
+  }, [currentView, setCurrentView, fetchUsers]);
+
+  const toggleUserSelection = useCallback((userId) => {
+    setSelectedUsers((prev) =>
+      prev.includes(userId)
+        ? prev.filter((id) => id !== userId)
+        : [...prev, userId]
+    );
+  }, []);
+
+  const selectAllUsers = useCallback((userList) => {
+    if (Array.isArray(userList)) {
+      setSelectedUsers(userList.map(user => user._id));
+    } else {
+      setSelectedUsers([]);
+    }
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedUsers([]);
+  }, []);
+
+  const deleteSelectedUsers = useCallback(async () => {
+    const selectedUsersData = show
+      ? { userIds: selectedUsers }
+      : { companyIds: selectedUsers };
+
+    try {
+      const response = await axios.delete(
+        show
+          ? `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_REMOVE_USERS_ROUTE}`
+          : `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_REMOVE_COMPANIES_ROUTE}`,
+        {
+          data: selectedUsersData,
+          withCredentials: true
+        }
+      );
+
+      if (response.data?.success === true) {
+        await refresh();
+        setSelectedUsers([]);
+        toast.success(response.data.message);
+      } else {
+        toast.error(response.data?.message || "Update failed.");
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Something went wrong");
+    }
+  }, [show, selectedUsers, refresh]);
+
+  const updateUserNote = useCallback(async () => {
+    await refresh();
+  }, [refresh]);
+
   const { isOpen: isScheduledModalOpen, openModal: openScheduledModal, closeModal: closeScheduledModal } = useScheduledEmailsModal();
 
+  // Lists Context
   const {
     savedLists,
-    selectedSavedLists,
-    showSavedListsTable,
-    fetchSavedLists,
-    toggleSavedListSelection,
-    closeSavedListsTable,
-    deleteSavedList,
-    addToExistingList,
-    removeItemsFromList,
-    createNewList,
-    mailSavedList,
-  } = useSavedLists(fetchUsers);
+    selectedLists: selectedSavedLists,
+    showListsTable: showSavedListsTable,
+    fetchLists: fetchSavedLists,
+    toggleListSelection: toggleSavedListSelection,
+    closeListsTable: closeSavedListsTable,
+    deleteList: deleteSavedList,
+    addToList: addToExistingList,
+    removeFromList: removeItemsFromList,
+    createList: createNewList,
+    openListsTable: openSavedListsTable
+  } = useLists();
 
+  // Templates Context
   const {
-    savedTemplates,
-    selectedSavedTemplates,
-    showSavedTemplatesTable,
-    showManualTemplateForm,
-    editingTemplate,
-    fetchSavedTemplates,
-    toggleSavedTemplateSelection,
-    closeSavedTemplatesTable,
-    toggleManualTemplateForm,
-    editSavedTemplate,
-    saveTemplate,
-    deleteSavedTemplate,
-    closeManualTemplateForm,
-  } = useSavedTemplates();
+    templates: savedTemplates,
+    selectedTemplates: selectedSavedTemplates,
+    showTemplatesTable: showSavedTemplatesTable,
+    fetchTemplates: fetchSavedTemplates,
+    toggleTemplateSelection: toggleSavedTemplateSelection,
+    closeTemplatesTable: closeSavedTemplatesTable,
+    deleteTemplate: deleteSavedTemplate,
+    createTemplate,
+    updateTemplate,
+  } = useTemplates();
 
   // Modal states
   const [showAddCompanyModal, setShowAddCompanyModal] = useState(false);
@@ -83,9 +209,96 @@ const AdminRefactored = () => {
   const [schedule, setSchedule] = useState(false);
   const [mState, setMState] = useState(true);
   const [showManualListForm, setShowManualListForm] = useState(false);
+  const [showManualTemplateForm, setShowManualTemplateForm] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState(null);
+
   const [prefilledEmails, setPrefilledEmails] = useState('');
   const [prefilledListName, setPrefilledListName] = useState('');
   const [prefilledContactNames, setPrefilledContactNames] = useState('');
+
+  // Re-implement mailSavedList locally since it was in the hook
+  const mailSavedList = useCallback(() => {
+    if (selectedSavedLists.length !== 1) {
+      toast.error('⚠️ Select exactly one list to mail!');
+      return null;
+    }
+
+    const list = savedLists.find(l => l._id === selectedSavedLists[0]);
+    if (!list) return null;
+
+    if (!list.listItems || list.listItems.length === 0) {
+      toast.error('⚠️ The selected list is empty!');
+      return null;
+    }
+
+    return list;
+  }, [selectedSavedLists, savedLists]);
+
+  // Template handlers
+  const toggleManualTemplateForm = useCallback(() => {
+    setEditingTemplate(null);
+    setShowManualTemplateForm(true);
+  }, []);
+
+  const closeManualTemplateForm = useCallback(() => {
+    setShowManualTemplateForm(false);
+    setEditingTemplate(null);
+  }, []);
+
+  const editSavedTemplate = useCallback(async () => {
+    if (selectedSavedTemplates.length !== 1) {
+      toast.error('⚠️ Select exactly one template to edit!');
+      return;
+    }
+
+    const templateName = selectedSavedTemplates[0];
+    const template = savedTemplates.find(t => t.templateName === templateName);
+
+    if (template) {
+      console.log('Editing template:', template);
+      setEditingTemplate(template);
+      setShowManualTemplateForm(true);
+    } else {
+      toast.error("Template not found");
+    }
+  }, [selectedSavedTemplates, savedTemplates]);
+
+  const saveTemplateHandler = useCallback(async (name, subject, content) => {
+    const data = {
+      templateName: name,
+      templateSubject: subject,
+      templateContent: content
+    };
+
+    let success;
+    if (editingTemplate) {
+      success = await updateTemplate(editingTemplate.templateName, data);
+    } else {
+      success = await createTemplate(data);
+    }
+
+    if (success) {
+      closeManualTemplateForm();
+    }
+  }, [editingTemplate, updateTemplate, createTemplate, closeManualTemplateForm]);
+
+  // Wrap deleteSavedList to refresh users after deletion
+  const handleDeleteSavedList = async (listIds) => {
+    const success = await deleteSavedList(listIds);
+    if (success) {
+      await refresh();
+    }
+    return success;
+  };
+
+  // Wrap removeItemsFromList to refresh users after editing
+  const handleRemoveItemsFromList = async (listId, itemIds) => {
+    const success = await removeItemsFromList(listId, itemIds);
+    if (success) {
+      await refresh();
+    }
+    return success;
+  };
 
   // Modal handlers
   const toggleMState = () => {
@@ -142,20 +355,58 @@ const AdminRefactored = () => {
       };
     });
 
-    // Pre-fill the modal with selected emails and contact names
     const emailString = listItems.map((item) => item.email).join(', ');
     const contactNamesString = listItems.map((item) => item.contactName || '').join(', ');
     const suggestedListName = `${show ? 'Users' : 'Companies'} List - ${new Date().toLocaleDateString()}`;
-    
+
     setPrefilledEmails(emailString);
     setPrefilledContactNames(contactNamesString);
     setPrefilledListName(suggestedListName);
     setShowManualListForm(true);
   };
 
-  const handleAddToExistingList = async () => {
-    const success = await addToExistingList(users, selectedUsers, show);
+  const handleAddToExistingList = async (listId) => {
+    if (!listId) {
+      toast.error('⚠️ No list selected!');
+      return;
+    }
+
+    const targetList = savedLists.find(list => list._id === listId);
+    if (!targetList) {
+      toast.error('⚠️ List not found!');
+      return;
+    }
+
+    const existingCompanyIds = new Set(
+      targetList.listItems?.map(item => item.company?._id || item.company) || []
+    );
+
+    const items = selectedUsers.map((userId) => {
+      const user = users.find((u) => u._id === userId);
+      if (!user) return null;
+
+      return {
+        company: user._id,
+        contactEmail: show ? user.email : user.companyEmail,
+        contactName: show ? user.fullName : user.companyContactPersonName,
+      };
+    }).filter(Boolean);
+
+    const newItems = items.filter(item => !existingCompanyIds.has(item.company));
+    const skippedCount = items.length - newItems.length;
+
+    if (skippedCount > 0) {
+      toast.info(`ℹ️ ${skippedCount} item(s) already in list, skipped!`);
+    }
+
+    if (newItems.length === 0) {
+      toast.error('⚠️ All selected items are already in the list!');
+      return;
+    }
+
+    const success = await addToExistingList(listId, newItems);
     if (success) {
+      await refresh();
       setSelectedUsers([]);
     }
   };
@@ -164,29 +415,46 @@ const AdminRefactored = () => {
     const emails = typedEmail.split(',').map(email => email.trim()).filter(email => email);
     const names = contactNames.split(',').map(name => name.trim());
 
-    const companyIds = selectedUsers.map(userId => userId);
-    
-    const listItems = emails.map((email, index) => {
-      // First try to get contact name from the provided names array
+    const listItems = [];
+    const missingEmails = [];
+
+    emails.forEach((email, index) => {
       let contactName = names[index] || '';
-      
-      // If no name provided, try to find from existing users
-      if (!contactName) {
-        const user = users.find(
-          (user) => (show ? user.email : user.companyEmail) === email
-        );
-        contactName = user ? (show ? user.fullName : user.companyContactPersonName) : '';
+
+      const user = users.find(
+        (user) => (show ? user.email : user.companyEmail) === email
+      );
+
+      if (user) {
+        if (!contactName) {
+          contactName = show ? user.fullName : user.companyContactPersonName;
+        }
+
+        listItems.push({
+          company: user._id,
+          contactEmail: email,
+          contactName: contactName || '',
+        });
+      } else {
+        missingEmails.push(email);
       }
-      
-      return {
-        email: email,
-        contactName: contactName,
-      };
     });
 
-    const success = await createNewList(listName, listItems, companyIds);
+    if (missingEmails.length > 0) {
+      toast.warn(`Skipped ${missingEmails.length} emails not found in database: ${missingEmails.slice(0, 2).join(', ')}...`);
+    }
+
+    if (listItems.length === 0) {
+      toast.error('⚠️ No valid items found to save!');
+      return;
+    }
+
+    console.log('Creating List with items:', listItems);
+
+    const success = await createNewList(listName, listItems, []);
     if (success) {
-      await fetchUsers();
+      await refresh();
+      clearSelection();
       setShowManualListForm(false);
       setPrefilledEmails('');
       setPrefilledListName('');
@@ -195,21 +463,43 @@ const AdminRefactored = () => {
     }
   };
 
-  const handleRefresh = () => {
-    fetchUsers();
-  };
+  // ✅ Show skeleton while loading initial data
+  if (loading && users.length === 0) {
+    return (
+      <div className="fixed inset-0 bg-gradient-to-br from-dark-900 via-dark-800 to-dark-900 z-10">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary-500/10 via-accent-500/5 to-primary-600/10 animate-pulse-slow pointer-events-none"></div>
+        <div className="absolute inset-0 bg-gradient-radial from-primary-400/20 via-transparent to-transparent pointer-events-none"></div>
+
+        <div className="absolute inset-0 top-20 overflow-auto">
+          <div className="px-6 py-3 bg-glass-dark/50 backdrop-blur-lg border-b border-primary-500/20">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-400 via-accent-400 to-primary-500 bg-clip-text text-transparent">
+                  ⚡ Admin Dashboard
+                </h1>
+                <p className="text-gray-300 text-xs">
+                  Loading your data...
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-4 pb-20">
+            <DataTableSkeleton show={show} />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-dark-900 via-dark-800 to-dark-900 z-10">
       {/* Background glow effects */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary-500/10 via-accent-500/5 to-primary-600/10 animate-pulse-slow pointer-events-none"></div>
       <div className="absolute inset-0 bg-gradient-radial from-primary-400/20 via-transparent to-transparent pointer-events-none"></div>
-      
+
       {/* Scrollable Content */}
       <div className="absolute inset-0 top-20 overflow-auto">
-        {/* Dummy Data Banner */}
-        <DummyDataBanner isVisible={isUsingDummyData} onRefresh={handleRefresh} />
-
         {/* Compact Header */}
         <div className="px-6 py-3 bg-glass-dark/50 backdrop-blur-lg border-b border-primary-500/20">
           {/* Dashboard Title - Compact */}
@@ -263,7 +553,7 @@ const AdminRefactored = () => {
                   <span className="font-semibold">Add</span>
                 </button>
               )}
-              
+
               {/* Action buttons - Only visible when items are selected */}
               {selectedUsers.length > 0 && (
                 <SelectedItemsActionBar
@@ -297,85 +587,104 @@ const AdminRefactored = () => {
 
       {/* Modals */}
       {showAddCompanyModal && (
-        <AddCompanyModal
-          upd={updateCompany}
-          users={users}
-          setUsers={setUsers}
-          selectedUsers={selectedUsers[0]}
-          setSelectedUsers={setSelectedUsers}
-          closeForm={closeAddCompanyModal}
-        />
+        <Suspense fallback={<div />}>
+          <AddCompanyModal
+            closeModal={closeAddCompanyModal}
+            upd={updateCompany}
+            setUpdateCompany={setUpdateCompany}
+            refreshUsers={refresh}
+            users={users}
+            selectedUsers={selectedUsers}
+            setSelectedUsers={setSelectedUsers}
+          />
+        </Suspense>
       )}
 
       {(showEmailForm || schedule) && (
-        <EmailModal
-          closeForm={closeEmailForm}
-          show={show}
-          users={users}
-          selectedUsers={selectedUsers}
-          savedLists={savedLists}
-          selectedSavedLists={selectedSavedLists}
-          schedule={schedule}
-          mState={mState}
-        />
+        <Suspense fallback={<div />}>
+          <EmailModal
+            closeForm={closeEmailForm}
+            show={show}
+            users={users}
+            selectedUsers={selectedUsers}
+            savedLists={savedLists}
+            selectedSavedLists={selectedSavedLists}
+            schedule={schedule}
+            mState={mState}
+          />
+        </Suspense>
       )}
 
-      <SavedListsModal
-        refetchUsers={fetchUsers}
-        showSavedListsTable={showSavedListsTable}
-        savedLists={savedLists}
-        selectedSavedLists={selectedSavedLists}
-        toggleSavedListSelection={toggleSavedListSelection}
-        toggleManualListForm={() => setShowManualListForm(true)}
-        deleteSavedList={deleteSavedList}
-        mailSavedList={handleMailSavedList}
-        handleScheduleEmail={handleScheduleEmail}
-        addToExistingList={handleAddToExistingList}
-        removeItemsFromList={removeItemsFromList}
-        closeSavedListsTable={closeSavedListsTable}
-        selectedUsersCount={selectedUsers.length}
-      />
+      {/* 🚀 PERFORMANCE: Suspense boundary for lazy-loaded modals */}
+      <Suspense fallback={<div />}>
+        <SavedListsModal
+          refetchUsers={refresh}
+          showSavedListsTable={showSavedListsTable}
+          savedLists={savedLists}
+          selectedSavedLists={selectedSavedLists}
+          toggleSavedListSelection={toggleSavedListSelection}
+          toggleManualListForm={() => setShowManualListForm(true)}
+          deleteSavedList={handleDeleteSavedList}
+          mailSavedList={handleMailSavedList}
+          handleScheduleEmail={handleScheduleEmail}
+          addToExistingList={handleAddToExistingList}
+          removeItemsFromList={handleRemoveItemsFromList}
+          closeSavedListsTable={closeSavedListsTable}
+          selectedUsersCount={selectedUsers.length}
+        />
 
-      <ManualListFormModal
-        showManualListForm={showManualListForm}
-        initialListName={prefilledListName}
-        initialTypedEmail={prefilledEmails}
-        companyIds={selectedUsers}
-        onSave={handleCreateNewList}
-        initialContactNames={prefilledContactNames}
-        onClose={() => {
-          setShowManualListForm(false);
-          setPrefilledEmails('');
-          setPrefilledListName('');
-          setPrefilledContactNames('');
-        }}
-      />
+        <ManualListFormModal
+          showManualListForm={showManualListForm}
+          initialListName={prefilledListName}
+          initialTypedEmail={prefilledEmails}
+          companyIds={selectedUsers}
+          onSave={handleCreateNewList}
+          initialContactNames={prefilledContactNames}
+          onClose={() => {
+            setShowManualListForm(false);
+            setPrefilledEmails('');
+            setPrefilledListName('');
+            setPrefilledContactNames('');
+          }}
+        />
 
-      <SavedTemplatesModal
-        showSavedTemplatesTable={showSavedTemplatesTable}
-        savedTemplates={savedTemplates}
-        selectedSavedTemplates={selectedSavedTemplates}
-        toggleSavedTemplateSelection={toggleSavedTemplateSelection}
-        toggleManualTemplateForm={toggleManualTemplateForm}
-        editSavedTemplate={editSavedTemplate}
-        deleteSavedTemplate={deleteSavedTemplate}
-        closeSavedTemplatesTable={closeSavedTemplatesTable}
-      />
+        <SavedTemplatesModal
+          showSavedTemplatesTable={showSavedTemplatesTable}
+          savedTemplates={savedTemplates}
+          selectedSavedTemplates={selectedSavedTemplates}
+          toggleSavedTemplateSelection={toggleSavedTemplateSelection}
+          toggleManualTemplateForm={toggleManualTemplateForm}
+          editSavedTemplate={editSavedTemplate}
+          deleteSavedTemplate={deleteSavedTemplate}
+          closeSavedTemplatesTable={closeSavedTemplatesTable}
+        />
 
-      <ManualTemplateFormModal
-        showManualTemplateForm={showManualTemplateForm}
-        initialTemplateName={editingTemplate?.templateName || ''}
-        initialTemplateSubject={editingTemplate?.templateSubject || ''}
-        initialTemplateContent={editingTemplate?.templateContent || ''}
-        onSave={saveTemplate}
-        onClose={closeManualTemplateForm}
-      />
+        <ManualTemplateFormModal
+          showManualTemplateForm={showManualTemplateForm}
+          initialTemplateName={editingTemplate?.templateName || ''}
+          initialTemplateSubject={editingTemplate?.templateSubject || ''}
+          initialTemplateContent={editingTemplate?.templateContent || ''}
+          onSave={saveTemplateHandler}
+          onClose={closeManualTemplateForm}
+        />
 
-      <ScheduledEmailsModal
-        isOpen={isScheduledModalOpen}
-        onClose={closeScheduledModal}
-      />
+        <ScheduledEmailsModal
+          isOpen={isScheduledModalOpen}
+          onClose={closeScheduledModal}
+        />
+      </Suspense>
     </div>
+  );
+};
+
+// ✅ Wrapper component that provides UserProvider and ListsProvider locally
+const AdminRefactored = () => {
+  return (
+    <UserProvider>
+      <ListsProvider>
+        <AdminContent />
+      </ListsProvider>
+    </UserProvider>
   );
 };
 

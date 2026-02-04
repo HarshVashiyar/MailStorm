@@ -3,7 +3,7 @@ import ExcelJS from "exceljs";
 import axios from "axios";
 import { toast } from "react-toastify";
 
-const ExcelUpload = ({ setUsers }) => {
+const ExcelUpload = ({ refreshUsers }) => {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -29,7 +29,8 @@ const ExcelUpload = ({ setUsers }) => {
       "companyProductGroup",
       "companyContactPersonName",
       "companyContactPersonPhone",
-      "companyNotes"
+      "companyNotes",
+      "hasProcurementTeam"
     ];
 
     const workbook = new ExcelJS.Workbook();
@@ -66,6 +67,10 @@ const ExcelUpload = ({ setUsers }) => {
                 rowData[header] = typeof cell.value === 'string'
                   ? cell.value.split(',').map(item => item.trim())
                   : [String(cell.value)];
+              } else if (header === "hasProcurementTeam") {
+                // Handle boolean field - accepts true/false, yes/no, 1/0
+                const val = String(cell.value).toLowerCase().trim();
+                rowData[header] = val === 'true' || val === 'yes' || val === '1';
               } else {
                 rowData[header] = cell.value;
               }
@@ -96,9 +101,9 @@ const ExcelUpload = ({ setUsers }) => {
         toast.success(response.data?.message || "Companies imported successfully!");
         toast.dismiss(toastId);
         setLoading(false);
-        // Update the users list with newly imported companies
-        if (response.data?.data && Array.isArray(response.data.data) && setUsers) {
-          setUsers(prevUsers => [...prevUsers, ...response.data.data]);
+        // Refresh data from context
+        if (refreshUsers) {
+          await refreshUsers();
         }
 
         setFile(null); // Reset file input

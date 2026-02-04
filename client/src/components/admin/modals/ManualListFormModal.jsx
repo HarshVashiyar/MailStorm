@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { MdClose, MdSave, MdLabel, MdEmail, MdPerson } from 'react-icons/md';
 
 const ManualListFormModal = ({
@@ -26,6 +26,19 @@ const ManualListFormModal = ({
     setListItems(initialListItems);
     setRemovedCompanyIds([]);
   }, [showManualListForm]);
+
+  // Memoize email and contact arrays (must be before early return)
+  const emailArray = useMemo(() =>
+    typedEmail.split(',').map(email => email.trim()).filter(email => email),
+    [typedEmail]
+  );
+
+  const contactNamesArray = useMemo(() =>
+    contactNames.split(',').map(name => name.trim()).filter(name => name),
+    [contactNames]
+  );
+
+  // Early return AFTER all hooks
   if (!showManualListForm) return null;
 
   const handleSave = async () => {
@@ -50,28 +63,25 @@ const ManualListFormModal = ({
     setContactNames('');
   };
 
-  const emailArray = typedEmail.split(',').map(email => email.trim()).filter(email => email);
-  const contactNamesArray = contactNames.split(',').map(name => name.trim()).filter(name => name);
-
-  const handleRemoveEmail = (indexToRemove) => {
-    const removedItem = listItems[indexToRemove];
-    if (removedItem?.company?._id) {
-      setRemovedCompanyIds(prev => [...prev, removedItem.company._id]);
+  const handleRemoveItem = (indexToRemove) => {
+    // Check if we're in "new list" mode (listItems is empty) or "edit" mode
+    if (listItems.length === 0) {
+      // New list mode: remove both email and contact name at the same index
+      const updatedEmails = emailArray.filter((_, index) => index !== indexToRemove);
+      const updatedContacts = contactNamesArray.filter((_, index) => index !== indexToRemove);
+      setTypedEmail(updatedEmails.join(', '));
+      setContactNames(updatedContacts.join(', '));
+    } else {
+      // Edit mode: work with listItems
+      const removedItem = listItems[indexToRemove];
+      if (removedItem?.company?._id) {
+        setRemovedCompanyIds(prev => [...prev, removedItem.company._id]);
+      }
+      const updatedItems = listItems.filter((_, i) => i !== indexToRemove);
+      setListItems(updatedItems);
+      setTypedEmail(updatedItems.map(i => i.contactEmail).join(', '));
+      setContactNames(updatedItems.map(i => i.contactName).join(', '));
     }
-
-    const updatedItems = listItems.filter((_, i) => i !== indexToRemove);
-    setListItems(updatedItems);
-
-    setTypedEmail(updatedItems.map(i => i.contactEmail).join(', '));
-    setContactNames(updatedItems.map(i => i.contactName).join(', '));
-  };
-
-  const handleRemoveContactName = (indexToRemove) => {
-    const updatedEmails = emailArray.filter((_, index) => index !== indexToRemove);
-    const updatedContacts = contactNamesArray.filter((_, index) => index !== indexToRemove);
-
-    setTypedEmail(updatedEmails.join(', '));
-    setContactNames(updatedContacts.join(', '));
   };
 
   return (
@@ -129,12 +139,12 @@ const ManualListFormModal = ({
               <div className="mt-4 flex flex-wrap gap-2">
                 {emailArray.map((email, index) => (
                   <div
-                    key={index}
+                    key={email}
                     className="bg-gradient-to-r from-orange-500/20 to-amber-500/20 border border-orange-500/50 rounded-full px-4 py-2 flex items-center gap-3 group hover:border-orange-500 transition-all duration-200"
                   >
                     <span className="text-white text-sm font-medium">{email}</span>
                     <button
-                      onClick={() => handleRemoveEmail(index)}
+                      onClick={() => handleRemoveItem(index)}
                       className="text-gray-400 hover:text-red-400 transition-colors duration-200 ml-1"
                       title="Remove email"
                     >
@@ -169,14 +179,14 @@ const ManualListFormModal = ({
               <div className="mt-4 flex flex-wrap gap-2">
                 {contactNamesArray.map((name, index) => (
                   <div
-                    key={index}
+                    key={`${name}-${index}`}
                     className="bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/50 rounded-full px-4 py-2 flex items-center gap-3 group hover:border-blue-500 transition-all duration-200"
                   >
                     <span className="text-white text-sm font-medium">{name}</span>
                     <button
-                      onClick={() => handleRemoveContactName(index)}
+                      onClick={() => handleRemoveItem(index)}
                       className="text-gray-400 hover:text-red-400 transition-colors duration-200 ml-1"
-                      title="Remove contact name"
+                      title="Remove contact"
                     >
                       {contactNamesArray.length > 1 && <MdClose className="text-lg" />}
                     </button>

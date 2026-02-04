@@ -16,7 +16,7 @@ const SelectedItemsActionBar = ({
             <span className="text-white font-medium text-xs">{selectedUsers.length} Selected</span>
           </span>
         </div>
-        
+
         {!show && selectedUsers.length === 1 && (
           <button
             onClick={handleUpdateCompany}
@@ -28,7 +28,7 @@ const SelectedItemsActionBar = ({
             </span>
           </button>
         )}
-        
+
         <button
           onClick={deleteSelectedUsers}
           className="group bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white w-20 h-full rounded-md text-xs font-medium transition-colors duration-150 shadow-sm border border-red-400/20 flex items-center justify-center"
@@ -38,7 +38,7 @@ const SelectedItemsActionBar = ({
             <span>Delete</span>
           </span>
         </button>
-        
+
         <button
           onClick={mailSelectedUsers}
           className="group bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white w-20 h-full rounded-md text-xs font-medium transition-colors duration-150 shadow-sm border border-blue-400/20 flex items-center justify-center"
@@ -48,7 +48,7 @@ const SelectedItemsActionBar = ({
             <span>Mail</span>
           </span>
         </button>
-        
+
         <button
           onClick={handleScheduleEmail}
           className="group bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white w-20 h-full rounded-md text-xs font-medium transition-colors duration-150 shadow-sm border border-purple-400/20 flex items-center justify-center"
@@ -58,16 +58,18 @@ const SelectedItemsActionBar = ({
             <span>Schedule</span>
           </span>
         </button>
-        
-        <button
-          onClick={handleSaveList}
-          className="group bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white w-20 h-full rounded-md text-xs font-medium transition-colors duration-150 shadow-sm border border-emerald-400/20 flex items-center justify-center"
-        >
-          <span className="inline-flex items-center gap-1">
-            <span className="text-sm">📋</span>
-            <span>New List</span>
-          </span>
-        </button>
+
+        {!show && (
+          <button
+            onClick={handleSaveList}
+            className="group bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white w-20 h-full rounded-md text-xs font-medium transition-colors duration-150 shadow-sm border border-emerald-400/20 flex items-center justify-center"
+          >
+            <span className="inline-flex items-center gap-1">
+              <span className="text-sm">📋</span>
+              <span>New List</span>
+            </span>
+          </button>
+        )}
       </div>
     </div>
   );

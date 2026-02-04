@@ -60,6 +60,7 @@ const initiateGoogleOAuth = async (req, res) => {
 
     const scopes = [
       'https://www.googleapis.com/auth/gmail.send',
+      'https://www.googleapis.com/auth/gmail.compose', // ✅ Added for scheduled emails
       'https://www.googleapis.com/auth/userinfo.email',
     ];
 
@@ -68,7 +69,7 @@ const initiateGoogleOAuth = async (req, res) => {
       scope: scopes,
       prompt: 'consent', // Force to get refresh token
     });
-    
+
     // Manually append state parameter to ensure it's included
     authUrl += `&state=${encodeURIComponent(state)}`;
 
@@ -115,7 +116,7 @@ const handleGoogleCallback = async (req, res) => {
 
     // Exchange code for tokens
     const { tokens } = await oauth2Client.getToken(code);
-    
+
     // Get user email
     oauth2Client.setCredentials(tokens);
     const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client });
@@ -126,7 +127,7 @@ const handleGoogleCallback = async (req, res) => {
       accessToken: tokens.access_token,
       tokenExpiry: new Date(tokens.expiry_date),
     };
-    
+
     // Only add refreshToken if it's actually returned
     if (tokens.refresh_token) {
       oauthTokens.refreshToken = tokens.refresh_token;

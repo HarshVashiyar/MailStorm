@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react';
 import NotesModal from '../modals/NotesModal';
 import HistoryModal from '../modals/HistoryModal';
 
@@ -30,27 +30,27 @@ const DataTable = ({
     }
   }, [selectedUsers.length, filteredUsers.length, show]);
 
-  const handleNote = (id, companyNote) => {
+  const handleNote = useCallback((id, companyNote) => {
     setNoteId(id);
     setNote(companyNote || '');
     setViewNote(true);
-  };
+  }, []);
 
-  const closeNote = () => {
+  const closeNote = useCallback(() => {
     setViewNote(false);
     setNoteId('');
     setNote('');
-  };
+  }, []);
 
-  const handleHistory = (userId) => {
+  const handleHistory = useCallback((userId) => {
     setHistoryUserId(userId);
     setViewHistory(true);
-  };
+  }, []);
 
-  const closeHistory = () => {
+  const closeHistory = useCallback(() => {
     setViewHistory(false);
     setHistoryUserId('');
-  };
+  }, []);
 
   const UsersTableHeader = () => (
     <tr>
@@ -117,12 +117,13 @@ const DataTable = ({
     </tr>
   );
 
-  const UserRow = ({ user, index, isSelected }) => {
+  // 🚀 PERFORMANCE: Memoize UserRow to prevent re-renders
+  const UserRow = memo(({ user, index, isSelected }) => {
     const fullName = user?.fullName || user?.full_name || user?.name || 'N/A';
     const email = user?.email || 'N/A';
     const createdAt = user?.createdAt || user?.created_at || new Date().toISOString();
     const updatedAt = user?.updatedAt || user?.updated_at || new Date().toISOString();
-    
+
     return (
       <tr
         className={`group transition-all duration-300 hover:bg-primary-500/10 ${isSelected
@@ -151,13 +152,15 @@ const DataTable = ({
               }`}
             checked={isSelected}
             onChange={() => toggleUserSelection(user._id)}
+            title={isSelected ? 'Deselect' : 'Select'}
           />
         </td>
       </tr>
     );
-  };
+  });
 
-  const CompanyRow = ({ user, index, isSelected }) => {
+  // 🚀 PERFORMANCE: Memoize CompanyRow to prevent re-renders
+  const CompanyRow = memo(({ user, index, isSelected }) => {
     const companyName = user?.companyName || user?.company_name || user?.name || 'N/A';
     const companyContactPersonName = user?.companyContactPersonName || user?.contactPersonName || user?.contact_person_name || 'N/A';
     const companyAddress = user?.companyAddress || user?.address || 'N/A';
@@ -302,7 +305,7 @@ const DataTable = ({
         </td>
       </tr>
     );
-  };
+  });
 
   const EmptyState = () => (
     <tr>
@@ -355,9 +358,9 @@ const DataTable = ({
         </div>
 
         {/* Table Container */}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" style={{ maxHeight: '600px', overflowY: 'auto' }}>
           <table className="w-full table-fixed bg-transparent text-gray-100">
-            <thead className="bg-gradient-to-r from-primary-600/20 to-accent-600/20 backdrop-blur-sm">
+            <thead className="bg-gradient-to-r from-primary-600/20 to-accent-600/20 backdrop-blur-sm sticky top-0 z-10">
               {show ? <UsersTableHeader /> : <CompaniesTableHeader />}
             </thead>
             <tbody className="divide-y divide-primary-500/20">
@@ -368,22 +371,22 @@ const DataTable = ({
                   if (!user?._id) {
                     return null;
                   }
-                  
+
                   const isSelected = selectedUsers.includes(user._id);
-                  
+
                   return show ? (
-                    <UserRow 
-                      key={user._id} 
-                      user={user} 
-                      index={index} 
-                      isSelected={isSelected} 
+                    <UserRow
+                      key={user._id}
+                      user={user}
+                      index={index}
+                      isSelected={isSelected}
                     />
                   ) : (
-                    <CompanyRow 
-                      key={user._id} 
-                      user={user} 
-                      index={index} 
-                      isSelected={isSelected} 
+                    <CompanyRow
+                      key={user._id}
+                      user={user}
+                      index={index}
+                      isSelected={isSelected}
                     />
                   );
                 })

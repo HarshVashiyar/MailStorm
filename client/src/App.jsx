@@ -15,47 +15,54 @@ import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
 import { ToastContainer } from "react-toastify";
 
+import { SmtpProvider } from './context/SmtpContext';
+import { TemplatesProvider } from './context/TemplatesContext';
+
 export default function App() {
   return (
     <AuthProvider>
-      <div className="min-h-screen relative overflow-x-hidden bg-gradient-to-br from-dark-900 via-dark-800 to-dark-900 text-white">
-        {/* Animated background gradients */}
-        <div className="fixed inset-0 bg-gradient-to-br from-primary-500/10 via-accent-500/5 to-primary-600/10 animate-pulse-slow"></div>
-        <div className="fixed inset-0 bg-gradient-radial from-primary-400/20 via-transparent to-transparent"></div>
+      <SmtpProvider>
+        <TemplatesProvider>
+          <div className="min-h-screen relative overflow-x-hidden bg-gradient-to-br from-dark-900 via-dark-800 to-dark-900 text-white">
+            {/* Animated background gradients */}
+            <div className="fixed inset-0 bg-gradient-to-br from-primary-500/10 via-accent-500/5 to-primary-600/10 animate-pulse-slow"></div>
+            <div className="fixed inset-0 bg-gradient-radial from-primary-400/20 via-transparent to-transparent"></div>
 
-        <MouseGradient />
-        <div className="mt-20" />
-        <ToastContainer
-          className={"mt-20"}
-          //position="top-center"
-          autoClose={4000}
-          hideProgressBar={false}
-          newestOnTop={true}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="colored"
-          style={{ fontSize: '1.25rem' }}
-        />
-        <Navbar />
-        <main className="flex flex-col min-h-screen pt-3 pb-0 overflow-auto relative z-10">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/SignUp" element={<SignUp />} />
-            <Route path="/SignIn" element={<SignIn />} />
-            <Route path="/SendOTP" element={<SendOTP />} />
-            <Route path="/VerifyOTP" element={<VerifyOTP />} />
-            <Route path="/ResetPassword" element={<ResetPassword />} />
-            <Route path="/Admin" element={<AdminRefactored />} />
-            <Route path="/Profile" element={<Profile />} />
-            <Route path="/Privacy" element={<Privacy />} />
-            <Route path="/Terms" element={<Terms />} />
-          </Routes>
-        </main>
-        {/* <Footer /> */}
-      </div>
+            <MouseGradient />
+            <div className="mt-20" />
+            <ToastContainer
+              className={"mt-20"}
+              //position="top-center"
+              autoClose={4000}
+              hideProgressBar={false}
+              newestOnTop={true}
+              closeOnClick
+              rtl={false}
+              pauseOnFocusLoss
+              draggable
+              pauseOnHover
+              theme="colored"
+              style={{ fontSize: '1.25rem' }}
+            />
+            <Navbar />
+            <main className="flex flex-col min-h-screen pt-3 pb-0 overflow-auto relative z-10">
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/SignUp" element={<SignUp />} />
+                <Route path="/SignIn" element={<SignIn />} />
+                <Route path="/SendOTP" element={<SendOTP />} />
+                <Route path="/VerifyOTP" element={<VerifyOTP />} />
+                <Route path="/ResetPassword" element={<ResetPassword />} />
+                <Route path="/Admin" element={<AdminRefactored />} />
+                <Route path="/Profile" element={<Profile />} />
+                <Route path="/Privacy" element={<Privacy />} />
+                <Route path="/Terms" element={<Terms />} />
+              </Routes>
+            </main>
+            {/* <Footer /> */}
+          </div>
+        </TemplatesProvider>
+      </SmtpProvider>
     </AuthProvider>
   );
 }

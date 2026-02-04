@@ -3,6 +3,8 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import NewPost from "../NewPost";
+import { useSmtp } from '../../context/SmtpContext';
+import { useTemplates } from '../../context/TemplatesContext';
 import {
   FaEnvelope,
   FaCalendarAlt,
@@ -40,7 +42,6 @@ const EmailModal = ({
     Intl.DateTimeFormat().resolvedOptions().timeZone
   );
   const [loading, setLoading] = useState(false);
-  const [availableTemplates, setAvailableTemplates] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState("");
   const [formalityLevel, setFormalityLevel] = useState("neutral");
   const [formalityLevelForContent, setFormalityLevelForContent] = useState("neutral");
@@ -57,70 +58,49 @@ const EmailModal = ({
   const MIN_RIGHT = 200; // px
   const MIN_LEFT = 320; // px
 
+  // 🎯 Use contexts instead of fetching data
+  const { smtpSlots: contextSmtpSlots, loading: loadingSlots, fetchSlots } = useSmtp();
+  const { templates: contextTemplates, loading: loadingTemplates, fetchTemplates } = useTemplates();
+
   const [smtpSlots, setSmtpSlots] = useState([]);
   const [selectedSlot, setSelectedSlot] = useState(null);
-  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [availableTemplatesState, setAvailableTemplatesState] = useState([]);
+
+  // ✅ Fetch data on mount if not already loaded
+  useEffect(() => {
+    if (contextSmtpSlots.length === 0 && !loadingSlots) {
+      fetchSlots();
+    }
+    if (contextTemplates.length === 0 && !loadingTemplates) {
+      fetchTemplates(true, false); // force=true, openModal=false
+    }
+  }, []); // Only on mount
+
+  // Sync context data to local state when available
+  useEffect(() => {
+    if (contextSmtpSlots && contextSmtpSlots.length > 0) {
+      setSmtpSlots(contextSmtpSlots);
+
+      // Set default active slot
+      const activeSlot = contextSmtpSlots.find(
+        slot => slot.status === 'active' && slot.isVerified
+      );
+      if (activeSlot && !selectedSlot) {
+        setSelectedSlot(activeSlot.slotNumber);
+      }
+    }
+  }, [contextSmtpSlots]);
+
+  useEffect(() => {
+    if (contextTemplates && contextTemplates.length > 0) {
+      setAvailableTemplatesState(contextTemplates);
+    }
+  }, [contextTemplates]);
+
+  // Use the state variable for availableTemplates
+  const availableTemplates = availableTemplatesState;
 
   const MAX_ATTACHMENTS_SIZE = 6.7 * 1024 * 1024; // 6.7 MB in bytes
-
-  // Fetch available SMTP slots on mount
-  useEffect(() => {
-    const fetchSmtpSlots = async () => {
-      setLoadingSlots(true);
-      try {
-        const response = await axios.get(
-          `${import.meta.env.VITE_BASE_URL}smtp/slots`,
-          { withCredentials: true }
-        );
-        if (response.data?.success === true) {
-          setSmtpSlots(response.data.data.slots || []);
-          // Auto-select first active slot
-          const activeSlot = response.data.data.slots.find(
-            slot => slot.status === 'active' && slot.isVerified
-          );
-          if (activeSlot) setSelectedSlot(activeSlot.slotNumber);
-        }
-      } catch (error) {
-        console.error("Error fetching SMTP slots:", error);
-      } finally {
-        setLoadingSlots(false);
-      }
-    };
-    fetchSmtpSlots();
-  }, []);
-
-  // Fetch available templates on mount
-  useEffect(() => {
-    const fetchTemplates = async () => {
-      const toastId = toast.loading("Fetching email templates...");
-      setLoading(true);
-      try {
-        const response = await axios.get(
-          `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_ALL_TEMPLATES_ROUTE}`,
-          { withCredentials: true }
-        );
-        if (response.data?.success === true) {
-          toast.dismiss(toastId);
-          setLoading(false);
-          const data = response.data.data || [];
-          setAvailableTemplates(Array.isArray(data) ? data : []);
-        } else {
-          toast.error(response.data?.message || "Update failed.");
-        }
-      } catch (error) {
-        toast.dismiss(toastId);
-        setLoading(false);
-        if (error.response?.data?.message) {
-          toast.error(error.response.data.message);
-        } else if (error.response?.data) {
-          toast.error(typeof error.response.data === 'string' ? error.response.data : "An error occurred.");
-        } else {
-          toast.error("Something went wrong. Please try again.");
-        }
-      }
-    };
-    fetchTemplates();
-  }, []);
 
   // Handle template selection
   const handleTemplateSelect = async (templateName) => {

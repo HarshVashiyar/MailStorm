@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { MdClose, MdEmail } from 'react-icons/md';
 import axios from "axios";
 import { toast } from "react-toastify";
@@ -9,35 +9,36 @@ const HistoryModal = ({ user, show, close, id }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
 
+    // Combined effect for initialization and keyboard handling
     useEffect(() => {
-        if (show && user) {
+        if (!show) return;
+
+        if (user) {
             setHistory(user.history || []);
-            // Prevent background scroll when modal is open
-            document.body.style.overflow = "hidden";
         }
+
+        // Prevent background scroll when modal is open
+        document.body.style.overflow = "hidden";
+
+        // Keyboard shortcut for Escape
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                close();
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+
         return () => {
             document.body.style.overflow = "auto";
+            document.removeEventListener('keydown', handleKeyDown);
         };
-    }, [show, user]);
+    }, [show, user, close]);
 
     const handleClose = () => {
         close();
     };
-
-    // Keyboard shortcut for Escape
-    const handleKeyDown = useCallback((e) => {
-        if (e.key === 'Escape') {
-            e.preventDefault();
-            handleClose();
-        }
-    }, [close]);
-
-    useEffect(() => {
-        document.addEventListener('keydown', handleKeyDown);
-        return () => {
-            document.removeEventListener('keydown', handleKeyDown);
-        };
-    }, [handleKeyDown]);
 
     if (!show) return null;
 
@@ -127,9 +128,8 @@ const HistoryModal = ({ user, show, close, id }) => {
                                     filteredHistory.map((item, index) => (
                                         <tr
                                             key={`${item.lastSent}-${index}`}
-                                            className={`transition-all duration-300 hover:bg-orange-500/5 ${
-                                                index % 2 === 0 ? 'bg-gray-800/20' : 'bg-transparent'
-                                            }`}
+                                            className={`transition-all duration-300 hover:bg-orange-500/5 ${index % 2 === 0 ? 'bg-gray-800/20' : 'bg-transparent'
+                                                }`}
                                         >
                                             <td className="py-4 px-6">
                                                 <div className="truncate font-medium text-orange-300" title={item.subject}>

@@ -4,15 +4,17 @@ const List = require("../models/listDB");
 const handleGetAllCompanies = async (req, res) => {
     const user = req.user;
     try {
-        companies = await Company.find({ createdBy: user.id });
-        const allLists = await List.find({});
-        companies = companies.map(company => ({
-            ...company._doc,
+        const companies = await Company.find({ createdBy: user.id }).lean();
+        const allLists = await List.find({ createdBy: user.id }).lean();
+
+        const companiesWithLists = companies.map(company => ({
+            ...company,
             lists: allLists
                 .filter(list => list.listItems?.some(item => item.company?.toString() === company._id.toString()))
                 .map(list => ({ listName: list.listName, _id: list._id }))
         }));
-        return res.status(200).json({ success: true, message: "Companies retrieved successfully", data: companies });
+
+        return res.status(200).json({ success: true, message: "Companies retrieved successfully", data: companiesWithLists });
     } catch (err) {
         console.error("Get all companies error:", err);
         return res.status(500).json({ success: false, message: err.message });

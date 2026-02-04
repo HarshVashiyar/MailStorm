@@ -3,11 +3,13 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAuth } from "../context/authContext";
+import { useSmtp } from "../context/SmtpContext";
 import ProfileAvatar from "../components/ProfileAvatar";
 import SmtpSlotCard from "../components/SmtpSlotCard";
 import EmptySlotCard from "../components/EmptySlotCard";
 import AddSmtpModal from "../components/modals/AddSmtpModal";
 import DeleteAccountModal from "../components/modals/DeleteAccountModal";
+import { ProfileHeaderSkeleton, SmtpSlotsSkeleton } from "../components/SkeletonLoaders";
 import {
   FaGoogle,
   FaMicrosoft,
@@ -22,46 +24,60 @@ import {
 const Profile = () => {
   const navigate = useNavigate();
   const { logout } = useAuth();
+
+  // ✅ Use context directly - no redundant local state sync
+  const { smtpSlots, smtpStats, loading: loadingSmtp, fetchSlots, refresh: refreshSmtp } = useSmtp();
+
   const isFirstMount = useRef(true);
+  const smtpSectionRef = useRef(null);
+  const hasTriggeredSmtpFetch = useRef(false);
 
   const [user, setUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // SMTP States
-  const [smtpSlots, setSmtpSlots] = useState([]);
-  const [smtpStats, setSmtpStats] = useState(null);
+  // SMTP Modal States
   const [showAddSmtpModal, setShowAddSmtpModal] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [availableSlots, setAvailableSlots] = useState([]);
 
+  // ✅ Fetch ONLY user profile data on mount
   useEffect(() => {
-    const fetchUserData = async () => {
-      setIsLoading(true);
-      const toastID = toast.loading("Loading user data...");
+    let isMounted = true;
+    let toastID = null;
+
+    const fetchProfileData = async () => {
+      setIsLoadingProfile(true);
+      toastID = toast.loading("Loading profile data...");
+
       try {
         const response = await axios.get(
           `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_USER_PROFILE_ROUTE}`,
           { withCredentials: true }
         );
+
+        if (!isMounted) {
+          toast.dismiss(toastID);
+          return;
+        }
+
         if (response.data?.success === true) {
           setUser(response.data.data);
-          setIsLoading(false);
-          toast.dismiss(toastID);
           if (isFirstMount.current) {
             toast.success("Welcome to your profile!");
             isFirstMount.current = false;
           }
-          fetchSmtpSlots();
-          return;
         } else {
-          toast.dismiss(toastID);
-          setIsLoading(false);
           toast.error(response.data?.message || "Failed to load user data.");
         }
-      } catch (error) {
-        setIsLoading(false);
+
         toast.dismiss(toastID);
+        setIsLoadingProfile(false);
+      } catch (error) {
+        toast.dismiss(toastID);
+        setIsLoadingProfile(false);
+
+        if (!isMounted) return;
 
         // Check if user profile was deleted or authentication failed
         if (error?.response?.status === 401 || error?.response?.status === 404) {
@@ -73,39 +89,52 @@ const Profile = () => {
           return;
         }
 
-        if (error?.response?.data?.message) {
-          if (isFirstMount.current) {
-            toast.error(error.response.data.message);
-            isFirstMount.current = false;
-          }
+        if (isFirstMount.current) {
+          toast.error(error?.response?.data?.message || "Something went wrong!");
+          isFirstMount.current = false;
         }
-        else {
-          if (isFirstMount.current) {
-            toast.error("Something went wrong!");
-            isFirstMount.current = false;
-          }
-        }
-        console.error(error);
+        console.error("Profile fetch error:", error);
       }
     };
 
-    fetchUserData();
-  }, []);
+    fetchProfileData();
 
-  const fetchSmtpSlots = async () => {
-    try {
-      const response = await axios.get(
-        `${import.meta.env.VITE_BASE_URL}smtp/slots`,
-        { withCredentials: true }
-      );
-      if (response.data?.success) {
-        setSmtpSlots(response.data.data.slots);
-        setSmtpStats(response.data.data.stats);
+    return () => {
+      isMounted = false;
+      if (toastID) {
+        toast.dismiss(toastID);
       }
-    } catch (error) {
-      console.error("Error fetching SMTP slots:", error);
-    }
-  };
+    };
+  }, [logout, navigate]);
+
+  // ✅ IntersectionObserver to lazy-load SMTP slots when section scrolls into view
+  useEffect(() => {
+    if (!smtpSectionRef.current || hasTriggeredSmtpFetch.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry.isIntersecting && !hasTriggeredSmtpFetch.current) {
+          // console.log('SMTP section visible - triggering fetch');
+          hasTriggeredSmtpFetch.current = true;
+          fetchSlots();
+        }
+      },
+      {
+        root: null,
+        rootMargin: '100px', // Trigger 100px before section is visible
+        threshold: 0.1
+      }
+    );
+
+    observer.observe(smtpSectionRef.current);
+
+    return () => {
+      if (smtpSectionRef.current) {
+        observer.unobserve(smtpSectionRef.current);
+      }
+    };
+  }, [fetchSlots, isLoadingProfile]); // ✅ Re-run when loading completes and ref is available
 
   const fetchAvailableSlots = async () => {
     try {
@@ -140,9 +169,11 @@ const Profile = () => {
         }
       );
 
+      toast.dismiss(toastID);
       if (response.data?.success) {
-        toast.dismiss(toastID);
         window.location.href = response.data.data.authUrl;
+      } else {
+        toast.error(response.data?.message || `Failed to connect ${provider}`);
       }
     } catch (error) {
       console.error('OAuth error:', error);
@@ -159,10 +190,12 @@ const Profile = () => {
         { withCredentials: true }
       );
 
+      toast.dismiss(toastID);
       if (response.data?.success) {
-        toast.dismiss(toastID);
         toast.success("SMTP slot deleted successfully!");
-        fetchSmtpSlots();
+        await refreshSmtp();
+      } else {
+        toast.error(response.data?.message || "Failed to delete slot");
       }
     } catch (error) {
       toast.dismiss(toastID);
@@ -181,7 +214,7 @@ const Profile = () => {
 
       if (response.data?.success) {
         toast.success(`Slot ${newStatus === 'active' ? 'activated' : 'deactivated'}`);
-        fetchSmtpSlots();
+        await refreshSmtp();
       }
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to update status");
@@ -213,8 +246,7 @@ const Profile = () => {
     const toastID = toast.loading("Logging out...");
     try {
       await axios.post(
-        `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_USER_LOGOUT_ROUTE
-        }`,
+        `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_USER_LOGOUT_ROUTE}`,
         {},
         { withCredentials: true }
       );
@@ -250,7 +282,6 @@ const Profile = () => {
       if (response.data?.success === true) {
         toast.dismiss(toastID);
         toast.success("Profile photo updated successfully!");
-        // Update local state with new photo
         setUser(prev => ({
           ...prev,
           profilePhoto: response.data.data.profilePhoto
@@ -277,7 +308,6 @@ const Profile = () => {
       if (response.data?.success === true) {
         toast.dismiss(toastID);
         toast.success("Profile photo deleted successfully!");
-        // Update local state to remove photo
         setUser(prev => ({
           ...prev,
           profilePhoto: { url: "", publicId: "" }
@@ -325,6 +355,17 @@ const Profile = () => {
     };
     return new Date(dateString).toLocaleDateString("en-US", options);
   };
+
+  // ✅ Show skeleton while profile is loading
+  if (isLoadingProfile) {
+    return (
+      <div className="flex flex-col min-h-screen px-4 sm:px-6 lg:px-8 py-6">
+        <div className="max-w-6xl mx-auto w-full">
+          <ProfileHeaderSkeleton />
+        </div>
+      </div>
+    );
+  }
 
   return user ? (
     <div className="flex flex-col min-h-screen px-4 sm:px-6 lg:px-8 py-6">
@@ -491,7 +532,6 @@ const Profile = () => {
                   Go to Dashboard
                 </button>
 
-                {/* Delete button moved here between Admin and Logout */}
                 <button
                   type="button"
                   onClick={() => setShowDeleteConfirm(true)}
@@ -540,8 +580,11 @@ const Profile = () => {
           </div>
         </div>
 
-        {/* SMTP Slots Section */}
-        <div className="bg-dark-800/30 backdrop-blur-xl border border-white/10 rounded-3xl shadow-glass overflow-hidden">
+        {/* ✅ SMTP Slots Section - lazy loaded with IntersectionObserver */}
+        <div
+          ref={smtpSectionRef}
+          className="bg-dark-800/30 backdrop-blur-xl border border-white/10 rounded-3xl shadow-glass overflow-hidden"
+        >
           <div className="px-6 md:px-10 py-6">
             <div className="flex items-center justify-between mb-6">
               <div>
@@ -556,29 +599,33 @@ const Profile = () => {
               )}
             </div>
 
-            {/* Slots Grid */}
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[1, 2, 3, 4, 5].map((slotNum) => {
-                const slot = smtpSlots.find(s => s.slotNumber === slotNum);
+            {/* ✅ Show skeleton while loading, otherwise show slots */}
+            {loadingSmtp && smtpSlots.length === 0 ? (
+              <SmtpSlotsSkeleton />
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[1, 2, 3, 4, 5].map((slotNum) => {
+                  const slot = smtpSlots.find(s => s.slotNumber === slotNum);
 
-                return slot ? (
-                  <SmtpSlotCard
-                    key={slotNum}
-                    slot={slot}
-                    onToggleStatus={handleToggleStatus}
-                    onDelete={handleDeleteSlot}
-                    getProviderIcon={getProviderIcon}
-                    getStatusIcon={getStatusIcon}
-                  />
-                ) : (
-                  <EmptySlotCard
-                    key={slotNum}
-                    slotNumber={slotNum}
-                    onClick={() => handleAddSlot(slotNum)}
-                  />
-                );
-              })}
-            </div>
+                  return slot ? (
+                    <SmtpSlotCard
+                      key={slotNum}
+                      slot={slot}
+                      onToggleStatus={handleToggleStatus}
+                      onDelete={handleDeleteSlot}
+                      getProviderIcon={getProviderIcon}
+                      getStatusIcon={getStatusIcon}
+                    />
+                  ) : (
+                    <EmptySlotCard
+                      key={slotNum}
+                      slotNumber={slotNum}
+                      onClick={() => handleAddSlot(slotNum)}
+                    />
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -590,7 +637,7 @@ const Profile = () => {
         selectedSlot={selectedSlot}
         onConnectOAuth={handleConnectOAuth}
         onSmtpAdded={() => {
-          fetchSmtpSlots();
+          refreshSmtp();
           setShowAddSmtpModal(false);
         }}
       />

@@ -1,63 +1,85 @@
-import { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { MdSave, MdClose, MdNote, MdInfo } from 'react-icons/md';
+import { MdNote, MdInfo } from 'react-icons/md';
 
 const NotesModal = ({ user, show, noteId, note, setNote, closeForm, updatedNoteInList }) => {
   const [originalNote, setOriginalNote] = useState('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Initialize note state on mount only
   useEffect(() => {
     const initialNote = user?.companyNotes || '';
     setNote(initialNote);
     setOriginalNote(initialNote);
+  }, [user?.companyNotes]);
 
-    // Prevent background scroll when modal is open
+  // Use refs to track current values for the event listener
+  const noteRef = useRef(note);
+  const hasUnsavedChangesRef = useRef(hasUnsavedChanges);
+
+  // Keep refs in sync with state
+  useEffect(() => {
+    noteRef.current = note;
+    hasUnsavedChangesRef.current = hasUnsavedChanges;
+  }, [note, hasUnsavedChanges]);
+
+  // Save and close function
+  const saveAndClose = async () => {
+    if (!hasUnsavedChangesRef.current) {
+      closeForm();
+      return;
+    }
+    const toastID = toast.loading("Saving note...");
+    setIsLoading(true);
+    try {
+      const response = await axios.put(
+        `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_UPDATE_COMPANY_NOTE_ROUTE}`,
+        { id: noteId, companyNote: noteRef.current.trim() },
+        { withCredentials: true }
+      );
+      if (response.data?.success === true && response.status === 200) {
+        toast.dismiss(toastID);
+        updatedNoteInList(noteId, noteRef.current.trim());
+        toast.success(response.data.message || "Note saved!");
+        closeForm();
+      } else {
+        toast.dismiss(toastID);
+        toast.error(response.data?.message || "Save failed.");
+      }
+    } catch (error) {
+      toast.dismiss(toastID);
+      toast.error(error.response?.data?.message || "Something went wrong.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Prevent body scroll and handle keyboard shortcuts
+  useEffect(() => {
     document.body.style.overflow = "hidden";
+
+    const handleKeyDown = async (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        await saveAndClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
     return () => {
       document.body.style.overflow = "auto";
+      document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [user?.companyNotes, setNote]);
+  }, [closeForm, noteId, updatedNoteInList]);
 
   // Track unsaved changes
   useEffect(() => {
     setHasUnsavedChanges(note !== originalNote);
   }, [note, originalNote]);
-
-  // Keyboard shortcuts
-  const handleKeyDown = useCallback((e) => {
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      // Save and close on Escape
-      if (hasUnsavedChanges) {
-        handleUpdateNote();
-      } else {
-        closeForm();
-      }
-    } else if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-      e.preventDefault();
-      handleUpdateNote();
-    }
-  }, [hasUnsavedChanges, note, originalNote, noteId, updatedNoteInList, closeForm]);
-
-  useEffect(() => {
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [handleKeyDown]);
-
-  const handleClose = () => {
-    if (hasUnsavedChanges) {
-      if (window.confirm('You have unsaved changes. Are you sure you want to close without saving?')) {
-        closeForm();
-      }
-    } else {
-      closeForm();
-    }
-  };
 
   const handleUpdateNote = async () => {
     const toastID = toast.loading("Updating note...");
@@ -140,38 +162,21 @@ const NotesModal = ({ user, show, noteId, note, setNote, closeForm, updatedNoteI
             <div className="flex justify-between items-center mt-3 text-sm">
               <div className="text-gray-400">
                 <span className={`${characterCount > maxCharacters * 0.9 ? 'text-amber-400' :
-                    characterCount > maxCharacters * 0.95 ? 'text-orange-400' : 'text-gray-400'
+                  characterCount > maxCharacters * 0.95 ? 'text-orange-400' : 'text-gray-400'
                   }`}>
                   {characterCount}
                 </span>
                 <span className="text-gray-500"> / {maxCharacters} characters</span>
               </div>
-              {/* <div className="text-gray-500 text-xs">
-                Press Ctrl/Cmd + Enter or Escape to save and close
-              </div> */}
+              <div className="text-gray-500 text-xs flex items-center space-x-1">
+                <span>Press</span>
+                <kbd className="px-1.5 py-0.5 bg-gray-700/50 border border-gray-600/50 rounded text-gray-400 text-xs font-mono">ESC</kbd>
+                <span>to close{hasUnsavedChanges ? ' and save changes' : ''}</span>
+              </div>
             </div>
           </div>
 
-          {/* Action buttons */}
-          <div className="flex justify-between gap-4">
-            <button
-              onClick={handleClose}
-              className="flex-1 bg-gray-700/40 hover:bg-gray-600/40 text-white py-3 px-6 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 backdrop-blur-sm border border-gray-600/30 hover:border-gray-500/50 flex items-center justify-center space-x-2"
-            >
-              <MdClose className="text-lg" />
-              <span>Cancel</span>
-            </button>
-            <button
-              onClick={handleUpdateNote}
-              className={`flex-1 py-3 px-6 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2 ${hasUnsavedChanges
-                  ? 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-orange-500/25 hover:shadow-orange-500/40'
-                  : 'bg-gray-600/40 hover:bg-gray-500/40 text-gray-300 shadow-gray-500/10'
-                }`}
-            >
-              <MdSave className="text-lg" />
-              <span>Save Note</span>
-            </button>
-          </div>
+
         </div>
       </div>
     </div>

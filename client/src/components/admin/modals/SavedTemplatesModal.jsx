@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { 
-  MdClose, 
-  MdAdd, 
-  MdDelete, 
+import {
+  MdClose,
+  MdAdd,
+  MdDelete,
   MdEdit,
   MdDescription,
-  MdCheckCircle 
+  MdCheckCircle
 } from 'react-icons/md';
 
 const SavedTemplatesModal = ({
@@ -84,17 +84,17 @@ const SavedTemplatesModal = ({
                 >
                   <MdEdit className="text-base flex-shrink-0" />
                   <span className="truncate">Edit "{
-                    (savedTemplates.find((template) => template.templateName === selectedSavedTemplates[0])?.templateName?.length > 8) 
+                    (savedTemplates.find((template) => template.templateName === selectedSavedTemplates[0])?.templateName?.length > 8)
                       ? savedTemplates.find((template) => template.templateName === selectedSavedTemplates[0])?.templateName?.slice(0, 8) + '...'
                       : savedTemplates.find((template) => template.templateName === selectedSavedTemplates[0])?.templateName
                   }"</span>
                 </button>
               </>
             )}
-            
+
             {selectedSavedTemplates.length >= 1 && (
               <button
-                onClick={deleteSavedTemplate}
+                onClick={() => deleteSavedTemplate(selectedSavedTemplates)}
                 className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-3 py-2 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 shadow-lg shadow-red-500/25 hover:shadow-red-500/40 border border-red-400/30 flex items-center space-x-2 text-sm"
                 title={`Delete ${selectedSavedTemplates.length} template(s)`}
               >
@@ -144,13 +144,12 @@ const SavedTemplatesModal = ({
                   </tr>
                 ) : (
                   filteredTemplates.map((template, index) => (
-                    <tr 
-                      key={template.templateName} 
-                      className={`transition-all duration-300 hover:bg-orange-500/5 ${ 
-                        selectedSavedTemplates.includes(template.templateName)
+                    <tr
+                      key={template.templateName}
+                      className={`transition-all duration-300 hover:bg-orange-500/5 ${selectedSavedTemplates.includes(template.templateName)
                           ? 'bg-gradient-to-r from-orange-500/20 to-amber-500/20 border-l-4 border-orange-400 shadow-lg shadow-orange-500/10'
                           : index % 2 === 0 ? 'bg-gray-800/20' : 'bg-transparent'
-                      }`}
+                        }`}
                     >
                       <td className="py-4 px-6">
                         <div className="font-semibold text-orange-300 text-lg">{template.templateName}</div>
@@ -163,11 +162,10 @@ const SavedTemplatesModal = ({
                       <td className="py-4 px-6 text-center">
                         <input
                           type="checkbox"
-                          className={`w-5 h-5 rounded border-2 transition-all duration-300 ${ 
-                            selectedSavedTemplates.includes(template.templateName)
+                          className={`w-5 h-5 rounded border-2 transition-all duration-300 ${selectedSavedTemplates.includes(template.templateName)
                               ? 'bg-orange-500 border-orange-500 text-white'
                               : 'border-orange-400/50 hover:border-orange-400 bg-gray-800/60'
-                          }`}
+                            }`}
                           checked={selectedSavedTemplates.includes(template.templateName)}
                           onChange={() => toggleSavedTemplateSelection(template.templateName)}
                         />

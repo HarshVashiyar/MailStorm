@@ -2,22 +2,22 @@ require('dotenv').config();
 const Queue = require('bull');
 
 // Redis configuration
-// const redisConfig = {
-//   host: process.env.REDIS_HOST || 'localhost',
-//   port: process.env.REDIS_PORT || 6379,
-//   password: process.env.REDIS_PASSWORD || undefined,
-//   maxRetriesPerRequest: null,
-//   enableReadyCheck: false,
-// };
-// Redis configuration for Upstash
 const redisConfig = {
-  host: process.env.REDIS_HOST,
-  port: Number(process.env.REDIS_PORT),
-  password: process.env.REDIS_PASSWORD,
-  tls: process.env.REDIS_TLS === 'true' ? {} : undefined,
+  host: process.env.REDIS_HOST || 'localhost',
+  port: process.env.REDIS_PORT || 6379,
+  password: process.env.REDIS_PASSWORD || undefined,
   maxRetriesPerRequest: null,
   enableReadyCheck: false,
 };
+// Redis configuration for Upstash
+// const redisConfig = {
+//   host: process.env.REDIS_HOST,
+//   port: Number(process.env.REDIS_PORT),
+//   password: process.env.REDIS_PASSWORD,
+//   tls: process.env.REDIS_TLS === 'true' ? {} : undefined,
+//   maxRetriesPerRequest: null,
+//   enableReadyCheck: false,
+// };
 
 // Create email queue with optimized settings
 const emailQueue = new Queue('emailQueue', {

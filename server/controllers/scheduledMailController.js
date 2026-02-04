@@ -223,9 +223,15 @@ const handleAddScheduledMail = async (req, res) => {
 const handleGetScheduledMails = async (req, res) => {
   const user = req.user;
   try {
-    // OPTIMIZED: Simple query without job status enrichment
-    // This saves N Redis reads (where N = number of scheduled mails)
-    const scheduledMails = await ScheduledMail.find({ createdBy: user.id });
+    // ⚡ OPTIMIZED: Add sorting, projection, and limit
+    // 1. Sort by sendAt descending (newest first) - uses index
+    // 2. Exclude attachment content (can be huge base64 data)
+    // 3. Limit to most recent 100 (prevent loading thousands)
+    const scheduledMails = await ScheduledMail.find({ createdBy: user.id })
+      .select('-attachments.content') // Exclude base64 content (keeps filename, path, contentType)
+      .sort({ sendAt: -1 }) // Newest scheduled emails first (indexed field)
+      .limit(100) // Reasonable limit for UI
+      .lean(); // Convert to plain JS object (faster)
 
     // REMOVED: Job status enrichment
     // If you need to check job status for debugging, use the debug endpoints

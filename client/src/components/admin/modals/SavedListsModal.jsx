@@ -100,11 +100,11 @@ const SavedListsModal = ({
               <h3 className="text-3xl font-bold text-white flex items-center space-x-3 mb-2">
                 <MdFolder className="text-orange-400 text-4xl" />
                 <span className="bg-gradient-to-r from-orange-400 to-amber-400 bg-clip-text text-transparent">
-                  Saved Email Lists
+                  Saved Lists
                 </span>
               </h3>
               <p className="text-gray-300 text-sm">
-                Manage your saved email lists and perform bulk actions
+                Manage your saved lists and perform bulk actions
               </p>
             </div>
             {/* Search Bar - Top Right */}
@@ -135,7 +135,7 @@ const SavedListsModal = ({
               {selectedSavedLists.length === 1 && (
                 <>
                   <button
-                    onClick={deleteSavedList}
+                    onClick={() => deleteSavedList(selectedSavedLists)}
                     className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-3 py-2 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 shadow-lg shadow-red-500/25 hover:shadow-red-500/40 border border-red-400/30 flex items-center space-x-2 text-sm max-w-[140px]"
                     title={`Delete "${savedLists.find((list) => list._id && list._id === selectedSavedLists[0])?.listName || 'Unnamed'}"`}
                   >
@@ -193,7 +193,7 @@ const SavedListsModal = ({
 
               {selectedSavedLists.length === 1 && selectedUsersCount > 0 && (
                 <button
-                  onClick={addToExistingList}
+                  onClick={() => addToExistingList(selectedSavedLists[0])}
                   className="bg-gradient-to-r from-teal-500 to-green-500 hover:from-teal-600 hover:to-green-600 text-white px-3 py-2 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 border border-teal-400/30 flex items-center space-x-2 text-sm max-w-[140px]"
                   title={`Add ${selectedUsersCount} item(s) to "${savedLists.find((list) => list._id && list._id === selectedSavedLists[0])?.listName || 'Unnamed'}"`}
                 >

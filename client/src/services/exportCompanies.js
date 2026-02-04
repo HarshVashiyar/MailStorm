@@ -4,14 +4,16 @@ export const exportCompaniesToExcel = async (companies) => {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Companies');
 
-  // Remove MongoDB metadata and format product group array to string
+  // Remove MongoDB metadata and relational fields that shouldn't be exported
   const dataForExport = companies.map((company) => {
-    const { _id, __v, createdAt, updatedAt, companyId, ...cleanData } = company;
+    const { _id, __v, createdAt, updatedAt, companyId, lists, createdBy, ...cleanData } = company;
     return {
       ...cleanData,
       companyProductGroup: Array.isArray(cleanData.companyProductGroup)
         ? cleanData.companyProductGroup.join(", ")
         : cleanData.companyProductGroup,
+      // Format hasProcurementTeam as TRUE/FALSE for better Excel readability
+      hasProcurementTeam: cleanData.hasProcurementTeam ? "TRUE" : "FALSE",
     };
   });
 

@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { 
-  MdClose, 
-  MdDelete, 
+import {
+  MdClose,
+  MdDelete,
   MdSchedule,
   MdEmail,
   MdAccessTime,
@@ -77,17 +77,17 @@ const ScheduledEmailsModal = ({ isOpen, onClose }) => {
   const filteredEmails = useMemo(() => {
     return sortedScheduledEmails.filter((email) => {
       const searchLower = searchTerm.toLowerCase();
-      
+
       // Handle 'to' field - could be string or array
-      const toField = Array.isArray(email.to) 
-        ? email.to.join(', ').toLowerCase() 
+      const toField = Array.isArray(email.to)
+        ? email.to.join(', ').toLowerCase()
         : (email.to || '').toLowerCase();
-      
+
       // Format date/time for searching
-      const dateTimeString = email.sendAt 
-        ? new Date(email.sendAt).toLocaleString().toLowerCase() 
+      const dateTimeString = email.sendAt
+        ? new Date(email.sendAt).toLocaleString().toLowerCase()
         : '';
-      
+
       return (
         (email.from || '').toLowerCase().includes(searchLower) ||
         toField.includes(searchLower) ||
@@ -269,11 +269,10 @@ const ScheduledEmailsModal = ({ isOpen, onClose }) => {
                     return (
                       <tr
                         key={email._id}
-                        className={`transition-all duration-300 hover:bg-orange-500/5 ${
-                          isSelected
+                        className={`transition-all duration-300 hover:bg-orange-500/5 ${isSelected
                             ? 'bg-gradient-to-r from-orange-500/20 to-amber-500/20 border-l-4 border-orange-400 shadow-lg shadow-orange-500/10'
                             : index % 2 === 0 ? 'bg-gray-800/20' : 'bg-transparent'
-                        }`}
+                          }`}
                       >
                         <td className="py-4 px-6">
                           <div className="truncate text-gray-300" title={email.from}>
@@ -294,24 +293,22 @@ const ScheduledEmailsModal = ({ isOpen, onClose }) => {
                           {new Date(email.sendAt).toLocaleString()}
                         </td>
                         <td className="py-4 px-6 text-center">
-                          <span className={`px-3 py-1 rounded-full text-xs font-semibold inline-block ${
-                            email.status === 'Pending'
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold inline-block ${email.status === 'Pending'
                               ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
                               : email.status === 'Sent'
                                 ? 'bg-green-500/20 text-green-400 border border-green-500/30'
                                 : 'bg-red-500/20 text-red-400 border border-red-500/30'
-                          }`}>
+                            }`}>
                             {email.status}
                           </span>
                         </td>
                         <td className="py-4 px-6 text-center">
                           <input
                             type="checkbox"
-                            className={`w-5 h-5 rounded border-2 transition-all duration-300 cursor-pointer ${
-                              isSelected
+                            className={`w-5 h-5 rounded border-2 transition-all duration-300 cursor-pointer ${isSelected
                                 ? 'bg-orange-500 border-orange-500 text-white'
                                 : 'border-orange-400/50 hover:border-orange-400 bg-gray-800/60'
-                            }`}
+                              }`}
                             checked={isSelected}
                             onChange={() => toggleEmailSelection(email._id)}
                           />
@@ -338,6 +335,30 @@ const ScheduledEmailsModal = ({ isOpen, onClose }) => {
       </div>
     </div>
   );
+};
+
+// Hook for managing modal state
+export const useScheduledEmailsModal = () => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const openModal = () => {
+    setIsOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsOpen(false);
+  };
+
+  const toggleModal = () => {
+    setIsOpen((prev) => !prev);
+  };
+
+  return {
+    isOpen,
+    openModal,
+    closeModal,
+    toggleModal
+  };
 };
 
 export default ScheduledEmailsModal;
