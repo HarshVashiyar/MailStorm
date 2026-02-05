@@ -11,6 +11,17 @@ const path = require("path");
 const cookieParser = require("cookie-parser");
 // const session = require('express-session');
 
+// Trust the proxy to know about HTTPS
+app.set('trust proxy', 1);
+
+// Middleware to enforce HTTPS
+app.use((req, res, next) => {
+  if (req.headers['x-forwarded-proto'] !== 'https' && process.env.NODE_ENV === 'production') {
+    return res.redirect('https://' + req.get('host') + req.url);
+  }
+  next();
+});
+
 app.use(cookieParser());
 
 app.use(

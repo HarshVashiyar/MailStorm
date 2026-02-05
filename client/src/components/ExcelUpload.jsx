@@ -19,27 +19,10 @@ const ExcelUpload = ({ refreshUsers }) => {
     setLoading(true);
     const toastId = toast.loading("Importing companies from Excel...");
 
-    const allowedFields = [
-      "companyName",
-      "companyWebsite", "website",
-      "companyCountry", "country",
-      "companyAddress", "address",
-      "companyEmail",
-      "companyPhone",
-      "companyProductGroup",
-      "companyContactPersonName", "contactPersonName",
-      "companyContactPersonPhone", "contactPersonPhone",
-      "companyNotes", "notes",
-      "hasProcurementTeam", "procurementTeam"
-    ];
-
     const workbook = new ExcelJS.Workbook();
 
     try {
-
-      // Read the file as ArrayBuffer and load it into ExcelJS
       const arrayBuffer = await file.arrayBuffer();
-
       await workbook.xlsx.load(arrayBuffer);
 
       const worksheet = workbook.worksheets[0];
@@ -49,65 +32,52 @@ const ExcelUpload = ({ refreshUsers }) => {
 
       const jsonData = [];
 
-      // Get headers
-      const headers = [];
-      worksheet.getRow(1).eachCell((cell) => {
-        headers.push(cell.value);
-      });
-
-      // Get data
+      // Process each row (skip header)
       worksheet.eachRow((row, rowNumber) => {
-        if (rowNumber > 1) { // Skip header row
-          const rowData = {};
-          row.eachCell((cell, colNumber) => {
-            const header = headers[colNumber - 1];
-            if (allowedFields.includes(header)) {
-              // Handle product group as comma-separated string or array
-              if (header === "companyProductGroup" && cell.value) {
-                rowData[header] = typeof cell.value === 'string'
-                  ? cell.value.split(',').map(item => item.trim())
-                  : [String(cell.value)];
-              } else if (header === "hasProcurementTeam" || header === "procurementTeam") {
-                // Handle boolean field - accepts true/false, yes/no, 1/0
-                const val = String(cell.value).toLowerCase().trim();
-                rowData[header] = val === 'true' || val === 'yes' || val === '1';
-              } else {
-                rowData[header] = cell.value;
-              }
-            }
-          });
-          // Only add rows that have at least a company name
-          if (rowData.companyName) {
+        if (rowNumber > 1) {
+          const rowData = {
+            companyName: row.getCell(1).value ? String(row.getCell(1).value).trim() : null,
+            companyProductGroup: row.getCell(2).value ? String(row.getCell(2).value).trim() : null,
+            companyEmail: row.getCell(3).value ? String(row.getCell(3).value).trim() : null,
+            contactPersonName: row.getCell(4).value ? String(row.getCell(4).value).trim() : null,
+            website: row.getCell(5).value ? String(row.getCell(5).value).trim() : null,
+            country: row.getCell(6).value ? String(row.getCell(6).value).trim() : null,
+            address: row.getCell(7).value ? String(row.getCell(7).value).trim() : null,
+            companyPhone: row.getCell(8).value ? String(row.getCell(8).value).trim() : null,
+            contactPersonPhone: row.getCell(9).value ? String(row.getCell(9).value).trim() : null,
+            procurementTeam: row.getCell(10).value ? String(row.getCell(10).value).toLowerCase().trim() : null,
+            notes: row.getCell(11).value ? String(row.getCell(11).value).trim() : null
+          };
+
+          // Only add rows with required fields
+          if (rowData.companyName && rowData.companyProductGroup && rowData.companyEmail && rowData.contactPersonName) {
             jsonData.push(rowData);
           }
         }
       });
 
+      console.log("Parsed Data:", jsonData);
+
       if (jsonData.length === 0) {
-        return toast.error("No valid company data found in the file. Make sure the headers match the required fields.");
+        toast.dismiss(toastId);
+        setLoading(false);
+        return toast.error("No valid company data found. Ensure companyName, companyProductGroup, companyEmail, and contactPersonName are filled.");
       }
 
       const url = `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_IMPORT_EXCEL_ROUTE}`;
 
-      const response = await axios.post(
-        url,
-        jsonData,
-        {
-          withCredentials: true
-        }
-      );
+      const response = await axios.post(url, jsonData, { withCredentials: true });
 
       if (response.data?.success === true && (response.status === 201 || response.status === 207)) {
-        toast.success(response.data?.message || "Companies imported successfully!");
         toast.dismiss(toastId);
+        toast.success(response.data?.message || "Companies imported successfully!");
         setLoading(false);
-        // Refresh data from context
+
         if (refreshUsers) {
           await refreshUsers();
         }
 
-        setFile(null); // Reset file input
-        // Reset the file input element
+        setFile(null);
         const fileInput = document.querySelector('input[type="file"]');
         if (fileInput) fileInput.value = '';
       } else {
@@ -116,17 +86,15 @@ const ExcelUpload = ({ refreshUsers }) => {
         toast.error(response.data?.message || "Update failed.");
       }
     } catch (error) {
+      console.error("Excel upload error:", error);
       toast.dismiss(toastId);
       setLoading(false);
+
       if (error.response?.data?.message) {
         toast.error(error.response.data.message);
-      } else if (error.response?.data) {
-        toast.error(typeof error.response.data === 'string' ? error.response.data : "An error occurred.");
       } else {
-        toast.error("Something went wrong. Please try again.");
+        toast.error(error.message || "Something went wrong. Please try again.");
       }
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -165,7 +133,7 @@ const ExcelUpload = ({ refreshUsers }) => {
         )}
       </button>
       <p className="text-xs text-gray-400 italic">
-        Required columns: companyName, companyEmail (others optional)
+        Required columns (in order): companyName, companyProductGroup, companyEmail, contactPersonName
       </p>
     </div>
   );

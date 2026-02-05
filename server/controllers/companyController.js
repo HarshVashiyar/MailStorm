@@ -162,49 +162,69 @@ const handleRemoveCompanies = async (req, res) => {
 const handleImportCompanies = async (req, res) => {
     const companiesData = req.body;
     const user = req.user;
+
     if (!companiesData || companiesData.length === 0) {
         return res.status(400).json({ success: false, message: "No companies data found" });
     }
     if (!Array.isArray(companiesData)) {
         return res.status(400).json({ success: false, message: "Invalid data format" });
     }
-    if (!companiesData.every(company => company.companyName)) {
-        return res.status(400).json({ success: false, message: "All companies must have a company name" });
-    }
+
     try {
         const companiesWithCreator = companiesData.map(company => {
-            // Map friendly names to DB schema names
-            const mappedCompany = {
+            // Validate required fields
+            if (!company.companyName || company.companyName.length < 1) {
+                throw new Error("Company name is required (min 1 char)");
+            }
+            if (!company.companyProductGroup || company.companyProductGroup.length < 1) {
+                throw new Error("Product group is required (min 1 char)");
+            }
+            if (!company.companyEmail) {
+                throw new Error("Company email is required");
+            }
+            if (!company.contactPersonName || company.contactPersonName.length < 3) {
+                throw new Error("Contact person name is required (min 3 chars)");
+            }
+
+            return {
                 companyName: company.companyName,
-                companyProductGroup: typeof company.companyProductGroup === 'string'
-                    ? company.companyProductGroup.split(',').map(s => s.trim())
-                    : company.companyProductGroup,
+                companyProductGroup: company.companyProductGroup.split(',').map(s => s.trim()),
                 companyEmail: company.companyEmail,
-                companyContactPersonName: company.contactPersonName || company.companyContactPersonName, // Handle both just in case
-                companyWebsite: company.website || company.companyWebsite,
-                companyCountry: company.country || company.companyCountry,
-                companyAddress: company.address || company.companyAddress,
-                companyPhone: company.companyPhone,
-                companyContactPersonPhone: company.contactPersonPhone || company.companyContactPersonPhone,
-                companyNotes: company.notes || company.companyNotes,
-                hasProcurementTeam: String(company.procurementTeam || company.hasProcurementTeam).toUpperCase() === 'TRUE',
+                companyContactPersonName: company.contactPersonName,
+                companyWebsite: company.website || undefined,
+                companyCountry: company.country || undefined,
+                companyAddress: company.address || undefined,
+                companyPhone: company.companyPhone || undefined,
+                companyContactPersonPhone: company.contactPersonPhone || undefined,
+                companyNotes: company.notes || undefined,
+                hasProcurementTeam: company.procurementTeam === 'true' || company.procurementTeam === true,
                 createdBy: user.id
             };
-            return mappedCompany;
         });
+
         const insertedCompanies = await Company.insertMany(companiesWithCreator, { ordered: false });
-        return res.status(201).json({ success: true, message: `${insertedCompanies.length} company(ies) imported successfully`, data: insertedCompanies });
+
+        return res.status(201).json({
+            success: true,
+            message: `${insertedCompanies.length} company(ies) imported successfully`,
+            data: insertedCompanies
+        });
     } catch (err) {
         console.error("Import companies error:", err);
-        console.error("Error name:", err.name);
-        console.error("Error code:", err.code);
+
+        if (err.message.includes("required") || err.message.includes("min")) {
+            return res.status(400).json({ success: false, message: err.message });
+        }
         if (err.name === "ValidationError") {
             const errorMessages = Object.values(err.errors).map(e => e.message).join(", ");
             return res.status(400).json({ success: false, message: `Validation error: ${errorMessages}` });
         }
         if (err.code === 11000) {
             const inserted = err.insertedDocs ? err.insertedDocs.length : 0;
-            return res.status(207).json({ success: true, message: `${inserted} company(ies) imported, some duplicates were skipped` });
+            return res.status(207).json({
+                success: true,
+                message: `${inserted} company(ies) imported, some duplicates were skipped`
+            });
         }
         return res.status(500).json({ success: false, message: err.message });
     }
