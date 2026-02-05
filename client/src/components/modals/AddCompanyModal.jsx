@@ -428,11 +428,11 @@ const AddCompanyModal = ({
               </div>
 
               <div className="space-y-1 lg:row-span-2 h-full">
-                <label className="text-white text-sm font-medium flex items-center space-x-2">
+                <label className="text-white text-sm font-medium flex items-center space-x-2 mb-3">
                   <FaClipboardList className="text-orange-400" />
                   <span>Products/Services</span>
                 </label>
-                <div className="h-full">
+                <div className="h-20">
                   <textarea
                     value={productGroupString}
                     onChange={handleProductGroupChange}

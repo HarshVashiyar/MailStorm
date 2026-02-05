@@ -4,27 +4,43 @@ export const exportCompaniesToExcel = async (companies) => {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Companies');
 
-  // Remove MongoDB metadata and relational fields that shouldn't be exported
+  // Define columns with headers and keys exactly as requested
+  worksheet.columns = [
+    { header: 'companyName', key: 'companyName', width: 20 },
+    { header: 'companyProductGroup', key: 'companyProductGroup', width: 20 },
+    { header: 'companyEmail', key: 'companyEmail', width: 25 },
+    { header: 'contactPersonName', key: 'companyContactPersonName', width: 20 },
+    { header: 'website', key: 'companyWebsite', width: 20 },
+    { header: 'country', key: 'companyCountry', width: 15 },
+    { header: 'address', key: 'companyAddress', width: 30 },
+    { header: 'companyPhone', key: 'companyPhone', width: 15 },
+    { header: 'contactPersonPhone', key: 'companyContactPersonPhone', width: 15 },
+    { header: 'notes', key: 'companyNotes', width: 30 },
+    { header: 'procurementTeam', key: 'hasProcurementTeam', width: 15 },
+  ];
+
+  // Process data to match the keys
   const dataForExport = companies.map((company) => {
-    const { _id, __v, createdAt, updatedAt, companyId, lists, createdBy, ...cleanData } = company;
     return {
-      ...cleanData,
-      companyProductGroup: Array.isArray(cleanData.companyProductGroup)
-        ? cleanData.companyProductGroup.join(", ")
-        : cleanData.companyProductGroup,
-      // Format hasProcurementTeam as TRUE/FALSE for better Excel readability
-      hasProcurementTeam: cleanData.hasProcurementTeam ? "TRUE" : "FALSE",
+      companyName: company.companyName,
+      companyProductGroup: Array.isArray(company.companyProductGroup)
+        ? company.companyProductGroup.join(", ")
+        : company.companyProductGroup,
+      companyEmail: company.companyEmail,
+      companyContactPersonName: company.companyContactPersonName,
+      companyWebsite: company.companyWebsite,
+      companyCountry: company.companyCountry,
+      companyAddress: company.companyAddress,
+      companyPhone: company.companyPhone,
+      companyContactPersonPhone: company.companyContactPersonPhone,
+      companyNotes: company.companyNotes,
+      // Format hasProcurementTeam as TRUE/FALSE
+      hasProcurementTeam: company.hasProcurementTeam ? "TRUE" : "FALSE",
     };
   });
 
-  // Add headers
-  const headers = Object.keys(dataForExport[0] || {});
-  worksheet.addRow(headers);
-
-  // Add data rows
-  dataForExport.forEach(company => {
-    worksheet.addRow(Object.values(company));
-  });
+  // Add rows
+  worksheet.addRows(dataForExport);
 
   // Generate and download file
   const buffer = await workbook.xlsx.writeBuffer();

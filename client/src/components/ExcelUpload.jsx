@@ -21,16 +21,16 @@ const ExcelUpload = ({ refreshUsers }) => {
 
     const allowedFields = [
       "companyName",
-      "companyWebsite",
-      "companyCountry",
-      "companyAddress",
+      "companyWebsite", "website",
+      "companyCountry", "country",
+      "companyAddress", "address",
       "companyEmail",
       "companyPhone",
       "companyProductGroup",
-      "companyContactPersonName",
-      "companyContactPersonPhone",
-      "companyNotes",
-      "hasProcurementTeam"
+      "companyContactPersonName", "contactPersonName",
+      "companyContactPersonPhone", "contactPersonPhone",
+      "companyNotes", "notes",
+      "hasProcurementTeam", "procurementTeam"
     ];
 
     const workbook = new ExcelJS.Workbook();
@@ -67,7 +67,7 @@ const ExcelUpload = ({ refreshUsers }) => {
                 rowData[header] = typeof cell.value === 'string'
                   ? cell.value.split(',').map(item => item.trim())
                   : [String(cell.value)];
-              } else if (header === "hasProcurementTeam") {
+              } else if (header === "hasProcurementTeam" || header === "procurementTeam") {
                 // Handle boolean field - accepts true/false, yes/no, 1/0
                 const val = String(cell.value).toLowerCase().trim();
                 rowData[header] = val === 'true' || val === 'yes' || val === '1';

@@ -52,7 +52,7 @@ const handleGetCompanyByID = async (req, res) => {
 }
 
 const handleAddCompany = async (req, res) => {
-    const { companyName, companyWebsite, companyCountry, companyAddress, companyEmail, companyPhone, companyProductGroup, companyContactPersonName, companyContactPersonPhone, hasProcurementTeam } = req.body;
+    const { companyName, companyWebsite, companyCountry, companyAddress, companyEmail, companyPhone, companyProductGroup, companyContactPersonName, companyContactPersonPhone, companyNotes, hasProcurementTeam } = req.body;
     const user = req.user;
     if (!companyName) {
         return res.status(400).json({ success: false, message: "Company name is required" });
@@ -68,6 +68,7 @@ const handleAddCompany = async (req, res) => {
             companyProductGroup,
             companyContactPersonName,
             companyContactPersonPhone,
+            companyNotes,
             hasProcurementTeam,
             createdBy: user.id
         });
@@ -79,7 +80,7 @@ const handleAddCompany = async (req, res) => {
 }
 
 const handleUpdateCompany = async (req, res) => {
-    const { id, companyName, companyWebsite, companyCountry, companyAddress, companyEmail, companyPhone, companyProductGroup, companyContactPersonName, companyContactPersonPhone, hasProcurementTeam } = req.body;
+    const { id, companyName, companyWebsite, companyCountry, companyAddress, companyEmail, companyPhone, companyProductGroup, companyContactPersonName, companyContactPersonPhone, companyNotes, hasProcurementTeam } = req.body;
     const user = req.user;
     if (!id) {
         return res.status(400).json({ success: false, message: "Company ID is required" });
@@ -98,6 +99,7 @@ const handleUpdateCompany = async (req, res) => {
         if (companyProductGroup !== undefined) updatedCompany.companyProductGroup = companyProductGroup;
         if (companyContactPersonName !== undefined) updatedCompany.companyContactPersonName = companyContactPersonName;
         if (companyContactPersonPhone !== undefined) updatedCompany.companyContactPersonPhone = companyContactPersonPhone;
+        if (companyNotes !== undefined) updatedCompany.companyNotes = companyNotes;
         if (hasProcurementTeam !== undefined) updatedCompany.hasProcurementTeam = hasProcurementTeam;
         await updatedCompany.save();
         return res.status(200).json({ success: true, message: "Company updated successfully", data: updatedCompany });
@@ -170,10 +172,26 @@ const handleImportCompanies = async (req, res) => {
         return res.status(400).json({ success: false, message: "All companies must have a company name" });
     }
     try {
-        const companiesWithCreator = companiesData.map(company => ({
-            ...company,
-            createdBy: user.id
-        }));
+        const companiesWithCreator = companiesData.map(company => {
+            // Map friendly names to DB schema names
+            const mappedCompany = {
+                companyName: company.companyName,
+                companyProductGroup: typeof company.companyProductGroup === 'string'
+                    ? company.companyProductGroup.split(',').map(s => s.trim())
+                    : company.companyProductGroup,
+                companyEmail: company.companyEmail,
+                companyContactPersonName: company.contactPersonName || company.companyContactPersonName, // Handle both just in case
+                companyWebsite: company.website || company.companyWebsite,
+                companyCountry: company.country || company.companyCountry,
+                companyAddress: company.address || company.companyAddress,
+                companyPhone: company.companyPhone,
+                companyContactPersonPhone: company.contactPersonPhone || company.companyContactPersonPhone,
+                companyNotes: company.notes || company.companyNotes,
+                hasProcurementTeam: String(company.procurementTeam || company.hasProcurementTeam).toUpperCase() === 'TRUE',
+                createdBy: user.id
+            };
+            return mappedCompany;
+        });
         const insertedCompanies = await Company.insertMany(companiesWithCreator, { ordered: false });
         return res.status(201).json({ success: true, message: `${insertedCompanies.length} company(ies) imported successfully`, data: insertedCompanies });
     } catch (err) {
