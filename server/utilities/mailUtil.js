@@ -12,6 +12,7 @@ const sendOTP = async (mail) => {
   const expirationTime = Date.now() + 152 * 1000;
   otpStorage[mail] = { otp, expirationTime };
   const content = {
+    from: process.env.ADMIN_MAIL,
     to: mail,
     subject: 'Your One-Time Password (OTP) for Email Verification',
     html: `
@@ -26,7 +27,9 @@ const sendOTP = async (mail) => {
         `,
   };
   const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: process.env.ADMIN_SMTP_HOST,
+    port: 465,
+    secure: true, // SSL
     auth: {
       user: process.env.ADMIN_MAIL,
       pass: process.env.ADMIN_MAIL_PASSWORD,
@@ -46,16 +49,16 @@ const verifyOTP = (mail, otp) => {
   if (!otp || typeof otp !== 'string' && typeof otp !== 'number') {
     return { success: false, message: "OTP is required!" };
   }
-  
+
   const otpString = String(otp);
   if (otpString.length !== 6) {
     return { success: false, message: "OTP must be exactly 6 digits!" };
   }
-  
+
   if (!/^\d{6}$/.test(otpString)) {
     return { success: false, message: "OTP must contain only digits!" };
   }
-  
+
   const otpData = otpStorage[mail];
   if (!otpData) {
     return { success: false, message: "OTP not found!" };

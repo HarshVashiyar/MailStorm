@@ -74,13 +74,22 @@ const ManualListFormModal = ({
     } else {
       // Edit mode: work with listItems
       const removedItem = listItems[indexToRemove];
-      if (removedItem?.company?._id) {
-        setRemovedCompanyIds(prev => [...prev, removedItem.company._id]);
+
+      // Use the list item's _id (subdocument ID) instead of company ID
+      if (removedItem?._id) {
+        setRemovedCompanyIds(prev => [...prev, removedItem._id]);
+      } else {
+        console.log('❌ No item ID found!');
       }
+
       const updatedItems = listItems.filter((_, i) => i !== indexToRemove);
       setListItems(updatedItems);
-      setTypedEmail(updatedItems.map(i => i.contactEmail).join(', '));
-      setContactNames(updatedItems.map(i => i.contactName).join(', '));
+
+      const emails = updatedItems.map(item => item.contactEmail || item.company?.companyEmail || item.email || '').filter(Boolean);
+      const names = updatedItems.map(item => item.contactName || item.company?.companyName || item.name || '').filter(Boolean);
+
+      setTypedEmail(emails.join(', '));
+      setContactNames(names.join(', '));
     }
   };
 

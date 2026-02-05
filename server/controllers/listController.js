@@ -23,7 +23,7 @@ const handleGetAllLists = async (req, res) => {
   const user = req.user;
   try {
     const lists = await List.find({ createdBy: user.id })
-      .populate("listItems.company", "companyName companyEmail");
+      .populate("listItems.company", "_id companyName companyEmail");
     return res.status(200).send({ success: true, message: "Lists retrieved successfully", data: lists });
   } catch (err) {
     console.error("Get all lists error:", err);
@@ -71,7 +71,7 @@ const handleRemoveItemsFromList = async (req, res) => {
       {
         $pull: {
           listItems: {
-            company: { $in: itemIds }
+            _id: { $in: itemIds }
           }
         }
       },

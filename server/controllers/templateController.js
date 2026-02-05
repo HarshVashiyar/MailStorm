@@ -5,7 +5,7 @@ const handleGetAllTemplates = async (req, res) => {
     try {
         const templates = await Template.find({ createdBy: user.id }).select('templateName templateSubject templateContent -_id');
         if (!templates || !Array.isArray(templates) || templates.length === 0) {
-            return res.status(404).json({ success: false, message: "No templates found" });
+            return res.status(200).json({ success: true, message: "No templates found", data: [] });
         }
         const data = templates.map(t => ({
             templateName: t.templateName,
