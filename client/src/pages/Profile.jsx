@@ -221,6 +221,30 @@ const Profile = () => {
     }
   };
 
+  const handleVerifySlot = async (slotNumber) => {
+    const toastID = toast.loading("Verifying SMTP credentials...");
+    try {
+      const response = await axios.post(
+        `${import.meta.env.VITE_BASE_URL}smtp/verify/${slotNumber}`,
+        {},
+        { withCredentials: true }
+      );
+
+      toast.dismiss(toastID);
+      if (response.data?.success) {
+        toast.success("SMTP verified successfully! Account is now active.");
+        await refreshSmtp();
+      } else {
+        toast.error(response.data?.message || "Verification failed");
+      }
+    } catch (error) {
+      toast.dismiss(toastID);
+      toast.error(error.response?.data?.message || "Failed to verify SMTP credentials");
+      // Refresh to show the error in the UI
+      await refreshSmtp();
+    }
+  };
+
   const getProviderIcon = (provider) => {
     switch (provider) {
       case 'gmail': return <FaGoogle className="text-red-500" />;
@@ -613,6 +637,7 @@ const Profile = () => {
                       slot={slot}
                       onToggleStatus={handleToggleStatus}
                       onDelete={handleDeleteSlot}
+                      onVerify={handleVerifySlot}
                       getProviderIcon={getProviderIcon}
                       getStatusIcon={getStatusIcon}
                     />
