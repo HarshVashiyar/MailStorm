@@ -35,7 +35,7 @@ const companySchema = new mongoose.Schema(
     companyEmail: {
       type: String,
       //required: true,
-      unique: true,
+      // unique: true,
       trim: true,
       validate: {
         validator: function (v) {
