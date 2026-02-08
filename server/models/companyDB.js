@@ -53,7 +53,7 @@ const companySchema = new mongoose.Schema(
       //unique: true,
       trim: true,
       // minLength: 5,
-      maxLength: 13,
+      maxLength: 30,
     },
     companyProductGroup: {
       type: [String],
