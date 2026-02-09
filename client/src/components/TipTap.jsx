@@ -8,6 +8,7 @@ import Blockquote from "@tiptap/extension-blockquote";
 import { Color } from "@tiptap/extension-color";
 import TextStyle from "@tiptap/extension-text-style";
 import TextAlign from "@tiptap/extension-text-align";
+import Image from "@tiptap/extension-image";
 import {
   MdFormatBold,
   MdFormatItalic,
@@ -27,8 +28,31 @@ import {
   MdColorize,
   MdSettings,
   MdExpandMore,
-  MdExpandLess
+  MdExpandLess,
+  MdImage,
+  MdPhotoSizeSelectLarge
 } from 'react-icons/md';
+
+// Custom Image extension that supports width attribute
+const CustomImage = Image.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      width: {
+        default: '100%',
+        parseHTML: element => element.getAttribute('width') || element.style.width || '100%',
+        renderHTML: attributes => {
+          if (!attributes.width) return {};
+          return {
+            width: attributes.width,
+            style: `width: ${attributes.width}; height: auto; display: inline-block; vertical-align: top;`,
+          };
+        },
+      },
+    };
+  },
+});
+
 const extensions = [
   StarterKit.configure({
     underline: true,
@@ -57,11 +81,16 @@ const extensions = [
   Color.configure({ types: ["textStyle"] }),
   TextStyle.configure({ types: ["textStyle", "paragraph"] }),
   TextAlign.configure({ types: ["heading", "paragraph"] }),
+  CustomImage.configure({
+    inline: true,
+    allowBase64: true,
+  }),
 ];
 
 const Tiptap = ({ onEditorContentSave, initialContent = '' }) => {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [wordCount, setWordCount] = useState(0);
+  const [customImageSize, setCustomImageSize] = useState('');
 
   const editor = useEditor({
     extensions,
@@ -93,18 +122,82 @@ const Tiptap = ({ onEditorContentSave, initialContent = '' }) => {
 
   const setLink = useCallback(() => {
     if (!editor) return;
-    
+
     const previousUrl = editor.getAttributes('link').href;
     const url = window.prompt('Enter URL:', previousUrl);
-    
+
     if (url === null) return;
-    
+
     if (url === '') {
       editor.chain().focus().extendMarkRange('link').unsetLink().run();
       return;
     }
-    
+
     editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+  }, [editor]);
+
+  // Hidden file input ref
+  const fileInputRef = useCallback((node) => {
+    if (node) {
+      node.onchange = (e) => {
+        const file = e.target.files?.[0];
+        if (file && file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            if (editor && reader.result) {
+              editor.chain().focus().setImage({ src: reader.result, width: '50%' }).run();
+            }
+          };
+          reader.readAsDataURL(file);
+        }
+        // Reset input for re-selection
+        e.target.value = '';
+      };
+    }
+  }, [editor]);
+
+  // Add new image (no resize logic here anymore)
+  const addImage = useCallback(() => {
+    if (!editor) return;
+
+    // Show options dialog for new image
+    const choice = window.confirm(
+      'Click OK to upload an image from your computer.\nClick Cancel to enter an image URL instead.'
+    );
+
+    if (choice) {
+      // User wants to upload - trigger file input
+      const input = document.getElementById('tiptap-image-upload');
+      if (input) input.click();
+    } else {
+      // User wants URL
+      const url = window.prompt('Enter image URL:');
+      if (url) {
+        editor.chain().focus().setImage({ src: url, width: '50%' }).run();
+      }
+    }
+  }, [editor]);
+
+  // Resize selected image to specific width
+  const setImageWidth = useCallback((width) => {
+    if (!editor) return;
+
+    const { state } = editor;
+    const { selection } = state;
+    const node = state.doc.nodeAt(selection.from);
+
+    if (node && node.type.name === 'image') {
+      editor.chain().focus().updateAttributes('image', { width }).run();
+    }
+  }, [editor]);
+
+  // Check if an image is selected
+  const isImageSelected = useCallback(() => {
+    if (!editor) return false;
+    const { state } = editor;
+    const { selection } = state;
+    const node = state.doc.nodeAt(selection.from);
+    return node && node.type.name === 'image';
   }, [editor]);
 
   if (!editor) return null;
@@ -125,6 +218,14 @@ const Tiptap = ({ onEditorContentSave, initialContent = '' }) => {
 
   return (
     <div className="bg-gray-900/80 backdrop-blur-lg rounded-2xl border border-orange-500/20 shadow-2xl shadow-orange-500/10 flex flex-col max-h-[85vh]">
+      {/* Hidden file input for image uploads */}
+      <input
+        type="file"
+        id="tiptap-image-upload"
+        ref={fileInputRef}
+        accept="image/*"
+        style={{ display: 'none' }}
+      />
       {/* Sticky Toolbar */}
       <div className="flex-shrink-0 bg-gradient-to-r from-gray-800/95 to-gray-700/95 backdrop-blur-md p-2 border-b border-orange-500/20 rounded-t-2xl">
         {/* Primary Formatting Tools */}
@@ -186,7 +287,7 @@ const Tiptap = ({ onEditorContentSave, initialContent = '' }) => {
             </button>
           </div>
 
-          {/* Color and Link Group */}
+          {/* Color, Link, and Image Group */}
           <div className="flex gap-1 bg-gray-800/40 p-0.5 rounded-xl border border-gray-600/30">
             <div className="flex items-center justify-center w-7 h-7 bg-gray-700/60 rounded-sm border border-gray-600/30">
               <input
@@ -203,6 +304,13 @@ const Tiptap = ({ onEditorContentSave, initialContent = '' }) => {
               title="Add/Edit Link"
             >
               <MdLink className="text-sm" />
+            </button>
+            <button
+              onClick={addImage}
+              className={getButtonClass(false)}
+              title="Insert Image"
+            >
+              <MdImage className="text-sm" />
             </button>
           </div>
 
@@ -236,11 +344,10 @@ const Tiptap = ({ onEditorContentSave, initialContent = '' }) => {
           {/* Advanced Options Toggle */}
           <button
             onClick={() => setShowAdvanced(!showAdvanced)}
-            className={`flex items-center gap-2 px-2 h-7 rounded-sm transition-all duration-150 border ${
-              showAdvanced 
-                ? 'bg-orange-500/20 text-orange-300 border-orange-400/30' 
-                : 'bg-gray-800/60 text-gray-300 border-gray-600/30'
-            }`}
+            className={`flex items-center gap-2 px-2 h-7 rounded-sm transition-all duration-150 border ${showAdvanced
+              ? 'bg-orange-500/20 text-orange-300 border-orange-400/30'
+              : 'bg-gray-800/60 text-gray-300 border-gray-600/30'
+              }`}
             title="Advanced Options"
           >
             <MdSettings className="text-sm" />
@@ -276,7 +383,7 @@ const Tiptap = ({ onEditorContentSave, initialContent = '' }) => {
               {[1, 2, 3].map((level) => (
                 <button
                   key={level}
-                  onClick={() => 
+                  onClick={() =>
                     editor.isActive('heading', { level })
                       ? editor.chain().focus().setParagraph().run()
                       : editor.chain().focus().setHeading({ level }).run()
@@ -287,6 +394,68 @@ const Tiptap = ({ onEditorContentSave, initialContent = '' }) => {
                   <span className="text-sm font-bold">H{level}</span>
                 </button>
               ))}
+            </div>
+
+            {/* Image Size Controls - Only show when image is selected */}
+            <div className="flex gap-1 bg-gray-800/40 p-0.5 rounded-xl border border-gray-600/30 items-center">
+              <span className="flex items-center px-1 text-xs text-gray-400">
+                <MdPhotoSizeSelectLarge className="mr-1" /> Size:
+              </span>
+              {['25%', '50%', '100%'].map((size) => (
+                <button
+                  key={size}
+                  onClick={() => setImageWidth(size)}
+                  className={`px-1.5 h-6 text-xs rounded border transition-all ${isImageSelected()
+                    ? 'bg-gray-700 text-white border-orange-500/40 hover:bg-orange-500/30 cursor-pointer'
+                    : 'bg-gray-800/40 text-gray-500 border-gray-600/30 cursor-not-allowed opacity-50'
+                    }`}
+                  title={`Set image width to ${size}`}
+                  disabled={!isImageSelected()}
+                >
+                  {size}
+                </button>
+              ))}
+              <div className="flex items-center gap-1 ml-1">
+                <input
+                  type="text"
+                  value={customImageSize}
+                  onChange={(e) => setCustomImageSize(e.target.value)}
+                  placeholder="e.g. 45%"
+                  className={`w-16 h-6 px-1.5 text-xs rounded border bg-gray-800 transition-all ${isImageSelected()
+                    ? 'text-white border-orange-500/40 focus:border-orange-500 focus:outline-none'
+                    : 'text-gray-500 border-gray-600/30 cursor-not-allowed opacity-50'
+                    }`}
+                  disabled={!isImageSelected()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && customImageSize) {
+                      const size = customImageSize.includes('%') || customImageSize.includes('px')
+                        ? customImageSize
+                        : `${customImageSize}%`;
+                      setImageWidth(size);
+                      setCustomImageSize('');
+                    }
+                  }}
+                />
+                <button
+                  onClick={() => {
+                    if (customImageSize) {
+                      const size = customImageSize.includes('%') || customImageSize.includes('px')
+                        ? customImageSize
+                        : `${customImageSize}%`;
+                      setImageWidth(size);
+                      setCustomImageSize('');
+                    }
+                  }}
+                  className={`px-1.5 h-6 text-xs rounded border transition-all ${isImageSelected() && customImageSize
+                    ? 'bg-orange-500 text-white border-orange-400 hover:bg-orange-600 cursor-pointer'
+                    : 'bg-gray-800/40 text-gray-500 border-gray-600/30 cursor-not-allowed opacity-50'
+                    }`}
+                  disabled={!isImageSelected() || !customImageSize}
+                  title="Apply custom size"
+                >
+                  ✓
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -305,8 +474,8 @@ const Tiptap = ({ onEditorContentSave, initialContent = '' }) => {
 
       {/* Scrollable Editor Content */}
       <div className="flex-1 bg-gray-800/40 backdrop-blur-sm overflow-y-auto">
-        <EditorContent 
-          editor={editor} 
+        <EditorContent
+          editor={editor}
           className="min-h-[40vh] max-h-[60vh] resize-y overflow-auto text-white p-2"
           style={{ resize: 'vertical' }}
         />
@@ -391,6 +560,22 @@ const Tiptap = ({ onEditorContentSave, initialContent = '' }) => {
         /* Override link color only for editor display */
         .ProseMirror a[style*="color: #0066cc"] {
           color: #fb923c !important;
+        }
+        /* Image styling - inline for side by side */
+        .ProseMirror img {
+          cursor: pointer;
+          transition: all 0.2s ease;
+          border-radius: 4px;
+          display: inline-block;
+          vertical-align: top;
+          margin: 4px;
+        }
+        .ProseMirror img:hover {
+          box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.4);
+        }
+        .ProseMirror img.ProseMirror-selectednode {
+          box-shadow: 0 0 0 3px #f97316;
+          outline: none;
         }
       `}</style>
     </div>

@@ -66,8 +66,20 @@ const handleUserSignIn = async (req, res) => {
 }
 
 const handleGetAllUsers = async (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
     try {
-        const users = await User.find({ role: 'User' });
+        const totalItems = await User.countDocuments({ role: 'User' });
+        const totalPages = Math.ceil(totalItems / limit);
+
+        const users = await User.find({ role: 'User' })
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean();
+
         const data = users.map(user => ({
             _id: user._id,
             fullName: user.fullName,
@@ -78,7 +90,20 @@ const handleGetAllUsers = async (req, res) => {
             createdAt: user.createdAt,
             updatedAt: user.updatedAt,
         }));
-        return res.status(200).json({ success: true, message: "Users fetched successfully", data });
+
+        return res.status(200).json({
+            success: true,
+            message: "Users fetched successfully",
+            data,
+            pagination: {
+                page,
+                limit,
+                totalItems,
+                totalPages,
+                hasNextPage: page < totalPages,
+                hasPrevPage: page > 1
+            }
+        });
     }
     catch (error) {
         console.error("Error fetching users:", error);
@@ -174,12 +199,12 @@ const handleDeleteUsers = async (req, res) => {
         if (!users) {
             return res.status(404).json({ success: false, message: "Users not found" });
         }
-        
-       // Only clear cookie if current user deleted their own account
-       if (userIds.includes(req.user.id)) {
-         res.clearCookie("token");
-       }
-        
+
+        // Only clear cookie if current user deleted their own account
+        if (userIds.includes(req.user.id)) {
+            res.clearCookie("token");
+        }
+
         return res.status(200).json({ success: true, message: "Users deleted successfully" });
     }
     catch (error) {
@@ -230,8 +255,8 @@ const handleUploadProfilePhoto = async (req, res) => {
         };
         await user.save({ validateModifiedOnly: true });
 
-        return res.status(200).json({ 
-            success: true, 
+        return res.status(200).json({
+            success: true,
             message: "Profile photo uploaded successfully",
             data: {
                 profilePhoto: user.profilePhoto
@@ -263,8 +288,8 @@ const handleDeleteProfilePhoto = async (req, res) => {
         user.profilePhoto = { url: "", publicId: "" };
         await user.save({ validateModifiedOnly: true });
 
-        return res.status(200).json({ 
-            success: true, 
+        return res.status(200).json({
+            success: true,
             message: "Profile photo deleted successfully"
         });
     }

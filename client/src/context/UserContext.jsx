@@ -9,15 +9,25 @@ export const UserProvider = ({ children }) => {
     const [currentView, setCurrentView] = useState('companies');
     const [loading, setLoading] = useState(false);
 
-    // ✅ On-demand fetch functions - NO auto-fetch on mount
-    const fetchCompanies = useCallback(async () => {
+    // Pagination state for companies and users
+    const [companiesPagination, setCompaniesPagination] = useState({
+        page: 1, limit: 20, totalItems: 0, totalPages: 0, hasNextPage: false, hasPrevPage: false
+    });
+    const [usersPagination, setUsersPagination] = useState({
+        page: 1, limit: 20, totalItems: 0, totalPages: 0, hasNextPage: false, hasPrevPage: false
+    });
+
+    // ✅ On-demand fetch functions with pagination
+    const fetchCompanies = useCallback(async (page = 1, limit = 20) => {
         setLoading(true);
         try {
-            // console.log('UserContext: Fetching companies...');
-            const response = await api.companies.getAll();
+            const response = await api.companies.getAll(page, limit);
             if (response.data?.success) {
                 const data = response.data.data || [];
                 setCompanies(Array.isArray(data) ? data : []);
+                if (response.data.pagination) {
+                    setCompaniesPagination(response.data.pagination);
+                }
             }
         } catch (error) {
             console.error('Error fetching companies:', error);
@@ -27,14 +37,16 @@ export const UserProvider = ({ children }) => {
         }
     }, []);
 
-    const fetchUsers = useCallback(async () => {
+    const fetchUsers = useCallback(async (page = 1, limit = 20) => {
         setLoading(true);
         try {
-            // console.log('UserContext: Fetching users...');
-            const response = await api.users.getAll();
+            const response = await api.users.getAll(page, limit);
             if (response.data?.success) {
                 const data = response.data.data || [];
                 setUsers(Array.isArray(data) ? data : []);
+                if (response.data.pagination) {
+                    setUsersPagination(response.data.pagination);
+                }
             }
         } catch (error) {
             console.error('Error fetching users:', error);
@@ -44,19 +56,29 @@ export const UserProvider = ({ children }) => {
         }
     }, []);
 
-    // Refresh function - fetches current view's data
+    // Pagination navigation helpers
+    const goToCompaniesPage = useCallback((page) => {
+        fetchCompanies(page, companiesPagination.limit);
+    }, [fetchCompanies, companiesPagination.limit]);
+
+    const goToUsersPage = useCallback((page) => {
+        fetchUsers(page, usersPagination.limit);
+    }, [fetchUsers, usersPagination.limit]);
+
+    // Refresh function - fetches current view's data (current page)
     const refresh = useCallback(async () => {
         setLoading(true);
         if (currentView === 'users') {
-            await fetchUsers();
+            await fetchUsers(usersPagination.page, usersPagination.limit);
         } else {
-            await fetchCompanies();
+            await fetchCompanies(companiesPagination.page, companiesPagination.limit);
         }
-    }, [currentView, fetchUsers, fetchCompanies]);
+    }, [currentView, fetchUsers, fetchCompanies, usersPagination, companiesPagination]);
 
     // Helper functions for updating state
     const addCompany = useCallback((company) => {
-        setCompanies(prev => [...prev, company]);
+        setCompanies(prev => [company, ...prev]);
+        setCompaniesPagination(prev => ({ ...prev, totalItems: prev.totalItems + 1 }));
     }, []);
 
     const updateCompany = useCallback((id, updates) => {
@@ -69,6 +91,10 @@ export const UserProvider = ({ children }) => {
         setCompanies(prev =>
             prev.filter(c => !ids.includes(c._id))
         );
+        setCompaniesPagination(prev => ({
+            ...prev,
+            totalItems: Math.max(0, prev.totalItems - ids.length)
+        }));
     }, []);
 
     const value = useMemo(() => ({
@@ -78,12 +104,19 @@ export const UserProvider = ({ children }) => {
         currentView,
         setCurrentView,
         loading,
-        fetchCompanies,  // ✅ Exposed for manual calling
-        fetchUsers,      // ✅ Exposed for manual calling
+        fetchCompanies,
+        fetchUsers,
         refresh,
         addCompany,
         updateCompany,
         deleteCompanies,
+        // Pagination
+        companiesPagination,
+        usersPagination,
+        currentPagination: currentView === 'users' ? usersPagination : companiesPagination,
+        goToCompaniesPage,
+        goToUsersPage,
+        goToPage: currentView === 'users' ? goToUsersPage : goToCompaniesPage,
     }), [
         users,
         companies,
@@ -94,7 +127,11 @@ export const UserProvider = ({ children }) => {
         refresh,
         addCompany,
         updateCompany,
-        deleteCompanies
+        deleteCompanies,
+        companiesPagination,
+        usersPagination,
+        goToCompaniesPage,
+        goToUsersPage
     ]);
 
     return (

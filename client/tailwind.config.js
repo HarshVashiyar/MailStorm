@@ -7,23 +7,23 @@ export default {
   theme: {
     extend: {
       animation: {
-        'float': 'float 3s ease-in-out infinite',
-        'float-delayed': 'float 3s ease-in-out infinite 1s',
-        'float-slow': 'float 4s ease-in-out infinite 2s',
-        'marquee-left-slow': 'marqueeLeft 45s linear infinite forwards',
-        'marquee-left': 'marqueeLeft 35s linear infinite forwards',
-        'marquee-left-fast': 'marqueeLeft 25s linear infinite forwards',
-        'marquee-right-slow': 'marqueeRight 45s linear infinite forwards',
-        'marquee-right': 'marqueeRight 35s linear infinite forwards',
-        'marquee-right-fast': 'marqueeRight 25s linear infinite forwards',
-        'glow': 'glow 2s ease-in-out infinite alternate',
-        'shimmer': 'shimmer 2s linear infinite',
-        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'float': 'float 6s ease-in-out infinite',
+        'float-delayed': 'float 6s ease-in-out infinite 2s',
+        'float-slow': 'float 8s ease-in-out infinite 4s',
+        'marquee-left-slow': 'marqueeLeft 60s linear infinite forwards',
+        'marquee-left': 'marqueeLeft 50s linear infinite forwards',
+        'marquee-left-fast': 'marqueeLeft 40s linear infinite forwards',
+        'marquee-right-slow': 'marqueeRight 60s linear infinite forwards',
+        'marquee-right': 'marqueeRight 50s linear infinite forwards',
+        'marquee-right-fast': 'marqueeRight 40s linear infinite forwards',
+        'glow': 'glow 4s ease-in-out infinite alternate',
+        'shimmer': 'shimmer 3s linear infinite',
+        'pulse-slow': 'pulse 6s cubic-bezier(0.4, 0, 0.6, 1) infinite',
       },
       keyframes: {
         float: {
           '0%, 100%': { transform: 'translateY(0px)' },
-          '50%': { transform: 'translateY(-20px)' },
+          '50%': { transform: 'translateY(-10px)' },
         },
         marqueeLeft: {
           '0%': { transform: 'translate3d(0, 0, 0)' },
@@ -38,8 +38,8 @@ export default {
           '100%': { animationPlayState: 'running' }
         },
         glow: {
-          '0%': { boxShadow: '0 0 20px rgba(255, 107, 53, 0.3)' },
-          '100%': { boxShadow: '0 0 40px rgba(255, 107, 53, 0.6)' },
+          '0%': { boxShadow: '0 0 15px rgba(255, 107, 53, 0.2)' },
+          '100%': { boxShadow: '0 0 25px rgba(255, 107, 53, 0.4)' },
         },
         shimmer: {
           '0%': { transform: 'translateX(-100%)' },
@@ -96,11 +96,10 @@ export default {
       boxShadow: {
         'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.37)',
         'glass-inset': 'inset 0 1px 0 0 rgba(255, 255, 255, 0.05)',
-        'glow': '0 0 20px rgba(255, 107, 53, 0.3)',
-        'glow-lg': '0 0 40px rgba(255, 107, 53, 0.6)',
+        'glow': '0 0 15px rgba(255, 107, 53, 0.2)',
+        'glow-lg': '0 0 25px rgba(255, 107, 53, 0.4)',
       }
     },
   },
   plugins: [],
 }
-

@@ -37,6 +37,8 @@ const AdminContent = () => {
     refresh,
     fetchCompanies,
     fetchUsers,
+    currentPagination,
+    goToPage,
   } = useUserContext();
 
   // ✅ Fetch companies on mount
@@ -186,7 +188,9 @@ const AdminContent = () => {
     addToList: addToExistingList,
     removeFromList: removeItemsFromList,
     createList: createNewList,
-    openListsTable: openSavedListsTable
+    openListsTable: openSavedListsTable,
+    pagination: listsPagination,
+    goToPage: listsGoToPage,
   } = useLists();
 
   // Templates Context
@@ -200,6 +204,8 @@ const AdminContent = () => {
     deleteTemplate: deleteSavedTemplate,
     createTemplate,
     updateTemplate,
+    pagination: templatesPagination,
+    goToPage: templatesGoToPage,
   } = useTemplates();
 
   // Modal states
@@ -581,6 +587,8 @@ const AdminContent = () => {
             updateUserNote={updateUserNote}
             openAddCompanyModal={openAddCompanyModal}
             searchTerm={searchTerm}
+            pagination={currentPagination}
+            onPageChange={goToPage}
           />
         </div>
       </div>
@@ -631,6 +639,8 @@ const AdminContent = () => {
           removeItemsFromList={handleRemoveItemsFromList}
           closeSavedListsTable={closeSavedListsTable}
           selectedUsersCount={selectedUsers.length}
+          pagination={listsPagination}
+          onPageChange={listsGoToPage}
         />
 
         <ManualListFormModal
@@ -657,6 +667,8 @@ const AdminContent = () => {
           editSavedTemplate={editSavedTemplate}
           deleteSavedTemplate={deleteSavedTemplate}
           closeSavedTemplatesTable={closeSavedTemplatesTable}
+          pagination={templatesPagination}
+          onPageChange={templatesGoToPage}
         />
 
         <ManualTemplateFormModal

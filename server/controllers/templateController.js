@@ -2,17 +2,56 @@ const Template = require("../models/templateDB");
 
 const handleGetAllTemplates = async (req, res) => {
     const user = req.user;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 5;
+    const skip = (page - 1) * limit;
+
     try {
-        const templates = await Template.find({ createdBy: user.id }).select('templateName templateSubject templateContent -_id');
+        const totalItems = await Template.countDocuments({ createdBy: user.id });
+        const totalPages = Math.ceil(totalItems / limit);
+
+        const templates = await Template.find({ createdBy: user.id })
+            .select('templateName templateSubject templateContent -_id')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean();
+
         if (!templates || !Array.isArray(templates) || templates.length === 0) {
-            return res.status(200).json({ success: true, message: "No templates found", data: [] });
+            return res.status(200).json({
+                success: true,
+                message: "No templates found",
+                data: [],
+                pagination: {
+                    page,
+                    limit,
+                    totalItems: 0,
+                    totalPages: 0,
+                    hasNextPage: false,
+                    hasPrevPage: false
+                }
+            });
         }
+
         const data = templates.map(t => ({
             templateName: t.templateName,
             templateSubject: t.templateSubject,
             templateContent: t.templateContent
         }));
-        return res.status(200).json({ success: true, message: "Templates retrieved successfully", data });
+
+        return res.status(200).json({
+            success: true,
+            message: "Templates retrieved successfully",
+            data,
+            pagination: {
+                page,
+                limit,
+                totalItems,
+                totalPages,
+                hasNextPage: page < totalPages,
+                hasPrevPage: page > 1
+            }
+        });
     } catch (error) {
         console.error("Error retrieving templates:", error);
         return res.status(500).json({ success: false, message: error.message });

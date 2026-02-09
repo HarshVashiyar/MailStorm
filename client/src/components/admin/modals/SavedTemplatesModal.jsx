@@ -7,6 +7,7 @@ import {
   MdDescription,
   MdCheckCircle
 } from 'react-icons/md';
+import InlinePagination from '../../common/InlinePagination';
 
 const SavedTemplatesModal = ({
   showSavedTemplatesTable,
@@ -17,6 +18,8 @@ const SavedTemplatesModal = ({
   editSavedTemplate,
   deleteSavedTemplate,
   closeSavedTemplatesTable,
+  pagination,
+  onPageChange,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -45,6 +48,7 @@ const SavedTemplatesModal = ({
               <span className="bg-gradient-to-r from-orange-400 to-amber-400 bg-clip-text text-transparent">
                 Saved Email Templates
               </span>
+              <InlinePagination pagination={pagination} onPageChange={onPageChange} />
             </h3>
             <p className="text-gray-300 text-sm">
               Manage your saved email templates and perform actions

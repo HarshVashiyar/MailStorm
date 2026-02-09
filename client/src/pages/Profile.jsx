@@ -640,6 +640,7 @@ const Profile = () => {
                       onVerify={handleVerifySlot}
                       getProviderIcon={getProviderIcon}
                       getStatusIcon={getStatusIcon}
+                      onRefresh={refreshSmtp}
                     />
                   ) : (
                     <EmptySlotCard

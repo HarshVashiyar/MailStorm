@@ -222,28 +222,34 @@ const handleAddScheduledMail = async (req, res) => {
 
 const handleGetScheduledMails = async (req, res) => {
   const user = req.user;
-  try {
-    // ⚡ OPTIMIZED: Add sorting, projection, and limit
-    // 1. Sort by sendAt descending (newest first) - uses index
-    // 2. Exclude attachment content (can be huge base64 data)
-    // 3. Limit to most recent 100 (prevent loading thousands)
-    const scheduledMails = await ScheduledMail.find({ createdBy: user.id })
-      .select('-attachments.content') // Exclude base64 content (keeps filename, path, contentType)
-      .sort({ sendAt: -1 }) // Newest scheduled emails first (indexed field)
-      .limit(100) // Reasonable limit for UI
-      .lean(); // Convert to plain JS object (faster)
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 5;
+  const skip = (page - 1) * limit;
 
-    // REMOVED: Job status enrichment
-    // If you need to check job status for debugging, use the debug endpoints
-    // Old code was doing:
-    // - await scheduledEmailQueue.getJob(mail.jobId) for each mail
-    // - await job.getState() for each job
-    // This caused 2N Redis reads per request
+  try {
+    const totalItems = await ScheduledMail.countDocuments({ createdBy: user.id });
+    const totalPages = Math.ceil(totalItems / limit);
+
+    // ⚡ OPTIMIZED: Add sorting, projection, pagination
+    const scheduledMails = await ScheduledMail.find({ createdBy: user.id })
+      .select('-attachments.content') // Exclude base64 content
+      .sort({ sendAt: -1 }) // Newest scheduled emails first
+      .skip(skip)
+      .limit(limit)
+      .lean();
 
     res.status(200).json({
       success: true,
       message: "Scheduled mails retrieved successfully.",
-      data: scheduledMails
+      data: scheduledMails,
+      pagination: {
+        page,
+        limit,
+        totalItems,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1
+      }
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

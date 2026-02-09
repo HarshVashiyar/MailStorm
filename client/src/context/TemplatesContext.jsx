@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo } from 'react';
 import { api } from '../services/api';
 import { toast } from 'react-toastify';
 import axios from 'axios';
@@ -12,33 +12,44 @@ export const TemplatesProvider = ({ children }) => {
     const [loading, setLoading] = useState(false);
     const [lastFetch, setLastFetch] = useState(null);
 
-    // Fetch all templates
-    const fetchTemplates = useCallback(async (force = false, openModal = true) => {
-        // Cache for 5 minutes
-        if (!force && lastFetch && Date.now() - lastFetch < 300000 && templates.length > 0) {
-            if (openModal) setShowTemplatesTable(true); // Still open modal if cached
+    // Pagination state
+    const [pagination, setPagination] = useState({
+        page: 1, limit: 5, totalItems: 0, totalPages: 0, hasNextPage: false, hasPrevPage: false
+    });
+
+    // Fetch all templates with pagination
+    const fetchTemplates = useCallback(async (force = false, openModal = true, page = null, limit = 5) => {
+        const targetPage = page || pagination.page;
+
+        // Cache for 5 minutes (but still respect pagination)
+        if (!force && !page && lastFetch && Date.now() - lastFetch < 300000 && templates.length > 0) {
+            if (openModal) setShowTemplatesTable(true);
             return;
         }
 
         setLoading(true);
         try {
-            const response = await api.templates.getAll();
+            const response = await api.templates.getAll(targetPage, limit);
             if (response.data?.success) {
                 const data = response.data.data || [];
                 setTemplates(Array.isArray(data) ? data : []);
-                if (openModal) setShowTemplatesTable(true); // Open modal after fetching
+                if (response.data.pagination) {
+                    setPagination(response.data.pagination);
+                }
+                if (openModal) setShowTemplatesTable(true);
             }
             setLastFetch(Date.now());
         } catch (error) {
             console.error('Error fetching templates:', error);
-            // Don't clear templates on error to allow offline viewing if cached
         } finally {
             setLoading(false);
         }
-    }, [lastFetch, templates.length]);
+    }, [lastFetch, templates.length, pagination.page]);
 
-    // ❌ REMOVED: Don't auto-fetch templates on mount - only fetch when user clicks "Templates" button
-    // This was causing the templates modal to open automatically on page load
+    // Navigate to specific page
+    const goToPage = useCallback((page) => {
+        fetchTemplates(true, true, page, pagination.limit);
+    }, [fetchTemplates, pagination.limit]);
 
     // Create template
     const createTemplate = useCallback(async (data) => {
@@ -51,7 +62,7 @@ export const TemplatesProvider = ({ children }) => {
 
             if (response.data?.success) {
                 toast.success(response.data.message || 'Template created successfully!');
-                await fetchTemplates(true); // Force refresh
+                await fetchTemplates(true, true, 1, pagination.limit); // Go to first page
                 return true;
             } else {
                 toast.error(response.data?.message || "Failed to create template");
@@ -62,17 +73,15 @@ export const TemplatesProvider = ({ children }) => {
             toast.error(error.response?.data?.message || "Failed to create template");
             return false;
         }
-    }, [fetchTemplates]);
+    }, [fetchTemplates, pagination.limit]);
 
     // Update template
     const updateTemplate = useCallback(async (id, data) => {
         try {
-            // Note: The API route for update might be different or require different params
-            // Adjusting to match probable API structure
             const response = await axios.put(
                 `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_UPDATE_TEMPLATE_ROUTE}`,
                 {
-                    templateName: id, // API uses name as ID currently
+                    templateName: id,
                     ...data
                 },
                 { withCredentials: true }
@@ -80,7 +89,7 @@ export const TemplatesProvider = ({ children }) => {
 
             if (response.data?.success) {
                 toast.success(response.data.message || 'Template updated successfully!');
-                await fetchTemplates(true); // Force refresh
+                await fetchTemplates(true, true, pagination.page, pagination.limit);
                 return true;
             } else {
                 toast.error(response.data?.message || "Failed to update template");
@@ -91,11 +100,10 @@ export const TemplatesProvider = ({ children }) => {
             toast.error(error.response?.data?.message || "Failed to update template");
             return false;
         }
-    }, [fetchTemplates]);
+    }, [fetchTemplates, pagination]);
 
     // Delete template(s)
     const deleteTemplate = useCallback(async (templateNames) => {
-        // Normalize to array
         const names = Array.isArray(templateNames) ? templateNames : [templateNames];
 
         if (!templateNames || names.length === 0) {
@@ -116,7 +124,7 @@ export const TemplatesProvider = ({ children }) => {
                 toast.success(response.data.message || 'Template(s) deleted successfully!');
                 setTemplates(prev => prev.filter(t => !names.includes(t.templateName)));
                 setSelectedTemplates(prev => prev.filter(name => !names.includes(name)));
-                await fetchTemplates(true); // Ensure sync
+                setPagination(prev => ({ ...prev, totalItems: Math.max(0, prev.totalItems - names.length) }));
                 return true;
             } else {
                 toast.error(response.data?.message || "Failed to delete template");
@@ -127,7 +135,7 @@ export const TemplatesProvider = ({ children }) => {
             toast.error(error.response?.data?.message || "Failed to delete template");
             return false;
         }
-    }, [fetchTemplates]);
+    }, []);
 
     // Selection logic
     const toggleTemplateSelection = useCallback((templateName) => {
@@ -150,8 +158,10 @@ export const TemplatesProvider = ({ children }) => {
         selectedTemplates,
         showTemplatesTable,
         loading,
+        pagination,
         fetchTemplates,
-        refresh: () => fetchTemplates(true),
+        goToPage,
+        refresh: () => fetchTemplates(true, true, pagination.page, pagination.limit),
         createTemplate,
         updateTemplate,
         deleteTemplate,
@@ -163,7 +173,9 @@ export const TemplatesProvider = ({ children }) => {
         selectedTemplates,
         showTemplatesTable,
         loading,
+        pagination,
         fetchTemplates,
+        goToPage,
         createTemplate,
         updateTemplate,
         deleteTemplate,

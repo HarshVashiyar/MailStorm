@@ -247,6 +247,7 @@ const getUserSmtpSlots = async (req, res) => {
       lastUsedAt: slot.lastUsedAt,
       createdAt: slot.createdAt,
       errorLog: slot.errorLog,
+      signature: slot.signature, // Include signature in response
     }));
 
     return res.status(200).json({
@@ -637,6 +638,126 @@ const getSmtpStats = async (req, res) => {
   }
 };
 
+/**
+ * Get signature for an SMTP account
+ * GET /api/smtp/slot/:slotNumber/signature
+ */
+const getSignature = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { slotNumber } = req.params;
+
+    const smtpAccount = await getSlotByNumber(userId, parseInt(slotNumber));
+
+    if (!smtpAccount) {
+      return res.status(404).json({
+        success: false,
+        message: "SMTP account not found"
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Signature fetched successfully",
+      data: {
+        signature: smtpAccount.signature || '',
+        slotNumber: smtpAccount.slotNumber,
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching signature:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch signature",
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Update signature for an SMTP account
+ * PUT /api/smtp/slot/:slotNumber/signature
+ * Body: { signature: '<html>...</html>' }
+ */
+const updateSignature = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { slotNumber } = req.params;
+    const { signature } = req.body;
+
+    const smtpAccount = await getSlotByNumber(userId, parseInt(slotNumber));
+
+    if (!smtpAccount) {
+      return res.status(404).json({
+        success: false,
+        message: "SMTP account not found"
+      });
+    }
+
+    // Only allow signature for verified accounts
+    if (!smtpAccount.isVerified || smtpAccount.status !== 'active') {
+      return res.status(400).json({
+        success: false,
+        message: "Signature can only be set for verified and active accounts"
+      });
+    }
+
+    smtpAccount.signature = signature || null;
+    await smtpAccount.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Signature updated successfully",
+      data: {
+        signature: smtpAccount.signature,
+        slotNumber: smtpAccount.slotNumber,
+      }
+    });
+  } catch (error) {
+    console.error("Error updating signature:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update signature",
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Delete signature for an SMTP account
+ * DELETE /api/smtp/slot/:slotNumber/signature
+ */
+const deleteSignature = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { slotNumber } = req.params;
+
+    const smtpAccount = await getSlotByNumber(userId, parseInt(slotNumber));
+
+    if (!smtpAccount) {
+      return res.status(404).json({
+        success: false,
+        message: "SMTP account not found"
+      });
+    }
+
+    smtpAccount.signature = null;
+    await smtpAccount.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Signature deleted successfully"
+    });
+  } catch (error) {
+    console.error("Error deleting signature:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete signature",
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getUserSmtpSlots,
   getAvailableSlots,
@@ -646,4 +767,7 @@ module.exports = {
   deleteSmtpSlot,
   updateSmtpStatus,
   getSmtpStats,
+  getSignature,
+  updateSignature,
+  deleteSignature,
 };

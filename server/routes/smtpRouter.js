@@ -9,6 +9,9 @@ const {
     deleteSmtpSlot,
     updateSmtpStatus,
     getSmtpStats,
+    getSignature,
+    updateSignature,
+    deleteSignature,
 } = require('../controllers/smtpController');
 const { authenticateUser } = require("../utilities/userUtil");
 
@@ -39,5 +42,10 @@ app.delete('/slot/:slotNumber', authenticateUser, deleteSmtpSlot);
 
 // Update SMTP status
 app.patch('/slot/:slotNumber/status', authenticateUser, updateSmtpStatus);
+
+// Signature CRUD routes
+app.get('/slot/:slotNumber/signature', authenticateUser, getSignature);
+app.put('/slot/:slotNumber/signature', authenticateUser, updateSignature);
+app.delete('/slot/:slotNumber/signature', authenticateUser, deleteSignature);
 
 module.exports = app;

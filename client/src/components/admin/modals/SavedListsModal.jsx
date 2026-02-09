@@ -11,6 +11,7 @@ import {
   MdCheckCircle
 } from 'react-icons/md';
 import ManualListFormModal from './ManualListFormModal';
+import InlinePagination from '../../common/InlinePagination';
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -28,6 +29,8 @@ const SavedListsModal = ({
   removeItemsFromList,
   closeSavedListsTable,
   selectedUsersCount = 0,
+  pagination,
+  onPageChange,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showEditForm, setShowEditForm] = useState(false);
@@ -102,6 +105,7 @@ const SavedListsModal = ({
                 <span className="bg-gradient-to-r from-orange-400 to-amber-400 bg-clip-text text-transparent">
                   Saved Lists
                 </span>
+                <InlinePagination pagination={pagination} onPageChange={onPageChange} />
               </h3>
               <p className="text-gray-300 text-sm">
                 Manage your saved lists and perform bulk actions

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import {
@@ -9,35 +9,32 @@ import {
   MdAccessTime,
   MdCheckCircle
 } from 'react-icons/md';
+import InlinePagination from '../../common/InlinePagination';
 
 const ScheduledEmailsModal = ({ isOpen, onClose }) => {
   const [scheduledEmails, setScheduledEmails] = useState([]);
   const [selectedEmails, setSelectedEmails] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [pagination, setPagination] = useState({
+    page: 1, limit: 5, totalItems: 0, totalPages: 0, hasNextPage: false, hasPrevPage: false
+  });
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchScheduledEmails();
-    } else {
-      // Reset state when modal closes
-      setSelectedEmails([]);
-      setSearchTerm('');
-    }
-  }, [isOpen]);
-
-  const fetchScheduledEmails = async () => {
+  const fetchScheduledEmails = useCallback(async (page = 1, limit = 5) => {
     setIsLoading(true);
     const toastID = toast.loading("Loading scheduled emails...");
     try {
       const response = await axios.get(
-        `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_ALL_SCHEDULED_EMAILS_ROUTE}`,
+        `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_ALL_SCHEDULED_EMAILS_ROUTE}?page=${page}&limit=${limit}`,
         { withCredentials: true }
       );
       if (response.data.success === true) {
         toast.dismiss(toastID);
         setIsLoading(false);
         setScheduledEmails(response.data.data);
+        if (response.data.pagination) {
+          setPagination(response.data.pagination);
+        }
       } else {
         toast.dismiss(toastID);
         setIsLoading(false);
@@ -54,7 +51,21 @@ const ScheduledEmailsModal = ({ isOpen, onClose }) => {
         toast.error("Something went wrong. Please try again.");
       }
     }
-  };
+  }, []);
+
+  const goToPage = useCallback((page) => {
+    fetchScheduledEmails(page, pagination.limit);
+  }, [fetchScheduledEmails, pagination.limit]);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchScheduledEmails();
+    } else {
+      // Reset state when modal closes
+      setSelectedEmails([]);
+      setSearchTerm('');
+    }
+  }, [isOpen, fetchScheduledEmails]);
 
   const toggleEmailSelection = (emailId) => {
     setSelectedEmails((prevSelected) =>
@@ -160,6 +171,7 @@ const ScheduledEmailsModal = ({ isOpen, onClose }) => {
               <span className="bg-gradient-to-r from-orange-400 to-amber-400 bg-clip-text text-transparent">
                 Scheduled Emails
               </span>
+              <InlinePagination pagination={pagination} onPageChange={goToPage} />
             </h3>
             <p className="text-gray-300 text-sm">
               Manage your scheduled email campaigns

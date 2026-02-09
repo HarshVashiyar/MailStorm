@@ -6,6 +6,7 @@ const Company = require('../models/companyDB');
 const SmtpAccount = require('../models/SmtpAccount');
 const smtpUtil = require('../utilities/smtpUtil');
 const axios = require('axios');
+const { processHtmlForEmail } = require('../utilities/emailImageUtil');
 
 // Create transporter dynamically based on SMTP account
 const createTransporter = async (smtpAccount) => {
@@ -37,13 +38,20 @@ const createTransporter = async (smtpAccount) => {
         oauth2Client.setCredentials(newCreds);
       }
 
+
       // Return a custom transporter that uses Gmail API with attachment support
       return {
         sendMail: async (mailOptions) => {
           const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
 
-          // Build MIME message with attachment support
+          // Build MIME message with attachment and inline image support
           const boundary = `boundary_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+          const relatedBoundary = `related_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+
+          // Separate inline (CID) attachments from regular attachments
+          const inlineAttachments = (mailOptions.attachments || []).filter(att => att.cid);
+          const regularAttachments = (mailOptions.attachments || []).filter(att => !att.cid);
+
           let messageParts = [
             `From: ${mailOptions.from}`,
             `To: ${mailOptions.to}`,
@@ -51,35 +59,94 @@ const createTransporter = async (smtpAccount) => {
             'MIME-Version: 1.0',
           ];
 
-          // Check if there are attachments
-          if (mailOptions.attachments && mailOptions.attachments.length > 0) {
-            // Multipart message with attachments
-            messageParts.push(`Content-Type: multipart/mixed; boundary="${boundary}"`);
-            messageParts.push('');
+          const hasInline = inlineAttachments.length > 0;
+          const hasRegular = regularAttachments.length > 0;
 
-            // HTML body part
-            messageParts.push(`--${boundary}`);
-            messageParts.push('Content-Type: text/html; charset=utf-8');
-            messageParts.push('Content-Transfer-Encoding: 7bit');
-            messageParts.push('');
-            messageParts.push(mailOptions.html);
-            messageParts.push('');
+          if (hasInline || hasRegular) {
+            // Use multipart/mixed as the outer container if we have regular attachments
+            if (hasRegular) {
+              messageParts.push(`Content-Type: multipart/mixed; boundary="${boundary}"`);
+              messageParts.push('');
+              messageParts.push(`--${boundary}`);
+            }
 
-            // Add each attachment
-            for (const attachment of mailOptions.attachments) {
+            // If we have inline images, wrap HTML + inline images in multipart/related
+            if (hasInline) {
+              if (hasRegular) {
+                messageParts.push(`Content-Type: multipart/related; boundary="${relatedBoundary}"`);
+                messageParts.push('');
+              } else {
+                messageParts.push(`Content-Type: multipart/related; boundary="${relatedBoundary}"`);
+                messageParts.push('');
+              }
+
+              // HTML body part
+              messageParts.push(`--${relatedBoundary}`);
+              messageParts.push('Content-Type: text/html; charset=utf-8');
+              messageParts.push('Content-Transfer-Encoding: 7bit');
+              messageParts.push('');
+              messageParts.push(mailOptions.html);
+              messageParts.push('');
+
+              // Add inline image attachments
+              for (const attachment of inlineAttachments) {
+                messageParts.push(`--${relatedBoundary}`);
+                messageParts.push(`Content-Type: ${attachment.contentType || 'image/png'}`);
+                messageParts.push('Content-Transfer-Encoding: base64');
+                messageParts.push(`Content-ID: <${attachment.cid}>`);
+                messageParts.push(`Content-Disposition: inline; filename="${attachment.filename}"`);
+                messageParts.push('');
+
+                // Convert buffer to base64 if needed
+                const base64Content = Buffer.isBuffer(attachment.content)
+                  ? attachment.content.toString('base64')
+                  : attachment.content;
+                messageParts.push(base64Content);
+                messageParts.push('');
+              }
+
+              // Close related boundary
+              messageParts.push(`--${relatedBoundary}--`);
+              if (hasRegular) {
+                messageParts.push('');
+              }
+            } else {
+              // No inline images, just HTML
+              if (hasRegular) {
+                messageParts.push('Content-Type: text/html; charset=utf-8');
+                messageParts.push('Content-Transfer-Encoding: 7bit');
+                messageParts.push('');
+                messageParts.push(mailOptions.html);
+                messageParts.push('');
+              }
+            }
+
+            // Add regular attachments
+            for (const attachment of regularAttachments) {
               messageParts.push(`--${boundary}`);
               messageParts.push(`Content-Type: ${attachment.contentType || 'application/octet-stream'}`);
               messageParts.push('Content-Transfer-Encoding: base64');
               messageParts.push(`Content-Disposition: attachment; filename="${attachment.filename}"`);
               messageParts.push('');
 
-              // The content is already base64 from mailController.js
-              messageParts.push(attachment.content);
+              // Convert buffer to base64 if needed
+              const base64Content = Buffer.isBuffer(attachment.content)
+                ? attachment.content.toString('base64')
+                : attachment.content;
+              messageParts.push(base64Content);
               messageParts.push('');
             }
 
-            // Close boundary
-            messageParts.push(`--${boundary}--`);
+            // Close outer boundary if we have regular attachments
+            if (hasRegular) {
+              messageParts.push(`--${boundary}--`);
+            } else if (!hasInline) {
+              // Edge case: no attachments at all
+              messageParts.push('Content-Type: text/html; charset=utf-8');
+              messageParts.push('Content-Transfer-Encoding: 7bit');
+              messageParts.push('');
+              messageParts.push(mailOptions.html);
+            }
           } else {
             // Simple HTML message without attachments
             messageParts.push('Content-Type: text/html; charset=utf-8');
@@ -184,7 +251,7 @@ const processAttachments = async (attachments) => {
           throw new Error(`Failed to fetch attachment: ${att.filename}`);
         }
       }
-      
+
       // Attachment is already base64 (stored in Redis)
       if (att.storedIn === 'redis' && att.content) {
         console.log(`💾 Using attachment from Redis: ${att.filename}`);
@@ -236,12 +303,19 @@ const processSingleEmail = async (job) => {
     // ✅ DYNAMIC STORAGE: Process attachments based on storage type
     const processedAttachments = await processAttachments(attachments);
 
+    // ✅ CID IMAGE EMBEDDING: Convert inline images to CID attachments
+    const fullHtml = `<p>Dear ${recipientName || 'Sir/Madam'},</p>${html}`;
+    const { html: processedHtml, inlineAttachments } = await processHtmlForEmail(fullHtml);
+
+    // Combine regular attachments with inline image attachments
+    const allAttachments = [...processedAttachments, ...inlineAttachments];
+
     const mailOptions = {
       from: `${smtpAccount.email}`,
       to,
       subject,
-      html: `<p>Dear ${recipientName || 'Sir/Madam'},</p>${html}`,
-      attachments: processedAttachments,
+      html: processedHtml,
+      attachments: allAttachments,
     };
 
     const info = await transporter.sendMail(mailOptions);
@@ -339,6 +413,16 @@ const processScheduledEmail = async (job) => {
     // ✅ DYNAMIC STORAGE: Process attachments (handles both Cloudinary and Redis)
     const processedAttachments = await processAttachments(attachments);
 
+    // ✅ Fetch SMTP account to get signature
+    let finalHtml = html;
+    if (smtpAccountId) {
+      const smtpAccount = await SmtpAccount.findById(smtpAccountId);
+      if (smtpAccount && smtpAccount.signature) {
+        // Append signature to email body
+        finalHtml = `${html}<br/><br/>--<br/>${smtpAccount.signature}`;
+      }
+    }
+
     // OPTIMIZED: Use Promise.all for batch job creation
     await Promise.all(
       to.map((email, i) => {
@@ -350,7 +434,7 @@ const processScheduledEmail = async (job) => {
             to: email,
             recipientName,
             subject,
-            html,
+            html: finalHtml, // Use html with signature appended
             attachments: processedAttachments,
             smtpAccountId,
           },

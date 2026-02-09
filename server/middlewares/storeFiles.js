@@ -8,14 +8,20 @@ const streamifier = require('streamifier'); // npm install streamifier
 const memoryStorage = multer.memoryStorage();
 
 // Generic upload for regular emails
-const upload = multer({ 
+const upload = multer({
   storage: memoryStorage,
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB file limit
+    fieldSize: 50 * 1024 * 1024, // 50MB field limit (for base64 images in HTML)
+  }
 });
 
-const scheduledUpload = multer({ 
+const scheduledUpload = multer({
   storage: memoryStorage,
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB file limit
+    fieldSize: 50 * 1024 * 1024, // 50MB field limit (for base64 images in HTML)
+  }
 });
 
 // const profilePhotoStorage = new CloudinaryStorage({
@@ -29,9 +35,12 @@ const scheduledUpload = multer({
 //   }),
 // });
 
-const profilePhotoUpload = multer({ 
+const profilePhotoUpload = multer({
   storage: memoryStorage,
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB file limit
+    fieldSize: 10 * 1024 * 1024, // 10MB field limit
+  },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
@@ -46,18 +55,18 @@ const processFiles = async (req, res, next) => {
   console.log('=== Process Files ===');
   console.log('req.body:', req.body);
   console.log('Number of files:', req.files ? req.files.length : 0);
-  
+
   if (!req.files || req.files.length === 0) {
     console.log('No files to process');
     return next();
   }
-  
+
   try {
     const uploadPromises = req.files.map((file) => {
       return new Promise((resolve, reject) => {
         const resourceType = file.mimetype.startsWith("image/") ? "image" : "raw";
         const publicId = `${Date.now()}-${file.originalname.replace(/\.[^/.]+$/, "")}`;
-        
+
         const uploadStream = cloudinary.uploader.upload_stream(
           {
             folder: "scheduled-emails",
@@ -80,16 +89,16 @@ const processFiles = async (req, res, next) => {
             }
           }
         );
-        
+
         streamifier.createReadStream(file.buffer).pipe(uploadStream);
       });
     });
-    
+
     const uploadedFiles = await Promise.all(uploadPromises);
-    
+
     // Replace req.files with uploaded file info
     req.files = uploadedFiles;
-    
+
     console.log('All files processed successfully');
     next();
   } catch (error) {
@@ -105,12 +114,12 @@ const processFiles = async (req, res, next) => {
 // Process profile photo
 const processProfilePhoto = async (req, res, next) => {
   console.log('=== Process Profile Photo ===');
-  
+
   if (!req.file) {
     console.log('No file to process');
     return next();
   }
-  
+
   try {
     const uploadPromise = new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
@@ -135,13 +144,13 @@ const processProfilePhoto = async (req, res, next) => {
           }
         }
       );
-      
+
       streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
     });
-    
+
     const uploadedFile = await uploadPromise;
     req.file = uploadedFile;
-    
+
     console.log('Profile photo processed successfully');
     next();
   } catch (error) {

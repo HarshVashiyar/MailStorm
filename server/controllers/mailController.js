@@ -86,7 +86,7 @@ const handleSendMail = async (req, res) => {
         message: "Please select an email account (SMTP slot) to send from.",
       });
     }
-    
+
     const smtpAccount = await SmtpAccount.findOne({
       _id: smtpSlotId,
       userId: user.id,
@@ -116,7 +116,7 @@ const handleSendMail = async (req, res) => {
         message: `Cannot send ${emailAddresses.length} emails. Only ${remainingLimit} emails remaining in daily limit.`,
       });
     }
-    
+
     // ✅ DYNAMIC STORAGE: Calculate total attachment size
     let totalAttachmentSize = 0;
     req.files?.forEach(file => {
@@ -131,7 +131,7 @@ const handleSendMail = async (req, res) => {
       if (totalAttachmentSize >= REDIS_SIZE_THRESHOLD) {
         // LARGE ATTACHMENTS: Upload to Cloudinary
         console.log(`📤 Uploading ${req.files.length} large attachment(s) to Cloudinary (${(totalAttachmentSize / 1024 / 1024).toFixed(2)}MB)`);
-        
+
         try {
           attachments = await uploadMultipleToCloudinary(req.files);
           storageMethod = 'cloudinary';
@@ -146,7 +146,7 @@ const handleSendMail = async (req, res) => {
       } else {
         // SMALL ATTACHMENTS: Store as base64 in Redis
         console.log(`💾 Storing ${req.files.length} small attachment(s) in Redis (${(totalAttachmentSize / 1024 / 1024).toFixed(2)}MB)`);
-        
+
         attachments = req.files.map((file) => ({
           filename: file.originalname,
           content: file.buffer.toString('base64'),
@@ -165,13 +165,20 @@ const handleSendMail = async (req, res) => {
       recipientName: recipients[index] || 'User',
     }));
 
+    // Append signature to email body if exists
+    let finalHtml = html;
+    if (smtpAccount.signature) {
+      // Add a separator line before signature
+      finalHtml = `${html}<br/><br/>--<br/>${smtpAccount.signature}`;
+    }
+
     // Add bulk email job to queue
     const job = await emailQueue.add(
       'bulk-email',
       {
         emails,
         subject,
-        html,
+        html: finalHtml, // Use html with signature appended
         attachments, // Either base64 (redis) or URLs (cloudinary)
         userId: user.id,
         smtpAccountId: smtpAccount._id.toString(), // Pass SMTP account ID
@@ -205,7 +212,7 @@ const handleSendMail = async (req, res) => {
     });
   } catch (error) {
     console.error("Error queuing emails:", error);
-    
+
     // Check if it's a Redis size error
     if (error.message && error.message.includes('max request size exceeded')) {
       return res.status(400).json({
@@ -214,11 +221,11 @@ const handleSendMail = async (req, res) => {
         error: 'Redis size limit exceeded',
       });
     }
-    
-    return res.status(500).json({ 
-      success: false, 
+
+    return res.status(500).json({
+      success: false,
       message: "Failed to queue emails",
-      error: error.message 
+      error: error.message
     });
   }
 };
@@ -247,7 +254,8 @@ Rewrite it as one single, concise, and contextually appropriate subject line sui
 
 Output only the final enhanced subject line, without any explanation, alternatives, or commentary.
 
-Original Subject: ${subject}` }
+Original Subject: ${subject}`
+            }
           ]
         }
       ]
@@ -321,10 +329,10 @@ Output the raw HTML directly now.` }
     });
     const candidates = response.candidates;
     let HTMLContent = candidates?.[0]?.content?.parts?.[0]?.text || "Upgrade to pro to get AI suggestions";
-    
+
     // Clean up any markdown code blocks that might be in the response
     HTMLContent = HTMLContent.replace(/^```html\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/g, '').trim();
-    
+
     return res.status(200).json({ success: true, message: "Email Content Generated Successfully!", HTMLContent });
   } catch (error) {
     console.error("Error enhancing the subject:", error);

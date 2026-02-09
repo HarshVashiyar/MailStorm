@@ -1,5 +1,6 @@
 import axios from 'axios';
 const BASE_URL = import.meta.env.VITE_BASE_URL;
+
 // Centralized API calls with consistent error handling
 export const api = {
     smtp: {
@@ -8,7 +9,7 @@ export const api = {
     },
 
     users: {
-        getAll: () => axios.get(`${BASE_URL}${import.meta.env.VITE_ALL_USERS_ROUTE}`, { withCredentials: true }),
+        getAll: (page = 1, limit = 20) => axios.get(`${BASE_URL}${import.meta.env.VITE_ALL_USERS_ROUTE}?page=${page}&limit=${limit}`, { withCredentials: true }),
         delete: (ids) => axios.delete(`${BASE_URL}${import.meta.env.VITE_REMOVE_USERS_ROUTE}`, {
             data: { userIds: ids },
             withCredentials: true
@@ -16,7 +17,7 @@ export const api = {
     },
 
     companies: {
-        getAll: () => axios.get(`${BASE_URL}${import.meta.env.VITE_ALL_COMPANIES_ROUTE}`, { withCredentials: true }),
+        getAll: (page = 1, limit = 20) => axios.get(`${BASE_URL}${import.meta.env.VITE_ALL_COMPANIES_ROUTE}?page=${page}&limit=${limit}`, { withCredentials: true }),
         create: (data) => axios.post(`${BASE_URL}${import.meta.env.VITE_ADD_COMPANY_ROUTE}`, data, { withCredentials: true }),
         update: (data) => axios.put(`${BASE_URL}${import.meta.env.VITE_UPDATE_COMPANY_ROUTE}`, data, { withCredentials: true }),
         delete: (ids) => axios.delete(`${BASE_URL}${import.meta.env.VITE_REMOVE_COMPANIES_ROUTE}`, {
@@ -26,7 +27,7 @@ export const api = {
     },
 
     templates: {
-        getAll: () => axios.get(`${BASE_URL}${import.meta.env.VITE_ALL_TEMPLATES_ROUTE}`, { withCredentials: true }),
+        getAll: (page = 1, limit = 5) => axios.get(`${BASE_URL}${import.meta.env.VITE_ALL_TEMPLATES_ROUTE}?page=${page}&limit=${limit}`, { withCredentials: true }),
         get: (id) => axios.get(`${BASE_URL}${import.meta.env.VITE_GET_TEMPLATE_ROUTE}?templateName=${encodeURIComponent(id)}`, { withCredentials: true }),
         create: (data) => axios.post(`${BASE_URL}${import.meta.env.VITE_ADD_TEMPLATE_ROUTE}`, data, { withCredentials: true }),
         update: (data) => axios.put(`${BASE_URL}${import.meta.env.VITE_UPDATE_TEMPLATE_ROUTE}`, data, { withCredentials: true }),
@@ -37,7 +38,7 @@ export const api = {
     },
 
     lists: {
-        getAll: () => axios.get(`${BASE_URL}${import.meta.env.VITE_ALL_LISTS_ROUTE}`, { withCredentials: true }),
+        getAll: (page = 1, limit = 5) => axios.get(`${BASE_URL}${import.meta.env.VITE_ALL_LISTS_ROUTE}?page=${page}&limit=${limit}`, { withCredentials: true }),
         create: (data) => axios.post(`${BASE_URL}${import.meta.env.VITE_ADD_LIST_ROUTE}`, data, { withCredentials: true }),
         delete: (ids) => axios.delete(`${BASE_URL}${import.meta.env.VITE_REMOVE_LISTS_ROUTE}`, {
             data: { listIds: ids },
@@ -45,5 +46,9 @@ export const api = {
         }),
         addTo: (listId, items) => axios.put(`${BASE_URL}${import.meta.env.VITE_ADD_TO_LIST_ROUTE}`, { listId, items }, { withCredentials: true }),
         removeFrom: (listId, itemIds) => axios.put(`${BASE_URL}${import.meta.env.VITE_REMOVE_FROM_LIST_ROUTE}`, { listId, itemIds }, { withCredentials: true }),
+    },
+
+    scheduledEmails: {
+        getAll: (page = 1, limit = 5) => axios.get(`${BASE_URL}${import.meta.env.VITE_ALL_SCHEDULED_EMAILS_ROUTE}?page=${page}&limit=${limit}`, { withCredentials: true }),
     },
 };

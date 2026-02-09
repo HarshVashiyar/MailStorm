@@ -10,18 +10,26 @@ export const ListsProvider = ({ children }) => {
     const [showListsTable, setShowListsTable] = useState(false);
     const [loading, setLoading] = useState(false);
 
-    // Fetch all saved lists
-    const fetchLists = useCallback(async () => {
+    // Pagination state
+    const [pagination, setPagination] = useState({
+        page: 1, limit: 5, totalItems: 0, totalPages: 0, hasNextPage: false, hasPrevPage: false
+    });
+
+    // Fetch all saved lists with pagination
+    const fetchLists = useCallback(async (page = 1, limit = 5) => {
         setLoading(true);
         try {
             const response = await axios.get(
-                `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_ALL_LISTS_ROUTE}`,
+                `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_ALL_LISTS_ROUTE}?page=${page}&limit=${limit}`,
                 { withCredentials: true }
             );
 
             if (response.data?.success) {
                 const data = response.data.data || [];
                 setSavedLists(Array.isArray(data) ? data : []);
+                if (response.data.pagination) {
+                    setPagination(response.data.pagination);
+                }
                 setShowListsTable(true);
             } else {
                 toast.error(response.data?.message || "Failed to fetch lists");
@@ -34,6 +42,11 @@ export const ListsProvider = ({ children }) => {
         }
     }, []);
 
+    // Navigate to specific page
+    const goToPage = useCallback((page) => {
+        fetchLists(page, pagination.limit);
+    }, [fetchLists, pagination.limit]);
+
     // Create new list
     const createList = useCallback(async (listName, listItems, companyIds = []) => {
         try {
@@ -45,7 +58,7 @@ export const ListsProvider = ({ children }) => {
 
             if (response.data?.success) {
                 toast.success(response.data.message || 'List created successfully!');
-                await fetchLists(); // Refresh lists
+                await fetchLists(1, pagination.limit); // Go to first page to see new list
                 return true;
             } else {
                 toast.error(response.data?.message || "Failed to create list");
@@ -56,7 +69,7 @@ export const ListsProvider = ({ children }) => {
             toast.error(error.response?.data?.message || "Failed to create list");
             return false;
         }
-    }, [fetchLists]);
+    }, [fetchLists, pagination.limit]);
 
     // Delete list(s)
     const deleteList = useCallback(async (listId) => {
@@ -80,6 +93,7 @@ export const ListsProvider = ({ children }) => {
                 toast.success(response.data.message || 'List deleted successfully!');
                 setSavedLists(prev => prev.filter(list => !ids.includes(list._id)));
                 setSelectedLists(prev => prev.filter(id => !ids.includes(id)));
+                setPagination(prev => ({ ...prev, totalItems: Math.max(0, prev.totalItems - ids.length) }));
                 return true;
             } else {
                 toast.error(response.data?.message || "Failed to delete list");
@@ -103,7 +117,7 @@ export const ListsProvider = ({ children }) => {
 
             if (response.data?.success) {
                 toast.success(response.data.message || 'Items added to list!');
-                await fetchLists(); // Refresh lists
+                await fetchLists(pagination.page, pagination.limit);
                 return true;
             } else {
                 toast.error(response.data?.message || "Failed to add items");
@@ -114,7 +128,7 @@ export const ListsProvider = ({ children }) => {
             toast.error(error.response?.data?.message || "Failed to add items");
             return false;
         }
-    }, [fetchLists]);
+    }, [fetchLists, pagination]);
 
     // Remove items from list
     const removeFromList = useCallback(async (listId, itemIds) => {
@@ -127,7 +141,7 @@ export const ListsProvider = ({ children }) => {
 
             if (response.data?.success) {
                 toast.success(response.data.message || 'Items removed from list!');
-                await fetchLists(); // Refresh lists
+                await fetchLists(pagination.page, pagination.limit);
                 return true;
             } else {
                 toast.error(response.data?.message || "Failed to remove items");
@@ -138,7 +152,7 @@ export const ListsProvider = ({ children }) => {
             toast.error(error.response?.data?.message || "Failed to remove items");
             return false;
         }
-    }, [fetchLists]);
+    }, [fetchLists, pagination]);
 
     // Toggle list selection
     const toggleListSelection = useCallback((listId) => {
@@ -161,7 +175,9 @@ export const ListsProvider = ({ children }) => {
         selectedLists,
         showListsTable,
         loading,
+        pagination,
         fetchLists,
+        goToPage,
         createList,
         deleteList,
         addToList,
@@ -174,7 +190,9 @@ export const ListsProvider = ({ children }) => {
         selectedLists,
         showListsTable,
         loading,
+        pagination,
         fetchLists,
+        goToPage,
         createList,
         deleteList,
         addToList,

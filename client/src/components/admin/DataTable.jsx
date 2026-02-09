@@ -1,6 +1,197 @@
 import { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react';
 import NotesModal from '../modals/NotesModal';
 import HistoryModal from '../modals/HistoryModal';
+import InlinePagination from '../common/InlinePagination';
+
+// 🚀 PERFORMANCE: Memoize UserRow to prevent re-renders
+const UserRow = memo(({ user, index, isSelected, onToggleSelection }) => {
+  const fullName = user?.fullName || user?.full_name || user?.name || 'N/A';
+  const email = user?.email || 'N/A';
+  const createdAt = user?.createdAt || user?.created_at || new Date().toISOString();
+  const updatedAt = user?.updatedAt || user?.updated_at || new Date().toISOString();
+
+  return (
+    <tr
+      className={`group transition-all duration-300 hover:bg-primary-500/10 ${isSelected
+        ? 'bg-gradient-to-r from-primary-500/20 to-accent-500/20 border-l-4 border-primary-400'
+        : index % 2 === 0 ? 'bg-glass-dark/20' : 'bg-transparent'
+        }`}
+    >
+      <td className="py-4 px-4 text-center">
+        <div className="truncate font-medium text-white" title={fullName}>{fullName}</div>
+      </td>
+      <td className="py-4 px-4 text-center">
+        <div className="truncate text-gray-300" title={email}>{email}</div>
+      </td>
+      <td className="py-4 px-4 text-center text-xs text-gray-400">
+        {new Date(createdAt).toLocaleDateString()}
+      </td>
+      <td className="py-4 px-4 text-center text-xs text-gray-400">
+        {new Date(updatedAt).toLocaleDateString()}
+      </td>
+      <td className="py-4 px-4 text-center">
+        <input
+          type="checkbox"
+          className={`w-5 h-5 rounded border-2 transition-all duration-300 ${isSelected
+            ? 'bg-primary-500 border-primary-500 text-white'
+            : 'border-gray-400 hover:border-primary-400'
+            }`}
+          checked={isSelected}
+          onChange={() => onToggleSelection(user._id)}
+          title={isSelected ? 'Deselect' : 'Select'}
+        />
+      </td>
+    </tr>
+  );
+});
+
+// 🚀 PERFORMANCE: Memoize CompanyRow to prevent re-renders
+const CompanyRow = memo(({ user, index, isSelected, onToggleSelection, onNote, onHistory }) => {
+  const companyName = user?.companyName || user?.company_name || user?.name || 'N/A';
+  const companyContactPersonName = user?.companyContactPersonName || user?.contactPersonName || user?.contact_person_name || 'N/A';
+  const companyAddress = user?.companyAddress || user?.address || 'N/A';
+  const companyCountry = user?.companyCountry || user?.country || 'N/A';
+  const companyEmail = user?.companyEmail || user?.email || 'N/A';
+  const companyPhone = user?.companyPhone || user?.phone || 'N/A';
+  const companyContactPersonPhone = user?.companyContactPersonPhone || user?.contactPersonPhone || user?.contact_phone || 'N/A';
+  const companyProductGroup = user?.companyProductGroup || user?.productGroup || user?.products || [];
+  const companyWebsite = user?.companyWebsite || user?.website || '';
+  const hasProcurementTeam = user?.hasProcurementTeam || user?.procurementTeam || user?.procurement || false;
+  const lists = user?.lists || user?.includedLists || [];
+  const history = user?.history || [];
+  const companyNotes = user?.companyNotes || user?.notes || '';
+
+  return (
+    <tr
+      className={`group transition-all duration-300 hover:bg-primary-500/10 ${isSelected
+        ? 'bg-gradient-to-r from-primary-500/20 to-accent-500/20 border-l-4 border-primary-400'
+        : index % 2 === 0 ? 'bg-glass-dark/20' : 'bg-transparent'
+        }`}
+    >
+      <td className="py-4 px-3 text-center">
+        <div className="space-y-1">
+          <div className="truncate font-semibold text-white" title={companyName}>
+            {companyName}
+          </div>
+          <div className="truncate text-xs text-accent-300" title={companyContactPersonName}>
+            👤 {companyContactPersonName}
+          </div>
+        </div>
+      </td>
+      <td className="py-4 px-3 text-center">
+        <div className="space-y-1">
+          <div className="truncate text-gray-300" title={companyAddress}>
+            {companyAddress}
+          </div>
+          <div className="truncate text-xs text-gray-400" title={companyCountry}>
+            🌍 {companyCountry}
+          </div>
+        </div>
+      </td>
+      <td className="py-4 px-3 text-center">
+        <div className="truncate text-accent-300 hover:text-accent-200 transition-colors" title={companyEmail}>
+          {companyEmail}
+        </div>
+      </td>
+      <td className="py-4 px-3 text-center">
+        <div className="space-y-1">
+          <div className="truncate text-gray-300" title={companyPhone}>
+            📞 {companyPhone}
+          </div>
+          <div className="truncate text-xs text-gray-400" title={companyContactPersonPhone}>
+            📱 {companyContactPersonPhone}
+          </div>
+        </div>
+      </td>
+      <td className="py-4 px-3 text-center">
+        <div className="space-y-1">
+          <div className="truncate text-gray-300" title={companyProductGroup.join(', ')}>
+            {companyProductGroup.slice(0, 2).join(', ')}
+            {companyProductGroup.length > 2 && '...'}
+          </div>
+          <div>
+            {companyWebsite && (
+              <a
+                href={companyWebsite.startsWith('http') ? companyWebsite : `https://${companyWebsite}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center space-x-1 text-xs text-accent-400 hover:text-accent-300 transition-colors hover:underline"
+                title={companyWebsite}
+              >
+                <span>🌐</span>
+                <span>Visit</span>
+              </a>
+            )}
+          </div>
+        </div>
+      </td>
+      <td className="py-4 px-3 text-center">
+        <div title={hasProcurementTeam ? 'Has procurement team' : 'No procurement team'}>
+          {hasProcurementTeam ? '⭐️' : '☆'}
+        </div>
+      </td>
+      <td className="text-center">
+        {lists.length > 0 ? (
+          <span
+            title={lists.map(l => l.listName || l.name || 'Unnamed').join('\n')}
+            className="cursor-pointer"
+          >
+            {lists.length}
+          </span>
+        ) : (
+          <span className="opacity-50">0</span>
+        )}
+      </td>
+      <td className="py-4 px-2 text-center">
+        <div className="flex items-center justify-center">
+          <button
+            onClick={() => onNote(user._id, companyNotes)}
+            className={`relative w-8 h-8 rounded-lg text-sm transition-all duration-300 transform hover:scale-110 shadow-lg border border-primary-400/30 ${companyNotes && companyNotes.trim()
+              ? 'bg-gradient-to-r from-accent-500 to-primary-600 hover:from-accent-600 hover:to-primary-700 text-white animate-glow'
+              : 'bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white'
+              }`}
+            title={companyNotes && companyNotes.trim() ? 'Edit Notes (Has Content)' : 'Add Notes (Empty)'}
+          >
+            {companyNotes && companyNotes.trim() ? (
+              <span className="relative">
+                📝
+                <span className="absolute -top-1 -right-1 w-2 h-2 bg-green-400 rounded-full border border-white/50 animate-pulse"></span>
+              </span>
+            ) : (
+              '✏️'
+            )}
+          </button>
+        </div>
+      </td>
+      <td className="py-4 px-2 text-center">
+        <div className="flex items-center justify-center">
+          <button
+            onClick={() => onHistory(user._id)}
+            className="relative w-8 h-8 rounded-lg text-sm transition-all duration-300 transform hover:scale-110 shadow-lg border border-primary-400/30 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white"
+            title={history.length > 0
+              ? `Last Sent: ${new Date(history[history.length - 1].lastSent).toLocaleDateString()}\nSubject: ${history[history.length - 1].subject}`
+              : 'No email history'}
+          >
+            📧
+          </button>
+        </div>
+      </td>
+      <td className="py-4 px-2 text-center">
+        <div className="flex justify-center">
+          <input
+            type="checkbox"
+            className={`w-5 h-5 rounded border-2 transition-all duration-300 ${isSelected
+              ? 'bg-primary-500 border-primary-500 text-white'
+              : 'border-gray-400 hover:border-primary-400'
+              }`}
+            checked={isSelected}
+            onChange={() => onToggleSelection(user._id)}
+          />
+        </div>
+      </td>
+    </tr>
+  );
+});
 
 const DataTable = ({
   filteredUsers,
@@ -11,6 +202,8 @@ const DataTable = ({
   updateUserNote,
   openAddCompanyModal,
   searchTerm,
+  pagination,
+  onPageChange,
 }) => {
   const [note, setNote] = useState('');
   const [noteId, setNoteId] = useState('');
@@ -117,196 +310,6 @@ const DataTable = ({
     </tr>
   );
 
-  // 🚀 PERFORMANCE: Memoize UserRow to prevent re-renders
-  const UserRow = memo(({ user, index, isSelected }) => {
-    const fullName = user?.fullName || user?.full_name || user?.name || 'N/A';
-    const email = user?.email || 'N/A';
-    const createdAt = user?.createdAt || user?.created_at || new Date().toISOString();
-    const updatedAt = user?.updatedAt || user?.updated_at || new Date().toISOString();
-
-    return (
-      <tr
-        className={`group transition-all duration-300 hover:bg-primary-500/10 ${isSelected
-          ? 'bg-gradient-to-r from-primary-500/20 to-accent-500/20 border-l-4 border-primary-400'
-          : index % 2 === 0 ? 'bg-glass-dark/20' : 'bg-transparent'
-          }`}
-      >
-        <td className="py-4 px-4 text-center">
-          <div className="truncate font-medium text-white" title={fullName}>{fullName}</div>
-        </td>
-        <td className="py-4 px-4 text-center">
-          <div className="truncate text-gray-300" title={email}>{email}</div>
-        </td>
-        <td className="py-4 px-4 text-center text-xs text-gray-400">
-          {new Date(createdAt).toLocaleDateString()}
-        </td>
-        <td className="py-4 px-4 text-center text-xs text-gray-400">
-          {new Date(updatedAt).toLocaleDateString()}
-        </td>
-        <td className="py-4 px-4 text-center">
-          <input
-            type="checkbox"
-            className={`w-5 h-5 rounded border-2 transition-all duration-300 ${isSelected
-              ? 'bg-primary-500 border-primary-500 text-white'
-              : 'border-gray-400 hover:border-primary-400'
-              }`}
-            checked={isSelected}
-            onChange={() => toggleUserSelection(user._id)}
-            title={isSelected ? 'Deselect' : 'Select'}
-          />
-        </td>
-      </tr>
-    );
-  });
-
-  // 🚀 PERFORMANCE: Memoize CompanyRow to prevent re-renders
-  const CompanyRow = memo(({ user, index, isSelected }) => {
-    const companyName = user?.companyName || user?.company_name || user?.name || 'N/A';
-    const companyContactPersonName = user?.companyContactPersonName || user?.contactPersonName || user?.contact_person_name || 'N/A';
-    const companyAddress = user?.companyAddress || user?.address || 'N/A';
-    const companyCountry = user?.companyCountry || user?.country || 'N/A';
-    const companyEmail = user?.companyEmail || user?.email || 'N/A';
-    const companyPhone = user?.companyPhone || user?.phone || 'N/A';
-    const companyContactPersonPhone = user?.companyContactPersonPhone || user?.contactPersonPhone || user?.contact_phone || 'N/A';
-    const companyProductGroup = user?.companyProductGroup || user?.productGroup || user?.products || [];
-    const companyWebsite = user?.companyWebsite || user?.website || '';
-    const hasProcurementTeam = user?.hasProcurementTeam || user?.procurementTeam || user?.procurement || false;
-    const lists = user?.lists || user?.includedLists || [];
-    const history = user?.history || [];
-    const companyNotes = user?.companyNotes || user?.notes || '';
-
-    return (
-      <tr
-        className={`group transition-all duration-300 hover:bg-primary-500/10 ${isSelected
-          ? 'bg-gradient-to-r from-primary-500/20 to-accent-500/20 border-l-4 border-primary-400'
-          : index % 2 === 0 ? 'bg-glass-dark/20' : 'bg-transparent'
-          }`}
-      >
-        <td className="py-4 px-3 text-center">
-          <div className="space-y-1">
-            <div className="truncate font-semibold text-white" title={companyName}>
-              {companyName}
-            </div>
-            <div className="truncate text-xs text-accent-300" title={companyContactPersonName}>
-              👤 {companyContactPersonName}
-            </div>
-          </div>
-        </td>
-        <td className="py-4 px-3 text-center">
-          <div className="space-y-1">
-            <div className="truncate text-gray-300" title={companyAddress}>
-              {companyAddress}
-            </div>
-            <div className="truncate text-xs text-gray-400" title={companyCountry}>
-              🌍 {companyCountry}
-            </div>
-          </div>
-        </td>
-        <td className="py-4 px-3 text-center">
-          <div className="truncate text-accent-300 hover:text-accent-200 transition-colors" title={companyEmail}>
-            {companyEmail}
-          </div>
-        </td>
-        <td className="py-4 px-3 text-center">
-          <div className="space-y-1">
-            <div className="truncate text-gray-300" title={companyPhone}>
-              📞 {companyPhone}
-            </div>
-            <div className="truncate text-xs text-gray-400" title={companyContactPersonPhone}>
-              📱 {companyContactPersonPhone}
-            </div>
-          </div>
-        </td>
-        <td className="py-4 px-3 text-center">
-          <div className="space-y-1">
-            <div className="truncate text-gray-300" title={companyProductGroup.join(', ')}>
-              {companyProductGroup.slice(0, 2).join(', ')}
-              {companyProductGroup.length > 2 && '...'}
-            </div>
-            <div>
-              {companyWebsite && (
-                <a
-                  href={companyWebsite.startsWith('http') ? companyWebsite : `https://${companyWebsite}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center space-x-1 text-xs text-accent-400 hover:text-accent-300 transition-colors hover:underline"
-                  title={companyWebsite}
-                >
-                  <span>🌐</span>
-                  <span>Visit</span>
-                </a>
-              )}
-            </div>
-          </div>
-        </td>
-        <td className="py-4 px-3 text-center">
-          <div title={hasProcurementTeam ? 'Has procurement team' : 'No procurement team'}>
-            {hasProcurementTeam ? '⭐️' : '☆'}
-          </div>
-        </td>
-        <td className="text-center">
-          {lists.length > 0 ? (
-            <span
-              title={lists.map(l => l.listName || l.name || 'Unnamed').join('\n')}
-              className="cursor-pointer"
-            >
-              {lists.length}
-            </span>
-          ) : (
-            <span className="opacity-50">0</span>
-          )}
-        </td>
-        <td className="py-4 px-2 text-center">
-          <div className="flex items-center justify-center">
-            <button
-              onClick={() => handleNote(user._id, companyNotes)}
-              className={`relative w-8 h-8 rounded-lg text-sm transition-all duration-300 transform hover:scale-110 shadow-lg border border-primary-400/30 ${companyNotes && companyNotes.trim()
-                ? 'bg-gradient-to-r from-accent-500 to-primary-600 hover:from-accent-600 hover:to-primary-700 text-white animate-glow'
-                : 'bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white'
-                }`}
-              title={companyNotes && companyNotes.trim() ? 'Edit Notes (Has Content)' : 'Add Notes (Empty)'}
-            >
-              {companyNotes && companyNotes.trim() ? (
-                <span className="relative">
-                  📝
-                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-green-400 rounded-full border border-white/50 animate-pulse"></span>
-                </span>
-              ) : (
-                '✏️'
-              )}
-            </button>
-          </div>
-        </td>
-        <td className="py-4 px-2 text-center">
-          <div className="flex items-center justify-center">
-            <button
-              onClick={() => handleHistory(user._id)}
-              className="relative w-8 h-8 rounded-lg text-sm transition-all duration-300 transform hover:scale-110 shadow-lg border border-primary-400/30 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white"
-              title={history.length > 0
-                ? `Last Sent: ${new Date(history[history.length - 1].lastSent).toLocaleDateString()}\nSubject: ${history[history.length - 1].subject}`
-                : 'No email history'}
-            >
-              📧
-            </button>
-          </div>
-        </td>
-        <td className="py-4 px-2 text-center">
-          <div className="flex justify-center">
-            <input
-              type="checkbox"
-              className={`w-5 h-5 rounded border-2 transition-all duration-300 ${isSelected
-                ? 'bg-primary-500 border-primary-500 text-white'
-                : 'border-gray-400 hover:border-primary-400'
-                }`}
-              checked={isSelected}
-              onChange={() => toggleUserSelection(user._id)}
-            />
-          </div>
-        </td>
-      </tr>
-    );
-  });
-
   const EmptyState = () => (
     <tr>
       <td colSpan={show ? "5" : "10"} className="py-16 px-6 text-center text-gray-400">
@@ -350,6 +353,7 @@ const DataTable = ({
             <h3 className="text-xl font-bold text-white flex items-center space-x-2">
               <span>{show ? '👥' : '🏢'}</span>
               <span>{show ? 'Users' : 'Companies'} Database</span>
+              <InlinePagination pagination={pagination} onPageChange={onPageChange} />
             </h3>
             <div className="text-sm text-gray-300">
               {filteredUsers.length} records found
@@ -380,6 +384,7 @@ const DataTable = ({
                       user={user}
                       index={index}
                       isSelected={isSelected}
+                      onToggleSelection={toggleUserSelection}
                     />
                   ) : (
                     <CompanyRow
@@ -387,6 +392,9 @@ const DataTable = ({
                       user={user}
                       index={index}
                       isSelected={isSelected}
+                      onToggleSelection={toggleUserSelection}
+                      onNote={handleNote}
+                      onHistory={handleHistory}
                     />
                   );
                 })

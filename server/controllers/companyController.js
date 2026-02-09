@@ -3,23 +3,66 @@ const List = require("../models/listDB");
 
 const handleGetAllCompanies = async (req, res) => {
     const user = req.user;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
     try {
-        const companies = await Company.find({ createdBy: user.id }).lean();
+        // Get total count for pagination metadata
+        const totalItems = await Company.countDocuments({ createdBy: user.id });
+        const totalPages = Math.ceil(totalItems / limit);
+
+        // Fetch only the companies for current page
+        const companies = await Company.find({ createdBy: user.id })
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean();
+
         const allLists = await List.find({ createdBy: user.id }).lean();
 
+        // BUILD INDEX: O(m) - one pass through all lists
+        const companyToLists = {};
+        allLists.forEach(list => {
+            list.listItems?.forEach(item => {
+                const companyId = item.company?.toString();
+                if (companyId) {
+                    if (!companyToLists[companyId]) {
+                        companyToLists[companyId] = [];
+                    }
+                    companyToLists[companyId].push({
+                        listName: list.listName,
+                        _id: list._id
+                    });
+                }
+            });
+        });
+
+        // LOOKUP: O(n) - one pass through companies
         const companiesWithLists = companies.map(company => ({
             ...company,
-            lists: allLists
-                .filter(list => list.listItems?.some(item => item.company?.toString() === company._id.toString()))
-                .map(list => ({ listName: list.listName, _id: list._id }))
+            lists: companyToLists[company._id.toString()] || []
         }));
 
-        return res.status(200).json({ success: true, message: "Companies retrieved successfully", data: companiesWithLists });
+        return res.status(200).json({
+            success: true,
+            message: "Companies retrieved successfully",
+            data: companiesWithLists,
+            pagination: {
+                page,
+                limit,
+                totalItems,
+                totalPages,
+                hasNextPage: page < totalPages,
+                hasPrevPage: page > 1
+            }
+        });
     } catch (err) {
         console.error("Get all companies error:", err);
         return res.status(500).json({ success: false, message: err.message });
     }
 }
+
 
 const handleGetCompanyByID = async (req, res) => {
     const { id } = req.query;

@@ -21,10 +21,34 @@ const handleAddList = async (req, res) => {
 
 const handleGetAllLists = async (req, res) => {
   const user = req.user;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 5;
+  const skip = (page - 1) * limit;
+
   try {
+    const totalItems = await List.countDocuments({ createdBy: user.id });
+    const totalPages = Math.ceil(totalItems / limit);
+
     const lists = await List.find({ createdBy: user.id })
-      .populate("listItems.company", "_id companyName companyEmail");
-    return res.status(200).send({ success: true, message: "Lists retrieved successfully", data: lists });
+      .populate("listItems.company", "_id companyName companyEmail")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    return res.status(200).send({
+      success: true,
+      message: "Lists retrieved successfully",
+      data: lists,
+      pagination: {
+        page,
+        limit,
+        totalItems,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1
+      }
+    });
   } catch (err) {
     console.error("Get all lists error:", err);
     return res.status(500).send({ success: false, message: err.message });
@@ -57,7 +81,7 @@ const handleAddItemsToList = async (req, res) => {
 const handleRemoveItemsFromList = async (req, res) => {
   const { listId, itemIds } = req.body;
   const user = req.user;
-  
+
   if (!listId || !Array.isArray(itemIds) || itemIds.length === 0) {
     return res.status(400).json({
       success: false,

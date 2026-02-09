@@ -114,8 +114,8 @@ const smtpAccountSchema = new mongoose.Schema(
     // Daily limit based on provider
     dailyLimit: {
       type: Number,
-      default: function() {
-        switch(this.provider) {
+      default: function () {
+        switch (this.provider) {
           case 'gmail': return 500;
           case 'outlook': return 300;
           case 'yahoo': return 500;
@@ -123,6 +123,11 @@ const smtpAccountSchema = new mongoose.Schema(
           default: return 500;
         }
       },
+    },
+    // HTML signature for emails
+    signature: {
+      type: String,
+      default: null,
     },
     errorLog: {
       lastError: {
@@ -146,62 +151,62 @@ const ENCRYPTION_KEY = process.env.SMTP_ENCRYPTION_KEY;
 const ALGORITHM = 'aes-256-cbc';
 
 // Encrypt sensitive data
-smtpAccountSchema.methods.encryptData = function(text) {
+smtpAccountSchema.methods.encryptData = function (text) {
   if (!text) return null;
-  
+
   const iv = crypto.randomBytes(16);
   const cipher = crypto.createCipheriv(
     ALGORITHM,
     Buffer.from(ENCRYPTION_KEY, 'hex'),
     iv
   );
-  
+
   let encrypted = cipher.update(text, 'utf8', 'hex');
   encrypted += cipher.final('hex');
-  
+
   return iv.toString('hex') + ':' + encrypted;
 };
 
 // Decrypt sensitive data
-smtpAccountSchema.methods.decryptData = function(encryptedText) {
+smtpAccountSchema.methods.decryptData = function (encryptedText) {
   if (!encryptedText) return null;
-  
+
   const parts = encryptedText.split(':');
   const iv = Buffer.from(parts[0], 'hex');
   const encrypted = parts[1];
-  
+
   const decipher = crypto.createDecipheriv(
     ALGORITHM,
     Buffer.from(ENCRYPTION_KEY, 'hex'),
     iv
   );
-  
+
   let decrypted = decipher.update(encrypted, 'hex', 'utf8');
   decrypted += decipher.final('utf8');
-  
+
   return decrypted;
 };
 
 // Pre-save hook to encrypt sensitive fields
-smtpAccountSchema.pre('save', function(next) {
+smtpAccountSchema.pre('save', function (next) {
   const account = this;
-  
+
   try {
     // Only encrypt if the token exists and is a string
     if (account.isModified('oauthTokens.accessToken') && account.oauthTokens?.accessToken && typeof account.oauthTokens.accessToken === 'string') {
       account.oauthTokens.accessToken = account.encryptData(account.oauthTokens.accessToken);
     }
-    
+
     if (account.isModified('oauthTokens.refreshToken') && account.oauthTokens?.refreshToken && typeof account.oauthTokens.refreshToken === 'string') {
       account.oauthTokens.refreshToken = account.encryptData(account.oauthTokens.refreshToken);
     }
-    
+
     if (account.isModified('smtpConfig.encryptedPassword') && account.smtpConfig?.encryptedPassword && typeof account.smtpConfig.encryptedPassword === 'string') {
       if (!account.smtpConfig.encryptedPassword.includes(':')) {
         account.smtpConfig.encryptedPassword = account.encryptData(account.smtpConfig.encryptedPassword);
       }
     }
-    
+
     next();
   } catch (err) {
     next(err);
