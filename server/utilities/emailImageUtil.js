@@ -158,9 +158,37 @@ function sanitizeHtmlForEmail(html) {
 }
 
 /**
+ * Preserves whitespace by converting multiple spaces to &nbsp; entities
+ * HTML normally collapses multiple spaces into a single space
+ * @param {string} html - HTML content
+ * @returns {string} - HTML with preserved whitespace
+ */
+function preserveWhitespace(html) {
+    if (!html) return '';
+
+    // Convert multiple spaces (2+) to alternating space and &nbsp;
+    // This preserves the visual spacing in email clients
+    let result = html;
+
+    // Replace sequences of spaces with alternating space + &nbsp;
+    // This ensures spacing is preserved while still allowing line breaks
+    result = result.replace(/  +/g, (match) => {
+        // For each pair of spaces, use space + &nbsp;
+        let replacement = '';
+        for (let i = 0; i < match.length; i++) {
+            replacement += i % 2 === 0 ? ' ' : '&nbsp;';
+        }
+        return replacement;
+    });
+
+    return result;
+}
+
+/**
  * Full HTML processing pipeline for email
  * 1. Sanitizes HTML to remove unsafe elements
- * 2. Converts images to CID attachments
+ * 2. Preserves whitespace (multiple spaces)
+ * 3. Converts images to CID attachments
  * @param {string} html - Raw HTML from editor
  * @returns {Promise<{html: string, inlineAttachments: Array}>}
  */
@@ -168,8 +196,11 @@ async function processHtmlForEmail(html) {
     // First sanitize
     const sanitized = sanitizeHtmlForEmail(html);
 
+    // Preserve whitespace (convert multiple spaces to &nbsp;)
+    const withWhitespace = preserveWhitespace(sanitized);
+
     // Then process images
-    const { html: processedHtml, attachments } = await processInlineImages(sanitized);
+    const { html: processedHtml, attachments } = await processInlineImages(withWhitespace);
 
     return {
         html: processedHtml,

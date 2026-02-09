@@ -33,19 +33,32 @@ import {
   MdPhotoSizeSelectLarge
 } from 'react-icons/md';
 
-// Custom Image extension that supports width attribute
+// Custom Image extension that supports width and style attributes
 const CustomImage = Image.extend({
   addAttributes() {
     return {
       ...this.parent?.(),
       width: {
-        default: '100%',
-        parseHTML: element => element.getAttribute('width') || element.style.width || '100%',
+        default: '50%',
+        parseHTML: element => {
+          return element.getAttribute('width') ||
+            element.style.width?.replace('px', '').replace('%', '') + '%' ||
+            '50%';
+        },
         renderHTML: attributes => {
-          if (!attributes.width) return {};
           return {
             width: attributes.width,
-            style: `width: ${attributes.width}; height: auto; display: inline-block; vertical-align: top;`,
+          };
+        },
+      },
+      style: {
+        default: 'width: 50%; height: auto; display: inline-block; vertical-align: top; margin: 8px;',
+        parseHTML: element => element.getAttribute('style'),
+        renderHTML: attributes => {
+          // Always include these essential styles for email compatibility
+          const width = attributes.width || '50%';
+          return {
+            style: `width: ${width}; height: auto; display: inline-block; vertical-align: top; margin: 8px;`,
           };
         },
       },
@@ -187,7 +200,12 @@ const Tiptap = ({ onEditorContentSave, initialContent = '' }) => {
     const node = state.doc.nodeAt(selection.from);
 
     if (node && node.type.name === 'image') {
-      editor.chain().focus().updateAttributes('image', { width }).run();
+      // Update both width and regenerate the style with the new width
+      const newStyle = `width: ${width}; height: auto; display: inline-block; vertical-align: top; margin: 8px;`;
+      editor.chain().focus().updateAttributes('image', {
+        width,
+        style: newStyle
+      }).run();
     }
   }, [editor]);
 
