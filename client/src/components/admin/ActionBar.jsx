@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { MdClose } from 'react-icons/md';
 import { exportCompaniesToExcel } from '../../services/exportCompanies';
 
 const ActionBar = ({
@@ -102,13 +103,27 @@ const ActionBar = ({
 
       <div className="ml-auto w-80 flex-shrink-0">
         <div className="relative flex items-center gap-3">
-          <input
-            type="text"
-            value={localSearch}
-            onChange={handleSearchChange}
-            placeholder="Search (space-separated keywords)"
-            className="flex-1 pl-3 pr-3 py-2 bg-gray-900 backdrop-blur-sm border border-primary-500/20 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-          />
+          <div className="relative flex-1">
+            <input
+              type="text"
+              value={localSearch}
+              onChange={handleSearchChange}
+              placeholder="Search (space-separated keywords)"
+              className="w-full pl-3 pr-10 py-2 bg-gray-900 backdrop-blur-sm border border-primary-500/20 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+            />
+            {localSearch && (
+              <button
+                onClick={() => {
+                  setLocalSearch('');
+                  setSearchTerm('');
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors duration-200 text-xl z-10 cursor-pointer"
+                title="Clear search"
+              >
+                <MdClose />
+              </button>
+            )}
+          </div>
 
           <button
             onClick={() => setFilterProcurement && setFilterProcurement((v) => !v)}

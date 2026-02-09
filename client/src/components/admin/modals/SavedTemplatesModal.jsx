@@ -58,8 +58,17 @@ const SavedTemplatesModal = ({
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search..."
-                className="w-full pl-3 pr-3 py-2 bg-gray-900 backdrop-blur-sm border border-orange-500/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300 text-sm"
+                className="w-full pl-3 pr-10 py-2 bg-gray-900 backdrop-blur-sm border border-orange-500/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300 text-sm"
               />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors duration-200 text-xl z-10 cursor-pointer"
+                  title="Clear search"
+                >
+                  <MdClose />
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -147,8 +156,8 @@ const SavedTemplatesModal = ({
                     <tr
                       key={template.templateName}
                       className={`transition-all duration-300 hover:bg-orange-500/5 ${selectedSavedTemplates.includes(template.templateName)
-                          ? 'bg-gradient-to-r from-orange-500/20 to-amber-500/20 border-l-4 border-orange-400 shadow-lg shadow-orange-500/10'
-                          : index % 2 === 0 ? 'bg-gray-800/20' : 'bg-transparent'
+                        ? 'bg-gradient-to-r from-orange-500/20 to-amber-500/20 border-l-4 border-orange-400 shadow-lg shadow-orange-500/10'
+                        : index % 2 === 0 ? 'bg-gray-800/20' : 'bg-transparent'
                         }`}
                     >
                       <td className="py-4 px-6">
@@ -163,8 +172,8 @@ const SavedTemplatesModal = ({
                         <input
                           type="checkbox"
                           className={`w-5 h-5 rounded border-2 transition-all duration-300 ${selectedSavedTemplates.includes(template.templateName)
-                              ? 'bg-orange-500 border-orange-500 text-white'
-                              : 'border-orange-400/50 hover:border-orange-400 bg-gray-800/60'
+                            ? 'bg-orange-500 border-orange-500 text-white'
+                            : 'border-orange-400/50 hover:border-orange-400 bg-gray-800/60'
                             }`}
                           checked={selectedSavedTemplates.includes(template.templateName)}
                           onChange={() => toggleSavedTemplateSelection(template.templateName)}

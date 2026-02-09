@@ -173,8 +173,17 @@ const ScheduledEmailsModal = ({ isOpen, onClose }) => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search..."
-                className="w-full pl-3 pr-3 py-2 bg-gray-900 backdrop-blur-sm border border-orange-500/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300 text-sm"
+                className="w-full pl-3 pr-10 py-2 bg-gray-900 backdrop-blur-sm border border-orange-500/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300 text-sm"
               />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors duration-200 text-xl z-10 cursor-pointer"
+                  title="Clear search"
+                >
+                  <MdClose />
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -270,8 +279,8 @@ const ScheduledEmailsModal = ({ isOpen, onClose }) => {
                       <tr
                         key={email._id}
                         className={`transition-all duration-300 hover:bg-orange-500/5 ${isSelected
-                            ? 'bg-gradient-to-r from-orange-500/20 to-amber-500/20 border-l-4 border-orange-400 shadow-lg shadow-orange-500/10'
-                            : index % 2 === 0 ? 'bg-gray-800/20' : 'bg-transparent'
+                          ? 'bg-gradient-to-r from-orange-500/20 to-amber-500/20 border-l-4 border-orange-400 shadow-lg shadow-orange-500/10'
+                          : index % 2 === 0 ? 'bg-gray-800/20' : 'bg-transparent'
                           }`}
                       >
                         <td className="py-4 px-6">
@@ -294,10 +303,10 @@ const ScheduledEmailsModal = ({ isOpen, onClose }) => {
                         </td>
                         <td className="py-4 px-6 text-center">
                           <span className={`px-3 py-1 rounded-full text-xs font-semibold inline-block ${email.status === 'Pending'
-                              ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
-                              : email.status === 'Sent'
-                                ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                                : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                            ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                            : email.status === 'Sent'
+                              ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                              : 'bg-red-500/20 text-red-400 border border-red-500/30'
                             }`}>
                             {email.status}
                           </span>
@@ -306,8 +315,8 @@ const ScheduledEmailsModal = ({ isOpen, onClose }) => {
                           <input
                             type="checkbox"
                             className={`w-5 h-5 rounded border-2 transition-all duration-300 cursor-pointer ${isSelected
-                                ? 'bg-orange-500 border-orange-500 text-white'
-                                : 'border-orange-400/50 hover:border-orange-400 bg-gray-800/60'
+                              ? 'bg-orange-500 border-orange-500 text-white'
+                              : 'border-orange-400/50 hover:border-orange-400 bg-gray-800/60'
                               }`}
                             checked={isSelected}
                             onChange={() => toggleEmailSelection(email._id)}
