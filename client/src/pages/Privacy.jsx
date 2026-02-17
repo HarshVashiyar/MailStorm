@@ -4,7 +4,7 @@ export default function Privacy() {
       {/* Background glow effects */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary-500/10 via-accent-500/5 to-primary-600/10 animate-pulse-slow pointer-events-none"></div>
       <div className="absolute inset-0 bg-gradient-radial from-primary-400/20 via-transparent to-transparent pointer-events-none"></div>
-      
+
       {/* Floating orbs for extra ambiance */}
       <div className="absolute top-20 left-10 w-64 h-64 bg-primary-500/20 rounded-full blur-3xl animate-pulse-slow"></div>
       <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent-500/20 rounded-full blur-3xl animate-pulse-slow" style={{ animationDelay: '1s' }}></div>
@@ -25,13 +25,32 @@ export default function Privacy() {
         {/* Main Content Card */}
         <div className="bg-glass-dark backdrop-blur-lg border border-primary-500/30 rounded-2xl p-8 shadow-glow">
           <Section title="Purpose of the Application" icon="🎯">
-            This application allows users to send emails using their own Google
-            account only after explicit user action.
+            This application allows users to connect and use their own email accounts
+            (including Google Gmail, Microsoft Outlook, and custom SMTP providers)
+            to send emails after explicit user action.
           </Section>
 
-          <Section title="Google OAuth Access" icon="🔐">
-            Google OAuth is used only to send emails on the user's behalf exactly
-            as instructed by the user.
+          <Section title="Email Provider Integrations" icon="🔐">
+            Users may connect supported email providers such as:
+            <ul className="list-none pl-0 space-y-3 mt-4">
+              <li className="flex items-start gap-3 bg-dark-800/50 p-3 rounded-lg border border-primary-500/20">
+                <span className="text-primary-400 mt-0.5">✓</span>
+                <span>Google (Gmail) via OAuth</span>
+              </li>
+              <li className="flex items-start gap-3 bg-dark-800/50 p-3 rounded-lg border border-primary-500/20">
+                <span className="text-primary-400 mt-0.5">✓</span>
+                <span>Microsoft Outlook via OAuth</span>
+              </li>
+              <li className="flex items-start gap-3 bg-dark-800/50 p-3 rounded-lg border border-primary-500/20">
+                <span className="text-primary-400 mt-0.5">✓</span>
+                <span>Custom SMTP servers provided by the user</span>
+              </li>
+            </ul>
+            <p className="mt-4">
+              Access to these providers is granted only after explicit user authorization.
+              The application uses only the minimum required permissions to send emails
+              on behalf of the user.
+            </p>
           </Section>
 
           <Section title="Data Accessed" icon="📊">
@@ -42,7 +61,15 @@ export default function Privacy() {
               </li>
               <li className="flex items-start gap-3 bg-dark-800/50 p-3 rounded-lg border border-primary-500/20">
                 <span className="text-primary-400 mt-0.5">✓</span>
-                <span>Permission to send emails via Gmail</span>
+                <span>Authorization tokens for connected providers</span>
+              </li>
+              <li className="flex items-start gap-3 bg-dark-800/50 p-3 rounded-lg border border-primary-500/20">
+                <span className="text-primary-400 mt-0.5">✓</span>
+                <span>SMTP credentials (if provided by the user)</span>
+              </li>
+              <li className="flex items-start gap-3 bg-dark-800/50 p-3 rounded-lg border border-primary-500/20">
+                <span className="text-primary-400 mt-0.5">✓</span>
+                <span>Permission to send emails via the connected provider</span>
               </li>
             </ul>
           </Section>
@@ -55,11 +82,11 @@ export default function Privacy() {
               </li>
               <li className="flex items-start gap-3 bg-dark-800/50 p-3 rounded-lg border border-red-500/20">
                 <span className="text-red-400 mt-0.5">✗</span>
-                <span>Do not store email content</span>
+                <span>Do not modify existing emails</span>
               </li>
               <li className="flex items-start gap-3 bg-dark-800/50 p-3 rounded-lg border border-red-500/20">
                 <span className="text-red-400 mt-0.5">✗</span>
-                <span>Do not send emails automatically</span>
+                <span>Do not send emails automatically without user action</span>
               </li>
               <li className="flex items-start gap-3 bg-dark-800/50 p-3 rounded-lg border border-red-500/20">
                 <span className="text-red-400 mt-0.5">✗</span>
@@ -69,12 +96,14 @@ export default function Privacy() {
           </Section>
 
           <Section title="User Control" icon="🎮">
-            Users decide the email content, recipients, and timing.
+            Users decide the email content, recipients, selected sending account,
+            and scheduling time. All email activity is initiated by user action.
           </Section>
 
           <Section title="Revoking Access" icon="🔓">
             <div className="bg-dark-800/50 p-4 rounded-lg border border-accent-500/30">
-              Access can be revoked anytime from{" "}
+              Connected providers can be removed at any time from the profile settings.
+              Google access can also be revoked from{" "}
               <a
                 className="text-accent-400 hover:text-accent-300 underline font-semibold transition-colors duration-200"
                 href="https://myaccount.google.com/permissions"
@@ -82,8 +111,7 @@ export default function Privacy() {
                 rel="noopener noreferrer"
               >
                 Google Account Permissions
-              </a>
-              .
+              </a>.
             </div>
           </Section>
         </div>

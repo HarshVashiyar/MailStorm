@@ -4,7 +4,7 @@ export default function Terms() {
       {/* Background glow effects */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary-500/10 via-accent-500/5 to-primary-600/10 animate-pulse-slow pointer-events-none"></div>
       <div className="absolute inset-0 bg-gradient-radial from-primary-400/20 via-transparent to-transparent pointer-events-none"></div>
-      
+
       {/* Floating orbs for extra ambiance */}
       <div className="absolute top-20 right-10 w-64 h-64 bg-accent-500/20 rounded-full blur-3xl animate-pulse-slow"></div>
       <div className="absolute bottom-20 left-10 w-96 h-96 bg-primary-500/20 rounded-full blur-3xl animate-pulse-slow" style={{ animationDelay: '1s' }}></div>
@@ -33,9 +33,9 @@ export default function Terms() {
 
           <Section title="Service Description" icon="📧" number="2">
             <div className="bg-dark-800/50 p-4 rounded-lg border border-primary-500/20">
-              The service allows users to send emails through their Google account
-              using Google OAuth authentication. All emails are sent directly from
-              your authorized Google account.
+              The service allows users to send emails through connected email providers,
+              including Google (Gmail), Microsoft Outlook, and custom SMTP servers.
+              All emails are sent directly from the user’s authorized email account.
             </div>
           </Section>
 
@@ -72,7 +72,7 @@ export default function Terms() {
                 <div>
                   <p className="font-semibold text-green-400 mb-2">User-Initiated Only</p>
                   <p>Emails are sent only after explicit user action. No automated
-                  or unsolicited messaging occurs without your direct instruction.</p>
+                    or unsolicited messaging occurs without your direct instruction.</p>
                 </div>
               </div>
             </div>
@@ -85,8 +85,8 @@ export default function Terms() {
                 <div>
                   <p className="font-semibold text-red-400 mb-2">As-Is Service</p>
                   <p>The service is provided "as is" without warranties of any kind,
-                  either express or implied. We are not liable for any damages arising
-                  from the use or inability to use this service.</p>
+                    either express or implied. We are not liable for any damages arising
+                    from the use or inability to use this service.</p>
                 </div>
               </div>
             </div>
