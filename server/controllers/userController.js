@@ -60,8 +60,8 @@ const handleUserSignIn = async (req, res) => {
     catch (error) {
         console.error("Error signing in user:", error);
         if (error.suspended) {
-            return res.status(403).json({ 
-                success: false, 
+            return res.status(403).json({
+                success: false,
                 suspended: true,
                 message: error.suspensionReason || "Your account has been suspended."
             });
@@ -74,18 +74,10 @@ const handleUserSignIn = async (req, res) => {
 }
 
 const handleGetAllUsers = async (req, res) => {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
-    const skip = (page - 1) * limit;
-
     try {
-        const totalItems = await User.countDocuments({ role: 'User' });
-        const totalPages = Math.ceil(totalItems / limit);
-
+        // All records returned at once; frontend paginates client-side
         const users = await User.find({ role: 'User' })
             .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit)
             .lean();
 
         const data = users.map(user => ({
@@ -106,14 +98,6 @@ const handleGetAllUsers = async (req, res) => {
             success: true,
             message: "Users fetched successfully",
             data,
-            pagination: {
-                page,
-                limit,
-                totalItems,
-                totalPages,
-                hasNextPage: page < totalPages,
-                hasPrevPage: page > 1
-            }
         });
     }
     catch (error) {
@@ -125,32 +109,32 @@ const handleGetAllUsers = async (req, res) => {
 const handleSuspendUsers = async (req, res) => {
     const { userIds } = req.body;
     const { reason } = req.body;
-    
+
     if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
         return res.status(400).json({ success: false, message: "User IDs are required" });
     }
 
     try {
         const users = await User.find({ _id: { $in: userIds } });
-        
+
         if (users.length === 0) {
             return res.status(404).json({ success: false, message: "No users found" });
         }
 
         const suspensionReason = reason || "Violation of Terms of Services or Privacy Policy";
-        
+
         for (const user of users) {
             await User.updateOne(
                 { _id: user._id },
-                { 
-                    $set: { 
-                        suspended: true, 
-                        suspendedAt: new Date(), 
-                        suspensionReason 
-                    } 
+                {
+                    $set: {
+                        suspended: true,
+                        suspendedAt: new Date(),
+                        suspensionReason
+                    }
                 }
             );
-            
+
             await sendSuspensionEmail(user.email, user.fullName, suspensionReason);
         }
 
@@ -166,14 +150,14 @@ const handleSuspendUsers = async (req, res) => {
 
 const handleUnsuspendUsers = async (req, res) => {
     const { userIds } = req.body;
-    
+
     if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
         return res.status(400).json({ success: false, message: "User IDs are required" });
     }
 
     try {
         const users = await User.find({ _id: { $in: userIds } });
-        
+
         if (users.length === 0) {
             return res.status(404).json({ success: false, message: "No users found" });
         }
@@ -181,15 +165,15 @@ const handleUnsuspendUsers = async (req, res) => {
         for (const user of users) {
             await User.updateOne(
                 { _id: user._id },
-                { 
-                    $set: { 
-                        suspended: false, 
-                        suspendedAt: null, 
-                        suspensionReason: null 
-                    } 
+                {
+                    $set: {
+                        suspended: false,
+                        suspendedAt: null,
+                        suspensionReason: null
+                    }
                 }
             );
-            
+
             await sendUnsuspensionEmail(user.email, user.fullName);
         }
 

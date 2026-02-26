@@ -1,20 +1,32 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
 const MouseGradient = () => {
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const rafRef = useRef(null);
+  const lastUpdateRef = useRef(0);
   const pendingPosition = useRef({ x: 0, y: 0 });
+  const positionRef = useRef({ x: 0, y: 0 });
+  const rafRef = useRef(null);
 
   useEffect(() => {
+    const updateGradient = () => {
+      positionRef.current = { ...pendingPosition.current };
+      const gradient = document.getElementById('mouse-gradient');
+      if (gradient) {
+        gradient.style.background = `radial-gradient(600px circle at ${positionRef.current.x}px ${positionRef.current.y}px, rgba(255, 107, 53, 0.1) 0%, rgba(255, 107, 53, 0.05) 40%, transparent 100%)`;
+      }
+    };
+
     const handleMouseMove = (e) => {
       pendingPosition.current = { x: e.clientX, y: e.clientY };
-
-      // Throttle updates using requestAnimationFrame (60fps cap)
-      if (!rafRef.current) {
-        rafRef.current = requestAnimationFrame(() => {
-          setMousePosition(pendingPosition.current);
-          rafRef.current = null;
-        });
+      
+      const now = Date.now();
+      if (now - lastUpdateRef.current >= 100) {
+        lastUpdateRef.current = now;
+        if (!rafRef.current) {
+          rafRef.current = requestAnimationFrame(() => {
+            updateGradient();
+            rafRef.current = null;
+          });
+        }
       }
     };
 
@@ -30,14 +42,13 @@ const MouseGradient = () => {
 
   return (
     <div
+      id="mouse-gradient"
       className="fixed inset-0 pointer-events-none z-20"
       style={{
-        background: `radial-gradient(600px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(255, 107, 53, 0.1) 0%, rgba(255, 107, 53, 0.05) 40%, transparent 100%)`
+        background: `radial-gradient(600px circle at 0px 0px, rgba(255, 107, 53, 0.1) 0%, rgba(255, 107, 53, 0.05) 40%, transparent 100%)`
       }}
     />
   );
 };
 
 export default MouseGradient;
-
-

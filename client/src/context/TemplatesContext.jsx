@@ -5,37 +5,44 @@ import axios from 'axios';
 
 const TemplatesContext = createContext(null);
 
+const TEMPLATES_LIMIT = 5;
+
+const buildPagination = (totalItems, page, limit) => {
+    const totalPages = Math.ceil(totalItems / limit);
+    return {
+        page,
+        limit,
+        totalItems,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+    };
+};
+
 export const TemplatesProvider = ({ children }) => {
-    const [templates, setTemplates] = useState([]);
+    const [allTemplates, setAllTemplates] = useState([]); // Full dataset
     const [selectedTemplates, setSelectedTemplates] = useState([]);
     const [showTemplatesTable, setShowTemplatesTable] = useState(false);
     const [loading, setLoading] = useState(false);
     const [lastFetch, setLastFetch] = useState(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [searchTerm, setSearchTermState] = useState(''); // Lifted for cross-page search
 
-    // Pagination state
-    const [pagination, setPagination] = useState({
-        page: 1, limit: 5, totalItems: 0, totalPages: 0, hasNextPage: false, hasPrevPage: false
-    });
-
-    // Fetch all templates with pagination
-    const fetchTemplates = useCallback(async (force = false, openModal = true, page = null, limit = 5) => {
-        const targetPage = page || pagination.page;
-
-        // Cache for 5 minutes (but still respect pagination)
-        if (!force && !page && lastFetch && Date.now() - lastFetch < 300000 && templates.length > 0) {
+    // Fetch ALL templates from the server at once
+    const fetchTemplates = useCallback(async (force = false, openModal = true) => {
+        // Cache for 5 minutes
+        if (!force && lastFetch && Date.now() - lastFetch < 300000 && allTemplates.length > 0) {
             if (openModal) setShowTemplatesTable(true);
             return;
         }
 
         setLoading(true);
         try {
-            const response = await api.templates.getAll(targetPage, limit);
+            const response = await api.templates.getAll();
             if (response.data?.success) {
                 const data = response.data.data || [];
-                setTemplates(Array.isArray(data) ? data : []);
-                if (response.data.pagination) {
-                    setPagination(response.data.pagination);
-                }
+                setAllTemplates(Array.isArray(data) ? data : []);
+                setCurrentPage(1);
                 if (openModal) setShowTemplatesTable(true);
             }
             setLastFetch(Date.now());
@@ -44,14 +51,19 @@ export const TemplatesProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
-    }, [lastFetch, templates.length, pagination.page]);
+    }, [lastFetch, allTemplates.length]);
 
-    // Navigate to specific page
+    // Client-side page navigation — no re-fetch
     const goToPage = useCallback((page) => {
-        fetchTemplates(true, true, page, pagination.limit);
-    }, [fetchTemplates, pagination.limit]);
+        setCurrentPage(page);
+    }, []);
 
-    // Create template
+    // Reset to page 1 when search changes
+    const setSearchTerm = useCallback((term) => {
+        setSearchTermState(term);
+        setCurrentPage(1);
+    }, []);
+
     const createTemplate = useCallback(async (data) => {
         try {
             const response = await axios.post(
@@ -62,7 +74,7 @@ export const TemplatesProvider = ({ children }) => {
 
             if (response.data?.success) {
                 toast.success(response.data.message || 'Template created successfully!');
-                await fetchTemplates(true, true, 1, pagination.limit); // Go to first page
+                await fetchTemplates(true, true);
                 return true;
             } else {
                 toast.error(response.data?.message || "Failed to create template");
@@ -73,23 +85,19 @@ export const TemplatesProvider = ({ children }) => {
             toast.error(error.response?.data?.message || "Failed to create template");
             return false;
         }
-    }, [fetchTemplates, pagination.limit]);
+    }, [fetchTemplates]);
 
-    // Update template
     const updateTemplate = useCallback(async (id, data) => {
         try {
             const response = await axios.put(
                 `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_UPDATE_TEMPLATE_ROUTE}`,
-                {
-                    templateName: id,
-                    ...data
-                },
+                { templateName: id, ...data },
                 { withCredentials: true }
             );
 
             if (response.data?.success) {
                 toast.success(response.data.message || 'Template updated successfully!');
-                await fetchTemplates(true, true, pagination.page, pagination.limit);
+                await fetchTemplates(true, true);
                 return true;
             } else {
                 toast.error(response.data?.message || "Failed to update template");
@@ -100,9 +108,8 @@ export const TemplatesProvider = ({ children }) => {
             toast.error(error.response?.data?.message || "Failed to update template");
             return false;
         }
-    }, [fetchTemplates, pagination]);
+    }, [fetchTemplates]);
 
-    // Delete template(s)
     const deleteTemplate = useCallback(async (templateNames) => {
         const names = Array.isArray(templateNames) ? templateNames : [templateNames];
 
@@ -122,9 +129,8 @@ export const TemplatesProvider = ({ children }) => {
 
             if (response.data?.success) {
                 toast.success(response.data.message || 'Template(s) deleted successfully!');
-                setTemplates(prev => prev.filter(t => !names.includes(t.templateName)));
+                setAllTemplates(prev => prev.filter(t => !names.includes(t.templateName)));
                 setSelectedTemplates(prev => prev.filter(name => !names.includes(name)));
-                setPagination(prev => ({ ...prev, totalItems: Math.max(0, prev.totalItems - names.length) }));
                 return true;
             } else {
                 toast.error(response.data?.message || "Failed to delete template");
@@ -137,7 +143,6 @@ export const TemplatesProvider = ({ children }) => {
         }
     }, []);
 
-    // Selection logic
     const toggleTemplateSelection = useCallback((templateName) => {
         setSelectedTemplates(prev =>
             prev.includes(templateName)
@@ -146,22 +151,49 @@ export const TemplatesProvider = ({ children }) => {
         );
     }, []);
 
-    // UI state management
     const openTemplatesTable = useCallback(() => setShowTemplatesTable(true), []);
     const closeTemplatesTable = useCallback(() => {
         setShowTemplatesTable(false);
         setSelectedTemplates([]);
+        setSearchTermState('');
     }, []);
 
+    // ── Search + pagination entirely client-side ──────────────────────────────
+
+    // 1. Filter across ALL templates
+    const filteredAllTemplates = useMemo(() => {
+        if (!searchTerm) return allTemplates;
+        const lower = searchTerm.toLowerCase();
+        return allTemplates.filter(t =>
+            t.templateName.toLowerCase().includes(lower) ||
+            t.templateSubject.toLowerCase().includes(lower)
+        );
+    }, [allTemplates, searchTerm]);
+
+    // 2. Pagination descriptor reflects filtered count
+    const pagination = useMemo(() =>
+        buildPagination(filteredAllTemplates.length, currentPage, TEMPLATES_LIMIT),
+        [filteredAllTemplates.length, currentPage]
+    );
+
+    // 3. Current-page slice of the filtered results
+    const templates = useMemo(() => {
+        const start = (currentPage - 1) * TEMPLATES_LIMIT;
+        return filteredAllTemplates.slice(start, start + TEMPLATES_LIMIT);
+    }, [filteredAllTemplates, currentPage]);
+
     const value = useMemo(() => ({
-        templates,
+        templates,          // Current page's slice (already filtered)
+        allTemplates,       // Full unfiltered dataset
         selectedTemplates,
         showTemplatesTable,
         loading,
         pagination,
+        searchTerm,
+        setSearchTerm,
         fetchTemplates,
         goToPage,
-        refresh: () => fetchTemplates(true, true, pagination.page, pagination.limit),
+        refresh: () => fetchTemplates(true, true),
         createTemplate,
         updateTemplate,
         deleteTemplate,
@@ -170,10 +202,13 @@ export const TemplatesProvider = ({ children }) => {
         closeTemplatesTable,
     }), [
         templates,
+        allTemplates,
         selectedTemplates,
         showTemplatesTable,
         loading,
         pagination,
+        searchTerm,
+        setSearchTerm,
         fetchTemplates,
         goToPage,
         createTemplate,

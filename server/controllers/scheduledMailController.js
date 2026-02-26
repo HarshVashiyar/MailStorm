@@ -222,34 +222,18 @@ const handleAddScheduledMail = async (req, res) => {
 
 const handleGetScheduledMails = async (req, res) => {
   const user = req.user;
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 5;
-  const skip = (page - 1) * limit;
 
   try {
-    const totalItems = await ScheduledMail.countDocuments({ createdBy: user.id });
-    const totalPages = Math.ceil(totalItems / limit);
-
-    // ⚡ OPTIMIZED: Add sorting, projection, pagination
+    // ⚡ OPTIMIZED: Sorting + projection; all records returned at once (frontend paginates client-side)
     const scheduledMails = await ScheduledMail.find({ createdBy: user.id })
       .select('-attachments.content') // Exclude base64 content
       .sort({ sendAt: -1 }) // Newest scheduled emails first
-      .skip(skip)
-      .limit(limit)
       .lean();
 
     res.status(200).json({
       success: true,
       message: "Scheduled mails retrieved successfully.",
       data: scheduledMails,
-      pagination: {
-        page,
-        limit,
-        totalItems,
-        totalPages,
-        hasNextPage: page < totalPages,
-        hasPrevPage: page > 1
-      }
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

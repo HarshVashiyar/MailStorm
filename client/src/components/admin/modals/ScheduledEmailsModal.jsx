@@ -11,30 +11,41 @@ import {
 } from 'react-icons/md';
 import InlinePagination from '../../common/InlinePagination';
 
+const EMAILS_LIMIT = 5;
+
+const buildPagination = (totalItems, page, limit) => {
+  const totalPages = Math.ceil(totalItems / limit);
+  return {
+    page,
+    limit,
+    totalItems,
+    totalPages,
+    hasNextPage: page < totalPages,
+    hasPrevPage: page > 1,
+  };
+};
+
 const ScheduledEmailsModal = ({ isOpen, onClose }) => {
-  const [scheduledEmails, setScheduledEmails] = useState([]);
+  const [allEmails, setAllEmails] = useState([]); // Full dataset
   const [selectedEmails, setSelectedEmails] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [pagination, setPagination] = useState({
-    page: 1, limit: 5, totalItems: 0, totalPages: 0, hasNextPage: false, hasPrevPage: false
-  });
+  const [currentPage, setCurrentPage] = useState(1);
 
-  const fetchScheduledEmails = useCallback(async (page = 1, limit = 5) => {
+  // Fetch ALL scheduled emails from server at once
+  const fetchScheduledEmails = useCallback(async () => {
     setIsLoading(true);
     const toastID = toast.loading("Loading scheduled emails...");
     try {
       const response = await axios.get(
-        `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_ALL_SCHEDULED_EMAILS_ROUTE}?page=${page}&limit=${limit}`,
+        `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_ALL_SCHEDULED_EMAILS_ROUTE}`,
         { withCredentials: true }
       );
       if (response.data.success === true) {
         toast.dismiss(toastID);
         setIsLoading(false);
-        setScheduledEmails(response.data.data);
-        if (response.data.pagination) {
-          setPagination(response.data.pagination);
-        }
+        setAllEmails(response.data.data);
+        setCurrentPage(1); // Reset to first page on fresh fetch
       } else {
         toast.dismiss(toastID);
         setIsLoading(false);
@@ -53,9 +64,10 @@ const ScheduledEmailsModal = ({ isOpen, onClose }) => {
     }
   }, []);
 
+  // Client-side page navigation — no re-fetch
   const goToPage = useCallback((page) => {
-    fetchScheduledEmails(page, pagination.limit);
-  }, [fetchScheduledEmails, pagination.limit]);
+    setCurrentPage(page);
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -64,6 +76,7 @@ const ScheduledEmailsModal = ({ isOpen, onClose }) => {
       // Reset state when modal closes
       setSelectedEmails([]);
       setSearchTerm('');
+      setCurrentPage(1);
     }
   }, [isOpen, fetchScheduledEmails]);
 
@@ -75,20 +88,20 @@ const ScheduledEmailsModal = ({ isOpen, onClose }) => {
     );
   };
 
-  // Sort emails by sendAt date, latest first
-  const sortedScheduledEmails = useMemo(() => {
-    return [...scheduledEmails].sort((a, b) => {
+  // Sort emails by sendAt date, latest first (from full dataset)
+  const sortedEmails = useMemo(() => {
+    return [...allEmails].sort((a, b) => {
       const dateA = new Date(a.sendAt);
       const dateB = new Date(b.sendAt);
       return dateB - dateA; // Latest first
     });
-  }, [scheduledEmails]);
+  }, [allEmails]);
 
-  // Filter emails based on search term
-  const filteredEmails = useMemo(() => {
-    return sortedScheduledEmails.filter((email) => {
-      const searchLower = searchTerm.toLowerCase();
-
+  // Filter emails based on search term (across ALL emails — client-side search)
+  const allFilteredEmails = useMemo(() => {
+    if (!searchTerm) return sortedEmails;
+    const searchLower = searchTerm.toLowerCase();
+    return sortedEmails.filter((email) => {
       // Handle 'to' field - could be string or array
       const toField = Array.isArray(email.to)
         ? email.to.join(', ').toLowerCase()
@@ -107,16 +120,40 @@ const ScheduledEmailsModal = ({ isOpen, onClose }) => {
         dateTimeString.includes(searchLower)
       );
     });
-  }, [sortedScheduledEmails, searchTerm]);
+  }, [sortedEmails, searchTerm]);
 
-  const selectAllEmails = () => {
-    const filteredEmailIds = filteredEmails.map(email => email._id);
-    if (selectedEmails.length === filteredEmailIds.length && filteredEmailIds.length > 0) {
-      setSelectedEmails([]);
+  // Client-side pagination: compute descriptor + current page slice
+  const pagination = useMemo(() =>
+    buildPagination(allFilteredEmails.length, currentPage, EMAILS_LIMIT),
+    [allFilteredEmails.length, currentPage]
+  );
+
+  // The emails to render in the table for the current page
+  const filteredEmails = useMemo(() => {
+    const start = (currentPage - 1) * EMAILS_LIMIT;
+    return allFilteredEmails.slice(start, start + EMAILS_LIMIT);
+  }, [allFilteredEmails, currentPage]);
+
+  // Selects / deselects all emails on the current page
+  const selectAllOnPage = () => {
+    const pageIds = filteredEmails.map(e => e._id);
+    const allPageSelected = pageIds.every(id => selectedEmails.includes(id));
+    if (allPageSelected) {
+      setSelectedEmails(prev => prev.filter(id => !pageIds.includes(id)));
     } else {
-      setSelectedEmails(filteredEmailIds);
+      setSelectedEmails(prev => [...new Set([...prev, ...pageIds])]);
     }
   };
+
+  // Selects ALL emails matching the current search across every page
+  const selectAllAcrossPages = () => {
+    setSelectedEmails(allFilteredEmails.map(e => e._id));
+  };
+
+  const clearSelection = () => setSelectedEmails([]);
+
+  const allPageSelected = filteredEmails.length > 0 && filteredEmails.every(e => selectedEmails.includes(e._id));
+  const allAcrossPagesSelected = selectedEmails.length === allFilteredEmails.length && allFilteredEmails.length > 0;
 
   const deleteSelectedEmails = async () => {
     setIsLoading(true);
@@ -132,7 +169,8 @@ const ScheduledEmailsModal = ({ isOpen, onClose }) => {
       if (response.data.success === true) {
         toast.dismiss(toastID);
         setIsLoading(false);
-        setScheduledEmails((prevEmails) =>
+        // Optimistic update on in-memory data
+        setAllEmails((prevEmails) =>
           prevEmails.filter((email) => !selectedEmails.includes(email._id))
         );
         setSelectedEmails([]);
@@ -174,7 +212,9 @@ const ScheduledEmailsModal = ({ isOpen, onClose }) => {
               <InlinePagination pagination={pagination} onPageChange={goToPage} />
             </h3>
             <p className="text-gray-300 text-sm">
-              Manage your scheduled email campaigns
+              {pagination?.totalItems > 0
+                ? `Showing ${filteredEmails.length} of ${pagination.totalItems} scheduled emails`
+                : 'Manage your scheduled email campaigns'}
             </p>
           </div>
           {/* Search Bar - Top Right */}
@@ -266,9 +306,9 @@ const ScheduledEmailsModal = ({ isOpen, onClose }) => {
                     <input
                       type="checkbox"
                       className="w-5 h-5 rounded border-2 border-orange-400 cursor-pointer"
-                      checked={selectedEmails.length === filteredEmails.length && filteredEmails.length > 0}
-                      onChange={selectAllEmails}
-                      title="Select/Deselect All"
+                      checked={allPageSelected}
+                      onChange={selectAllOnPage}
+                      title="Select/Deselect page"
                     />
                   </th>
                 </tr>
@@ -279,75 +319,102 @@ const ScheduledEmailsModal = ({ isOpen, onClose }) => {
                     <td colSpan="6" className="py-12 px-6 text-center text-gray-300">
                       <div className="flex flex-col items-center space-y-3">
                         <MdSchedule className="text-6xl text-gray-500" />
-                        <p className="text-xl font-medium">{scheduledEmails.length === 0 ? 'No Scheduled Emails' : 'No Results Found'}</p>
-                        <p className="text-sm">{scheduledEmails.length === 0 ? 'Your scheduled emails will appear here' : 'Try adjusting your search'}</p>
+                        <p className="text-xl font-medium">{allEmails.length === 0 ? 'No Scheduled Emails' : 'No Results Found'}</p>
+                        <p className="text-sm">{allEmails.length === 0 ? 'Your scheduled emails will appear here' : 'Try adjusting your search'}</p>
                       </div>
                     </td>
                   </tr>
                 ) : (
-                  filteredEmails.map((email, index) => {
-                    const isSelected = selectedEmails.includes(email._id);
-                    return (
-                      <tr
-                        key={email._id}
-                        className={`transition-all duration-300 hover:bg-orange-500/5 ${isSelected
-                          ? 'bg-gradient-to-r from-orange-500/20 to-amber-500/20 border-l-4 border-orange-400 shadow-lg shadow-orange-500/10'
-                          : index % 2 === 0 ? 'bg-gray-800/20' : 'bg-transparent'
-                          }`}
-                      >
-                        <td className="py-4 px-6">
-                          <div className="truncate text-gray-300" title={email.from}>
-                            {email.from}
-                          </div>
-                        </td>
-                        <td className="py-4 px-6">
-                          <div className="truncate text-gray-300" title={Array.isArray(email.to) ? email.to.join(', ') : email.to}>
-                            {Array.isArray(email.to) ? email.to.join(', ') : email.to}
-                          </div>
-                        </td>
-                        <td className="py-4 px-6">
-                          <div className="truncate font-medium text-white" title={email.subject}>
-                            {email.subject}
-                          </div>
-                        </td>
-                        <td className="py-4 px-6 text-sm text-gray-300">
-                          {new Date(email.sendAt).toLocaleString()}
-                        </td>
-                        <td className="py-4 px-6 text-center">
-                          <span className={`px-3 py-1 rounded-full text-xs font-semibold inline-block ${email.status === 'Pending'
-                            ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
-                            : email.status === 'Sent'
-                              ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                              : 'bg-red-500/20 text-red-400 border border-red-500/30'
-                            }`}>
-                            {email.status}
-                          </span>
-                        </td>
-                        <td className="py-4 px-6 text-center">
-                          <input
-                            type="checkbox"
-                            className={`w-5 h-5 rounded border-2 transition-all duration-300 cursor-pointer ${isSelected
-                              ? 'bg-orange-500 border-orange-500 text-white'
-                              : 'border-orange-400/50 hover:border-orange-400 bg-gray-800/60'
-                              }`}
-                            checked={isSelected}
-                            onChange={() => toggleEmailSelection(email._id)}
-                          />
+                  <>
+                    {/* Cross-page select-all banner */}
+                    {allPageSelected && allFilteredEmails.length > filteredEmails.length && (
+                      <tr className="bg-orange-500/10 border-b border-orange-500/20">
+                        <td colSpan="6" className="py-2 px-4 text-center text-sm">
+                          {allAcrossPagesSelected ? (
+                            <span className="text-green-400">
+                              All {allFilteredEmails.length} emails are selected.{' '}
+                              <button onClick={clearSelection} className="underline text-orange-300 hover:text-white ml-1 cursor-pointer">Clear selection</button>
+                            </span>
+                          ) : (
+                            <span className="text-gray-300">
+                              All {filteredEmails.length} emails on this page are selected.{' '}
+                              <button onClick={selectAllAcrossPages} className="underline text-orange-300 hover:text-white ml-1 cursor-pointer">
+                                Select all {allFilteredEmails.length} emails
+                              </button>
+                            </span>
+                          )}
                         </td>
                       </tr>
-                    );
-                  })
+                    )}
+                    {filteredEmails.map((email, index) => {
+                      const isSelected = selectedEmails.includes(email._id);
+                      return (
+                        <tr
+                          key={email._id}
+                          className={`transition-all duration-300 hover:bg-orange-500/5 ${isSelected
+                            ? 'bg-gradient-to-r from-orange-500/20 to-amber-500/20 border-l-4 border-orange-400 shadow-lg shadow-orange-500/10'
+                            : index % 2 === 0 ? 'bg-gray-800/20' : 'bg-transparent'
+                            }`}
+                        >
+                          <td className="py-4 px-6">
+                            <div className="truncate text-gray-300" title={email.from}>
+                              {email.from}
+                            </div>
+                          </td>
+                          <td className="py-4 px-6">
+                            <div className="truncate text-gray-300" title={Array.isArray(email.to) ? email.to.join(', ') : email.to}>
+                              {Array.isArray(email.to) ? email.to.join(', ') : email.to}
+                            </div>
+                          </td>
+                          <td className="py-4 px-6">
+                            <div className="truncate font-medium text-white" title={email.subject}>
+                              {email.subject}
+                            </div>
+                          </td>
+                          <td className="py-4 px-6 text-sm text-gray-300">
+                            {new Date(email.sendAt).toLocaleString()}
+                          </td>
+                          <td className="py-4 px-6 text-center">
+                            <span className={`px-3 py-1 rounded-full text-xs font-semibold inline-block ${email.status === 'Pending'
+                              ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                              : email.status === 'Sent'
+                                ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                                : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                              }`}>
+                              {email.status}
+                            </span>
+                          </td>
+                          <td className="py-4 px-6 text-center">
+                            <input
+                              type="checkbox"
+                              className={`w-5 h-5 rounded border-2 transition-all duration-300 cursor-pointer ${isSelected
+                                ? 'bg-orange-500 border-orange-500 text-white'
+                                : 'border-orange-400/50 hover:border-orange-400 bg-gray-800/60'
+                                }`}
+                              checked={isSelected}
+                              onChange={() => toggleEmailSelection(email._id)}
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </>
                 )}
               </tbody>
             </table>
           </div>
         </div>
 
-        {/* Close Button */}
-        <div className="flex justify-center">
+        {/* Bottom bar: record count + close */}
+        <div className="flex items-center justify-between">
+          <span className="text-gray-400 text-sm">
+            {pagination?.totalItems > 0
+              ? `Showing ${filteredEmails.length} of ${pagination.totalItems} emails`
+              : `${allEmails.length} email${allEmails.length !== 1 ? 's' : ''} total`}
+          </span>
           <button
             onClick={onClose}
-            className="bg-gray-700/40 hover:bg-gray-600/40 text-white py-3 px-8 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 backdrop-blur-sm border border-gray-600/30 hover:border-gray-500/50 flex items-center space-x-2"
+            className="bg-gray-700/40 hover:bg-gray-600/40 text-white py-2 px-6 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 backdrop-blur-sm border border-gray-600/30 hover:border-gray-500/50 flex items-center space-x-2"
           >
             <MdClose className="text-lg" />
             <span>Close</span>

@@ -3,115 +3,125 @@ import { api } from '../services/api';
 
 const UserContext = createContext(null);
 
+// Helper: compute a pagination descriptor from a full in-memory list
+const buildPagination = (totalItems, page, limit) => {
+    const totalPages = Math.ceil(totalItems / limit);
+    return {
+        page,
+        limit,
+        totalItems,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+    };
+};
+
 export const UserProvider = ({ children }) => {
-    const [users, setUsers] = useState([]);
-    const [companies, setCompanies] = useState([]);
+    // Full datasets (all records from the API)
+    const [allUsers, setAllUsers] = useState([]);
+    const [allCompanies, setAllCompanies] = useState([]);
     const [currentView, setCurrentView] = useState('companies');
     const [loading, setLoading] = useState(false);
 
-    // Pagination state for companies and users
-    const [companiesPagination, setCompaniesPagination] = useState({
-        page: 1, limit: 20, totalItems: 0, totalPages: 0, hasNextPage: false, hasPrevPage: false
-    });
-    const [usersPagination, setUsersPagination] = useState({
-        page: 1, limit: 20, totalItems: 0, totalPages: 0, hasNextPage: false, hasPrevPage: false
-    });
+    // Current page for each view (client-side)
+    const [companiesPage, setCompaniesPage] = useState(1);
+    const [usersPage, setUsersPage] = useState(1);
 
-    // ✅ On-demand fetch functions with pagination
-    const fetchCompanies = useCallback(async (page = 1, limit = 20) => {
+    const COMPANIES_LIMIT = 20;
+    const USERS_LIMIT = 20;
+
+    // ✅ On-demand fetch functions — load ALL data from the server
+    const fetchCompanies = useCallback(async () => {
         setLoading(true);
         try {
-            const response = await api.companies.getAll(page, limit);
+            const response = await api.companies.getAll();
             if (response.data?.success) {
                 const data = response.data.data || [];
-                setCompanies(Array.isArray(data) ? data : []);
-                if (response.data.pagination) {
-                    setCompaniesPagination(response.data.pagination);
-                }
+                setAllCompanies(Array.isArray(data) ? data : []);
+                setCompaniesPage(1); // Reset to first page on fresh fetch
             }
         } catch (error) {
             console.error('Error fetching companies:', error);
-            setCompanies([]);
+            setAllCompanies([]);
         } finally {
             setLoading(false);
         }
     }, []);
 
-    const fetchUsers = useCallback(async (page = 1, limit = 20) => {
+    const fetchUsers = useCallback(async () => {
         setLoading(true);
         try {
-            const response = await api.users.getAll(page, limit);
+            const response = await api.users.getAll();
             if (response.data?.success) {
                 const data = response.data.data || [];
-                setUsers(Array.isArray(data) ? data : []);
-                if (response.data.pagination) {
-                    setUsersPagination(response.data.pagination);
-                }
+                setAllUsers(Array.isArray(data) ? data : []);
+                setUsersPage(1); // Reset to first page on fresh fetch
             }
         } catch (error) {
             console.error('Error fetching users:', error);
-            setUsers([]);
+            setAllUsers([]);
         } finally {
             setLoading(false);
         }
     }, []);
 
-    // Pagination navigation helpers
+    // Pagination navigation — just update the page number, no re-fetch
     const goToCompaniesPage = useCallback((page) => {
-        fetchCompanies(page, companiesPagination.limit);
-    }, [fetchCompanies, companiesPagination.limit]);
+        setCompaniesPage(page);
+    }, []);
 
     const goToUsersPage = useCallback((page) => {
-        fetchUsers(page, usersPagination.limit);
-    }, [fetchUsers, usersPagination.limit]);
+        setUsersPage(page);
+    }, []);
 
-    // Refresh function - fetches current view's data (current page)
+    // Refresh function — re-fetches current view's data
     const refresh = useCallback(async () => {
         setLoading(true);
         if (currentView === 'users') {
-            await fetchUsers(usersPagination.page, usersPagination.limit);
+            await fetchUsers();
         } else {
-            await fetchCompanies(companiesPagination.page, companiesPagination.limit);
+            await fetchCompanies();
         }
-    }, [currentView, fetchUsers, fetchCompanies, usersPagination, companiesPagination]);
+    }, [currentView, fetchUsers, fetchCompanies]);
 
-    // Helper functions for updating state
+    // Helper functions for optimistic updates
     const addCompany = useCallback((company) => {
-        setCompanies(prev => [company, ...prev]);
-        setCompaniesPagination(prev => ({ ...prev, totalItems: prev.totalItems + 1 }));
+        setAllCompanies(prev => [company, ...prev]);
     }, []);
 
     const updateCompany = useCallback((id, updates) => {
-        setCompanies(prev =>
+        setAllCompanies(prev =>
             prev.map(c => c._id === id ? { ...c, ...updates } : c)
         );
     }, []);
 
-    const deleteCompanies = useCallback((ids) => {
-        setCompanies(prev =>
-            prev.filter(c => !ids.includes(c._id))
-        );
-        setCompaniesPagination(prev => ({
-            ...prev,
-            totalItems: Math.max(0, prev.totalItems - ids.length)
-        }));
+    const deleteCompanies = useCallback(async (ids) => {
+        try {
+            const response = await api.companies.delete(ids);
+            if (response.data?.success) {
+                // Optimistically remove from local state after confirmed server deletion
+                setAllCompanies(prev => prev.filter(c => !ids.includes(c._id)));
+                return { success: true, message: response.data.message || 'Companies deleted successfully' };
+            } else {
+                return { success: false, message: response.data?.message || 'Failed to delete companies' };
+            }
+        } catch (error) {
+            console.error('Error deleting companies:', error);
+            return { success: false, message: error.response?.data?.message || 'Failed to delete companies' };
+        }
     }, []);
 
     const deleteUsers = useCallback((ids) => {
-        setUsers(prev =>
+        setAllUsers(prev =>
             prev.filter(u => !ids.includes(u._id))
         );
-        setUsersPagination(prev => ({
-            ...prev,
-            totalItems: Math.max(0, prev.totalItems - ids.length)
-        }));
     }, []);
 
     const suspendUsers = useCallback(async (userIds, reason) => {
         try {
             const response = await api.users.suspend(userIds, reason);
             if (response.data?.success) {
-                await refresh();
+                await fetchUsers();
                 return { success: true, message: response.data.message };
             }
             return { success: false, message: response.data?.message || 'Suspension failed' };
@@ -119,13 +129,13 @@ export const UserProvider = ({ children }) => {
             console.error('Error suspending users:', error);
             return { success: false, message: error.response?.data?.message || 'Something went wrong' };
         }
-    }, [refresh]);
+    }, [fetchUsers]);
 
     const unsuspendUsers = useCallback(async (userIds) => {
         try {
             const response = await api.users.unsuspend(userIds);
             if (response.data?.success) {
-                await refresh();
+                await fetchUsers();
                 return { success: true, message: response.data.message };
             }
             return { success: false, message: response.data?.message || 'Unsuspension failed' };
@@ -133,11 +143,36 @@ export const UserProvider = ({ children }) => {
             console.error('Error unsuspending users:', error);
             return { success: false, message: error.response?.data?.message || 'Something went wrong' };
         }
-    }, [refresh]);
+    }, [fetchUsers]);
+
+    // Compute paged slices client-side
+    const companiesPagination = useMemo(() =>
+        buildPagination(allCompanies.length, companiesPage, COMPANIES_LIMIT),
+        [allCompanies.length, companiesPage]
+    );
+
+    const usersPagination = useMemo(() =>
+        buildPagination(allUsers.length, usersPage, USERS_LIMIT),
+        [allUsers.length, usersPage]
+    );
+
+    // Only expose the current page's slice to consumers
+    const companies = useMemo(() => {
+        const start = (companiesPage - 1) * COMPANIES_LIMIT;
+        return allCompanies.slice(start, start + COMPANIES_LIMIT);
+    }, [allCompanies, companiesPage]);
+
+    const users = useMemo(() => {
+        const start = (usersPage - 1) * USERS_LIMIT;
+        return allUsers.slice(start, start + USERS_LIMIT);
+    }, [allUsers, usersPage]);
 
     const value = useMemo(() => ({
         users,
         companies,
+        // Full datasets — kept for features that need to search across all records
+        allUsers,
+        allCompanies,
         currentData: currentView === 'users' ? users : companies,
         currentView,
         setCurrentView,
@@ -161,6 +196,8 @@ export const UserProvider = ({ children }) => {
     }), [
         users,
         companies,
+        allUsers,
+        allCompanies,
         currentView,
         loading,
         fetchCompanies,
@@ -175,7 +212,7 @@ export const UserProvider = ({ children }) => {
         companiesPagination,
         usersPagination,
         goToCompaniesPage,
-        goToUsersPage
+        goToUsersPage,
     ]);
 
     return (

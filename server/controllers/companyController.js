@@ -3,20 +3,11 @@ const List = require("../models/listDB");
 
 const handleGetAllCompanies = async (req, res) => {
     const user = req.user;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
-    const skip = (page - 1) * limit;
 
     try {
-        // Get total count for pagination metadata
-        const totalItems = await Company.countDocuments({ createdBy: user.id });
-        const totalPages = Math.ceil(totalItems / limit);
-
-        // Fetch only the companies for current page
+        // All records returned at once; frontend paginates client-side
         const companies = await Company.find({ createdBy: user.id })
             .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit)
             .lean();
 
         const allLists = await List.find({ createdBy: user.id }).lean();
@@ -48,14 +39,6 @@ const handleGetAllCompanies = async (req, res) => {
             success: true,
             message: "Companies retrieved successfully",
             data: companiesWithLists,
-            pagination: {
-                page,
-                limit,
-                totalItems,
-                totalPages,
-                hasNextPage: page < totalPages,
-                hasPrevPage: page > 1
-            }
         });
     } catch (err) {
         console.error("Get all companies error:", err);

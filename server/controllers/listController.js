@@ -21,33 +21,46 @@ const handleAddList = async (req, res) => {
 
 const handleGetAllLists = async (req, res) => {
   const user = req.user;
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 5;
-  const skip = (page - 1) * limit;
+
+  // NOTE: Server-side pagination is intentionally disabled.
+  // All records are returned at once; the frontend handles paging client-side.
+  // The original server-side pagination code is preserved below for reference:
+  //
+  // const page = parseInt(req.query.page) || 1;
+  // const limit = parseInt(req.query.limit) || 5;
+  // const skip = (page - 1) * limit;
+  //
+  // const totalItems = await List.countDocuments({ createdBy: user.id });
+  // const totalPages = Math.ceil(totalItems / limit);
+  //
+  // const lists = await List.find({ createdBy: user.id })
+  //   .populate("listItems.company", "_id companyName companyEmail")
+  //   .sort({ createdAt: -1 })
+  //   .skip(skip)
+  //   .limit(limit)
+  //   .lean();
+  //
+  // return res.status(200).send({
+  //   success: true,
+  //   message: "Lists retrieved successfully",
+  //   data: lists,
+  //   pagination: {
+  //     page, limit, totalItems, totalPages,
+  //     hasNextPage: page < totalPages,
+  //     hasPrevPage: page > 1
+  //   }
+  // });
 
   try {
-    const totalItems = await List.countDocuments({ createdBy: user.id });
-    const totalPages = Math.ceil(totalItems / limit);
-
     const lists = await List.find({ createdBy: user.id })
       .populate("listItems.company", "_id companyName companyEmail")
       .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
       .lean();
 
     return res.status(200).send({
       success: true,
       message: "Lists retrieved successfully",
       data: lists,
-      pagination: {
-        page,
-        limit,
-        totalItems,
-        totalPages,
-        hasNextPage: page < totalPages,
-        hasPrevPage: page > 1
-      }
     });
   } catch (err) {
     console.error("Get all lists error:", err);

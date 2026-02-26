@@ -21,6 +21,8 @@ const SavedListsModal = ({
   savedLists,
   selectedSavedLists,
   toggleSavedListSelection,
+  selectAllLists,       // fn(listArray) — selects all given lists; fn([]) clears
+  allListsData = [],   // full unfiltered list array for cross-page select
   toggleManualListForm,
   deleteSavedList,
   mailSavedList,
@@ -31,11 +33,30 @@ const SavedListsModal = ({
   selectedUsersCount = 0,
   pagination,
   onPageChange,
+  // Cross-page search — managed by ListsContext
+  searchTerm,
+  setSearchTerm,
+  allListsCount = 0,
 }) => {
-  const [searchTerm, setSearchTerm] = useState('');
   const [showEditForm, setShowEditForm] = useState(false);
 
   if (!showSavedListsTable) return null;
+
+  const allPageSelected = savedLists.length > 0 && savedLists.every(l => selectedSavedLists.includes(l._id));
+  const allAcrossPagesSelected = allListsData.length > 0 && selectedSavedLists.length === allListsData.length;
+
+  const handleSelectAllOnPage = () => {
+    if (allPageSelected) {
+      // Deselect all on this page (keep selections from other pages)
+      const pageIds = savedLists.map(l => l._id);
+      selectAllLists(allListsData.filter(l => !pageIds.includes(l._id)));
+    } else {
+      // Add all on this page to selection
+      const existing = allListsData.filter(l => selectedSavedLists.includes(l._id));
+      const newOnes = savedLists.filter(l => !selectedSavedLists.includes(l._id));
+      selectAllLists([...existing, ...newOnes]);
+    }
+  };
 
   const handleEditListSave = async (listName, typedEmail, contactNames, removedCompanyIds) => {
     console.log("Editing list with removedCompanyIds:", removedCompanyIds);
@@ -61,18 +82,6 @@ const SavedListsModal = ({
       return false;
     }
   };
-
-  // Filter lists based on search term
-  const filteredLists = savedLists.filter((list) => {
-    const searchLower = searchTerm.toLowerCase();
-    const emails = list.listItems?.map((item) => item.email).join(', ').toLowerCase() || '';
-    const contacts = list.listItems?.map((item) => item.contactName).join(', ').toLowerCase() || '';
-    return (
-      list.listName.toLowerCase().includes(searchLower) ||
-      emails.includes(searchLower) ||
-      contacts.includes(searchLower)
-    );
-  });
 
   return (
     <>
@@ -108,7 +117,9 @@ const SavedListsModal = ({
                 <InlinePagination pagination={pagination} onPageChange={onPageChange} />
               </h3>
               <p className="text-gray-300 text-sm">
-                Manage your saved lists and perform bulk actions
+                {pagination?.totalItems > 0
+                  ? `Showing ${savedLists.length} of ${pagination.totalItems} lists`
+                  : 'Manage your saved lists and perform bulk actions'}
               </p>
             </div>
             {/* Search Bar - Top Right */}
@@ -250,80 +261,115 @@ const SavedListsModal = ({
                       <div className="flex items-center justify-center space-x-2">
                         <MdCheckCircle className="text-orange-400" />
                         <span>Select</span>
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 rounded border-2 border-orange-400/70 cursor-pointer ml-1"
+                          checked={allPageSelected}
+                          onChange={handleSelectAllOnPage}
+                          title="Select / deselect this page"
+                        />
                       </div>
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-orange-500/10">
-                  {filteredLists.length === 0 ? (
+                  {savedLists.length === 0 ? (
                     <tr>
                       <td colSpan="4" className="py-12 px-6 text-center text-gray-300">
                         <div className="flex flex-col items-center space-y-3">
                           <MdFolder className="text-6xl text-gray-500" />
-                          <p className="text-xl font-medium">{savedLists.length === 0 ? 'No saved lists found' : 'No Results Found'}</p>
-                          <p className="text-sm">{savedLists.length === 0 ? 'Create your first email list to get started' : 'Try adjusting your search'}</p>
+                          <p className="text-xl font-medium">{allListsCount === 0 ? 'No saved lists found' : 'No Results Found'}</p>
+                          <p className="text-sm">{allListsCount === 0 ? 'Create your first email list to get started' : 'Try adjusting your search'}</p>
                         </div>
                       </td>
                     </tr>
                   ) : (
-                    filteredLists.map((list, index) => (
-                      <tr
-                        key={list._id || `list-${index}`}
-                        className={`transition-all duration-300 hover:bg-orange-500/5 ${list._id && selectedSavedLists.includes(list._id)
-                          ? 'bg-gradient-to-r from-orange-500/20 to-amber-500/20 border-l-4 border-orange-400 shadow-lg shadow-orange-500/10'
-                          : index % 2 === 0 ? 'bg-gray-800/20' : 'bg-transparent'
-                          }`}
-                      >
-                        <td className="py-4 px-6">
-                          <div className="font-semibold text-orange-300 text-lg">{list.listName}</div>
-                          <div className="text-sm text-gray-400 flex items-center space-x-1 mt-1">
-                            <MdGroup className="text-xs" />
-                            <span>{list.listItems?.length || 0} contacts</span>
-                          </div>
-                        </td>
-                        <td className="py-4 px-6">
-                          <div
-                            className="max-w-xs truncate text-gray-300 text-sm cursor-help"
-                            title={list.listItems?.map((item) => item.contactEmail).join(', ')}
-                          >
-                            {list.listItems?.slice(0, 2).map((item) => item.contactEmail).join(', ')}
-                            {list.listItems?.length > 2 && <span className="text-orange-400 ml-1">+{list.listItems.length - 2} more</span>}
-                          </div>
-                        </td>
-                        <td className="py-4 px-6">
-                          <div
-                            className="max-w-xs truncate text-gray-300 text-sm cursor-help"
-                            title={list.listItems?.map((item) => item.contactName).join(', ')}
-                          >
-                            {list.listItems?.slice(0, 2).map((item) => item.contactName).join(', ')}
-                            {list.listItems?.length > 2 && <span className="text-orange-400 ml-1">+{list.listItems.length - 2} more</span>}
-                          </div>
-                        </td>
-                        <td className="py-4 px-6 text-center">
-                          <input
-                            type="checkbox"
-                            className={`w-5 h-5 rounded border-2 transition-all duration-300 ${list._id && selectedSavedLists.includes(list._id)
-                              ? 'bg-orange-500 border-orange-500 text-white'
-                              : 'border-orange-400/50 hover:border-orange-400 bg-gray-800/60'
-                              }`}
-                            checked={list._id ? selectedSavedLists.includes(list._id) : false}
-                            onChange={() => list._id && toggleSavedListSelection(list._id)}
-                            disabled={!list._id}
-                          />
-                        </td>
-                      </tr>
-                    ))
+                    <>
+                      {/* Cross-page select-all banner */}
+                      {allPageSelected && allListsData.length > savedLists.length && (
+                        <tr className="bg-orange-500/10 border-b border-orange-500/20">
+                          <td colSpan="4" className="py-2 px-4 text-center text-sm">
+                            {allAcrossPagesSelected ? (
+                              <span className="text-green-400">
+                                All {allListsData.length} lists are selected.{' '}
+                                <button onClick={() => selectAllLists([])} className="underline text-orange-300 hover:text-white ml-1 cursor-pointer">Clear selection</button>
+                              </span>
+                            ) : (
+                              <span className="text-gray-300">
+                                All {savedLists.length} lists on this page are selected.{' '}
+                                <button onClick={() => selectAllLists(allListsData)} className="underline text-orange-300 hover:text-white ml-1 cursor-pointer">
+                                  Select all {allListsData.length} lists
+                                </button>
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                      {savedLists.map((list, index) => (
+                        <tr
+                          key={list._id || `list-${index}`}
+                          className={`transition-all duration-300 hover:bg-orange-500/5 ${list._id && selectedSavedLists.includes(list._id)
+                            ? 'bg-gradient-to-r from-orange-500/20 to-amber-500/20 border-l-4 border-orange-400 shadow-lg shadow-orange-500/10'
+                            : index % 2 === 0 ? 'bg-gray-800/20' : 'bg-transparent'
+                            }`}
+                        >
+                          <td className="py-4 px-6">
+                            <div className="font-semibold text-orange-300 text-lg">{list.listName}</div>
+                            <div className="text-sm text-gray-400 flex items-center space-x-1 mt-1">
+                              <MdGroup className="text-xs" />
+                              <span>{list.listItems?.length || 0} contacts</span>
+                            </div>
+                          </td>
+                          <td className="py-4 px-6">
+                            <div
+                              className="max-w-xs truncate text-gray-300 text-sm cursor-help"
+                              title={list.listItems?.map((item) => item.contactEmail).join(', ')}
+                            >
+                              {list.listItems?.slice(0, 2).map((item) => item.contactEmail).join(', ')}
+                              {list.listItems?.length > 2 && <span className="text-orange-400 ml-1">+{list.listItems.length - 2} more</span>}
+                            </div>
+                          </td>
+                          <td className="py-4 px-6">
+                            <div
+                              className="max-w-xs truncate text-gray-300 text-sm cursor-help"
+                              title={list.listItems?.map((item) => item.contactName).join(', ')}
+                            >
+                              {list.listItems?.slice(0, 2).map((item) => item.contactName).join(', ')}
+                              {list.listItems?.length > 2 && <span className="text-orange-400 ml-1">+{list.listItems.length - 2} more</span>}
+                            </div>
+                          </td>
+                          <td className="py-4 px-6 text-center">
+                            <input
+                              type="checkbox"
+                              className={`w-5 h-5 rounded border-2 transition-all duration-300 ${list._id && selectedSavedLists.includes(list._id)
+                                ? 'bg-orange-500 border-orange-500 text-white'
+                                : 'border-orange-400/50 hover:border-orange-400 bg-gray-800/60'
+                                }`}
+                              checked={list._id ? selectedSavedLists.includes(list._id) : false}
+                              onChange={() => list._id && toggleSavedListSelection(list._id)}
+                              disabled={!list._id}
+                            />
+                          </td>
+                        </tr>
+                      ))
+                      }
+                    </>
                   )}
                 </tbody>
               </table>
             </div>
           </div>
 
-          {/* Close Button */}
-          <div className="flex justify-center">
+          {/* Bottom bar: record count + close */}
+          <div className="flex items-center justify-between mt-2">
+            <span className="text-gray-400 text-sm">
+              {pagination?.totalItems > 0
+                ? `Showing ${savedLists.length} of ${pagination.totalItems} lists`
+                : `${allListsCount} list${allListsCount !== 1 ? 's' : ''} total`}
+            </span>
             <button
               onClick={closeSavedListsTable}
-              className="bg-gray-700/40 hover:bg-gray-600/40 text-white py-3 px-8 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 backdrop-blur-sm border border-gray-600/30 hover:border-gray-500/50 flex items-center space-x-2"
+              className="bg-gray-700/40 hover:bg-gray-600/40 text-white py-2 px-6 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 backdrop-blur-sm border border-gray-600/30 hover:border-gray-500/50 flex items-center space-x-2"
             >
               <MdClose className="text-lg" />
               <span>Close</span>

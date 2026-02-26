@@ -31,6 +31,8 @@ const AdminContent = () => {
   const {
     users: contextUsers,
     companies: contextCompanies,
+    allUsers,
+    allCompanies,
     currentView,
     setCurrentView,
     loading,
@@ -58,11 +60,14 @@ const AdminContent = () => {
 
   // Derived state
   const show = currentView === 'users';
-  const users = currentView === 'users' ? contextUsers : contextCompanies;
+  // Paged slice from context — used for display and individual row lookups
+  const users = show ? contextUsers : contextCompanies;
+  // Full dataset — used for cross-page search so filtering isn't constrained to the current page
+  const allCurrentData = show ? allUsers : allCompanies;
 
-  // Memoized filtered users (now using debounced search)
+  // Memoized filtered dataset — searches across ALL records regardless of current page
   const filteredUsers = useMemo(() => {
-    return (users || []).filter((user) => {
+    return (allCurrentData || []).filter((user) => {
       if (!user) return false;
 
       const searchFields = show
@@ -106,7 +111,32 @@ const AdminContent = () => {
 
       return keywords.every(k => haystack.includes(k));
     });
-  }, [users, searchTerm, show, filterProcurement]);
+  }, [allCurrentData, searchTerm, show, filterProcurement]);
+
+  // Compute search-aware pagination from filtered total
+  // (currentPagination from context is based on raw total; this respects search results)
+  const filteredPagination = useMemo(() => {
+    const limit = currentPagination?.limit || 20;
+    const page = currentPagination?.page || 1;
+    const totalItems = filteredUsers.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / limit));
+    const safePage = Math.min(page, totalPages);
+    return {
+      page: safePage,
+      limit,
+      totalItems,
+      totalPages,
+      hasNextPage: safePage < totalPages,
+      hasPrevPage: safePage > 1,
+    };
+  }, [filteredUsers.length, currentPagination]);
+
+  // Slice filteredUsers to the current page — this is what DataTable actually renders
+  const pagedFilteredUsers = useMemo(() => {
+    const { page, limit } = filteredPagination;
+    const start = (page - 1) * limit;
+    return filteredUsers.slice(start, start + limit);
+  }, [filteredUsers, filteredPagination]);
 
   // Actions
   // Track if we've fetched users at least once (local to this component)
@@ -158,10 +188,13 @@ const AdminContent = () => {
         toast.error(error.response?.data?.message || "Something went wrong");
       }
     } else {
-      deleteCompanies(selectedUsers);
-      await refresh();
-      setSelectedUsers([]);
-      toast.success("Company deleted successfully");
+      const result = await deleteCompanies(selectedUsers);
+      if (result?.success) {
+        setSelectedUsers([]);
+        toast.success(result.message);
+      } else {
+        toast.error(result?.message || 'Failed to delete companies');
+      }
     }
   }, [show, selectedUsers, refresh, deleteCompanies]);
 
@@ -173,7 +206,7 @@ const AdminContent = () => {
 
     const reason = "Violation of Terms of Services or Privacy Policy";
     const result = await suspendUsers(selectedUsers, reason);
-    
+
     if (result.success) {
       setSelectedUsers([]);
       toast.success(result.message);
@@ -188,7 +221,7 @@ const AdminContent = () => {
     }
 
     const result = await unsuspendUsers(selectedUsers);
-    
+
     if (result.success) {
       setSelectedUsers([]);
       toast.success(result.message);
@@ -206,6 +239,7 @@ const AdminContent = () => {
   // Lists Context
   const {
     savedLists,
+    allLists: allSavedLists,       // Full dataset for cross-page lookups
     selectedLists: selectedSavedLists,
     showListsTable: showSavedListsTable,
     fetchLists: fetchSavedLists,
@@ -218,11 +252,14 @@ const AdminContent = () => {
     openListsTable: openSavedListsTable,
     pagination: listsPagination,
     goToPage: listsGoToPage,
+    searchTerm: listsSearchTerm,
+    setSearchTerm: setListsSearchTerm,
   } = useLists();
 
   // Templates Context
   const {
     templates: savedTemplates,
+    allTemplates: allSavedTemplates,  // Full dataset for cross-page lookups
     selectedTemplates: selectedSavedTemplates,
     showTemplatesTable: showSavedTemplatesTable,
     fetchTemplates: fetchSavedTemplates,
@@ -233,6 +270,8 @@ const AdminContent = () => {
     updateTemplate,
     pagination: templatesPagination,
     goToPage: templatesGoToPage,
+    searchTerm: templatesSearchTerm,
+    setSearchTerm: setTemplatesSearchTerm,
   } = useTemplates();
 
   // Modal states
@@ -256,7 +295,8 @@ const AdminContent = () => {
       return null;
     }
 
-    const list = savedLists.find(l => l._id === selectedSavedLists[0]);
+    // Search across ALL lists (not just current page's slice)
+    const list = allSavedLists.find(l => l._id === selectedSavedLists[0]);
     if (!list) return null;
 
     if (!list.listItems || list.listItems.length === 0) {
@@ -404,7 +444,8 @@ const AdminContent = () => {
       return;
     }
 
-    const targetList = savedLists.find(list => list._id === listId);
+    // Search across ALL lists (not just current page's slice)
+    const targetList = allSavedLists.find(list => list._id === listId);
     if (!targetList) {
       toast.error('⚠️ List not found!');
       return;
@@ -508,7 +549,7 @@ const AdminContent = () => {
             <div className="flex items-center justify-between mb-3">
               <div>
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-400 via-accent-400 to-primary-500 bg-clip-text text-transparent">
-                  ⚡ Admin Dashboard
+                  ⚡ Dashboard
                 </h1>
                 <p className="text-gray-300 text-xs">
                   Loading your data...
@@ -539,7 +580,7 @@ const AdminContent = () => {
           <div className="flex items-center justify-between mb-3">
             <div>
               <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-400 via-accent-400 to-primary-500 bg-clip-text text-transparent">
-                ⚡ Admin Dashboard
+                ⚡ Dashboard
               </h1>
               <p className="text-gray-300 text-xs">
                 Manage your {show ? 'users' : 'companies'} with powerful tools
@@ -547,7 +588,9 @@ const AdminContent = () => {
             </div>
             <div className="flex items-center space-x-2">
               <div className="bg-gradient-to-r from-primary-500 to-accent-500 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-glow animate-glow">
-                {filteredUsers.length} {show ? 'Users' : 'Companies'}
+                {pagedFilteredUsers.length === filteredUsers.length
+                  ? `${filteredUsers.length} ${show ? 'Users' : 'Companies'}`
+                  : `${pagedFilteredUsers.length} of ${filteredUsers.length} ${show ? 'Users' : 'Companies'}`}
               </div>
               <div className="bg-gradient-to-r from-accent-500 to-primary-500 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-glow">
                 {selectedUsers.length} Selected
@@ -609,7 +652,8 @@ const AdminContent = () => {
         {/* Main Content Area - Enhanced Table */}
         <div className="p-4 pb-20">
           <DataTable
-            filteredUsers={filteredUsers}
+            filteredUsers={pagedFilteredUsers}
+            allFilteredUsers={filteredUsers}
             show={show}
             selectedUsers={selectedUsers}
             toggleUserSelection={toggleUserSelection}
@@ -617,7 +661,7 @@ const AdminContent = () => {
             updateUserNote={updateUserNote}
             openAddCompanyModal={openAddCompanyModal}
             searchTerm={searchTerm}
-            pagination={currentPagination}
+            pagination={filteredPagination}
             onPageChange={goToPage}
           />
         </div>
@@ -671,6 +715,9 @@ const AdminContent = () => {
           selectedUsersCount={selectedUsers.length}
           pagination={listsPagination}
           onPageChange={listsGoToPage}
+          searchTerm={listsSearchTerm}
+          setSearchTerm={setListsSearchTerm}
+          allListsCount={allSavedLists.length}
         />
 
         <ManualListFormModal
@@ -699,6 +746,9 @@ const AdminContent = () => {
           closeSavedTemplatesTable={closeSavedTemplatesTable}
           pagination={templatesPagination}
           onPageChange={templatesGoToPage}
+          searchTerm={templatesSearchTerm}
+          setSearchTerm={setTemplatesSearchTerm}
+          allTemplatesCount={allSavedTemplates.length}
         />
 
         <ManualTemplateFormModal
