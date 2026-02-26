@@ -106,6 +106,9 @@ export default function Terms() {
               immediately, without prior notice, for conduct that we believe
               violates these Terms of Service or is harmful to other users.
             </div>
+            <div className="mt-4 bg-dark-800/50 p-4 rounded-lg border border-red-500/30">
+              <p className="text-red-400 font-semibold">Accounts found sending unsolicited or non-consensual emails may be terminated immediately.</p>
+            </div>
           </Section>
         </div>
 

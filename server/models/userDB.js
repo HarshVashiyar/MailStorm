@@ -55,6 +55,18 @@ const userSchema = new mongoose.Schema(
       enum: ["User", "Admin"],
       default: "User",
     },
+    suspended: {
+      type: Boolean,
+      default: false,
+    },
+    suspendedAt: {
+      type: Date,
+      default: null,
+    },
+    suspensionReason: {
+      type: String,
+      default: null,
+    },
     profilePhoto: {
       url: {
         type: String,
@@ -91,6 +103,15 @@ userSchema.static(
       error.statusCode = 404;
       throw error;
     }
+    
+    if (user.suspended) {
+      const error = new Error("Account Suspended");
+      error.statusCode = 403;
+      error.suspended = true;
+      error.suspensionReason = user.suspensionReason || "Account suspended for violating terms of service";
+      throw error;
+    }
+    
     const isPasswordMatch = await bcrypt.compare(
       password,
       user.password

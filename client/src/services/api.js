@@ -14,6 +14,8 @@ export const api = {
             data: { userIds: ids },
             withCredentials: true
         }),
+        suspend: (userIds, reason) => axios.post(`${BASE_URL}user/suspend`, { userIds, reason }, { withCredentials: true }),
+        unsuspend: (userIds) => axios.post(`${BASE_URL}user/unsuspend`, { userIds }, { withCredentials: true }),
     },
 
     companies: {

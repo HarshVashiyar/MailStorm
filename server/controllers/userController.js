@@ -1,5 +1,6 @@
 const User = require("../models/userDB");
 const cloudinary = require("../utilities/cloudinary");
+const { sendSuspensionEmail, sendUnsuspensionEmail } = require("../utilities/mailUtil");
 
 const handleCheckAuthStatus = async (req, res) => {
     const user = req.user;
@@ -58,6 +59,13 @@ const handleUserSignIn = async (req, res) => {
     }
     catch (error) {
         console.error("Error signing in user:", error);
+        if (error.suspended) {
+            return res.status(403).json({ 
+                success: false, 
+                suspended: true,
+                message: error.suspensionReason || "Your account has been suspended."
+            });
+        }
         if (error.statusCode === 401 || error.statusCode === 404) {
             return res.status(401).json({ success: false, message: "Email or Password is incorrect." });
         }
@@ -87,6 +95,9 @@ const handleGetAllUsers = async (req, res) => {
             email: user.email,
             dob: user.dob,
             profilePhoto: user.profilePhoto,
+            suspended: user.suspended,
+            suspendedAt: user.suspendedAt,
+            suspensionReason: user.suspensionReason,
             createdAt: user.createdAt,
             updatedAt: user.updatedAt,
         }));
@@ -110,6 +121,87 @@ const handleGetAllUsers = async (req, res) => {
         return res.status(500).json({ success: false, message: error.message });
     }
 }
+
+const handleSuspendUsers = async (req, res) => {
+    const { userIds } = req.body;
+    const { reason } = req.body;
+    
+    if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+        return res.status(400).json({ success: false, message: "User IDs are required" });
+    }
+
+    try {
+        const users = await User.find({ _id: { $in: userIds } });
+        
+        if (users.length === 0) {
+            return res.status(404).json({ success: false, message: "No users found" });
+        }
+
+        const suspensionReason = reason || "Violation of Terms of Services or Privacy Policy";
+        
+        for (const user of users) {
+            await User.updateOne(
+                { _id: user._id },
+                { 
+                    $set: { 
+                        suspended: true, 
+                        suspendedAt: new Date(), 
+                        suspensionReason 
+                    } 
+                }
+            );
+            
+            await sendSuspensionEmail(user.email, user.fullName, suspensionReason);
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: `${users.length} user(s) have been suspended and notified via email`
+        });
+    } catch (error) {
+        console.error("Error suspending users:", error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+}
+
+const handleUnsuspendUsers = async (req, res) => {
+    const { userIds } = req.body;
+    
+    if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+        return res.status(400).json({ success: false, message: "User IDs are required" });
+    }
+
+    try {
+        const users = await User.find({ _id: { $in: userIds } });
+        
+        if (users.length === 0) {
+            return res.status(404).json({ success: false, message: "No users found" });
+        }
+
+        for (const user of users) {
+            await User.updateOne(
+                { _id: user._id },
+                { 
+                    $set: { 
+                        suspended: false, 
+                        suspendedAt: null, 
+                        suspensionReason: null 
+                    } 
+                }
+            );
+            
+            await sendUnsuspensionEmail(user.email, user.fullName);
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: `${users.length} user(s) have been unsuspended`
+        });
+    } catch (error) {
+        console.error("Error unsuspending users:", error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
 
 const handleGetUserById = async (req, res) => {
     const { id } = req.user;
@@ -307,6 +399,8 @@ module.exports = {
     handleGetUserById,
     handleUpdateUser,
     handleDeleteUsers,
+    handleSuspendUsers,
+    handleUnsuspendUsers,
     handleLogout,
     handleUploadProfilePhoto,
     handleDeleteProfilePhoto,

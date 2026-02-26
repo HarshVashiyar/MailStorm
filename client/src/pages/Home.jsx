@@ -2,13 +2,13 @@ const Home = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-dark-900 via-dark-800 to-dark-900 relative overflow-hidden">
       {/* Animated background elements */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary-500/10 via-accent-500/5 to-primary-600/10 animate-pulse-slow pointer-events-none"></div>
+      <div className="absolute inset-0 bg-gradient-to-br from-primary-500/10 via-accent-500/5 to-primary-600/10 pointer-events-none"></div>
       <div className="absolute inset-0 bg-gradient-radial from-primary-400/20 via-transparent to-transparent pointer-events-none"></div>
 
       {/* Floating orbs */}
-      <div className="absolute top-40 -left-20 w-96 h-96 bg-primary-500/20 rounded-full blur-3xl animate-pulse-slow"></div>
-      <div className="absolute top-1/3 -right-20 w-[500px] h-[500px] bg-accent-500/20 rounded-full blur-3xl animate-pulse-slow" style={{ animationDelay: '1s' }}></div>
-      <div className="absolute bottom-20 left-1/3 w-80 h-80 bg-primary-400/15 rounded-full blur-3xl animate-pulse-slow" style={{ animationDelay: '2s' }}></div>
+      <div className="absolute top-40 -left-20 w-96 h-96 bg-primary-500/20 rounded-full blur-3xl"></div>
+      <div className="absolute top-1/3 -right-20 w-[500px] h-[500px] bg-accent-500/20 rounded-full blur-3xl"></div>
+      <div className="absolute bottom-20 left-1/3 w-80 h-80 bg-primary-400/15 rounded-full blur-3xl"></div>
 
       {/* Main Content */}
       <div className="relative z-10 px-4 sm:px-6 lg:px-8 py-16">

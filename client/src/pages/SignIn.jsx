@@ -47,7 +47,9 @@ const SignIn = () => {
     } catch (error) {
       toast.dismiss(toastId);
       setIsLoading(false);
-      if (error.response?.data?.message) {
+      if (error.response?.data?.suspended) {
+        setError(`Your account was suspended due to ${error.response.data.message || "Violation of Terms of Services or Privacy Policy"}, please check your inbox for more details.`);
+      } else if (error.response?.data?.message) {
         toast.error(error.response.data.message);
       } else if (error.response?.data) {
         toast.error(typeof error.response.data === 'string' ? error.response.data : "An error occurred.");

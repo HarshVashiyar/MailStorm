@@ -100,6 +100,12 @@ export default function Privacy() {
             and scheduling time. All email activity is initiated by user action.
           </Section>
 
+          <Section title="Compliance & Enforcement" icon="⚖️">
+            <div className="bg-dark-800/50 p-4 rounded-lg border border-amber-500/30">
+              <p>The platform may suspend accounts that violate email consent requirements.</p>
+            </div>
+          </Section>
+
           <Section title="Revoking Access" icon="🔓">
             <div className="bg-dark-800/50 p-4 rounded-lg border border-accent-500/30">
               Connected providers can be removed at any time from the profile settings.

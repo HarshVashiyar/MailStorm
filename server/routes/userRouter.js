@@ -8,6 +8,8 @@ const {
   handleGetUserById,
   handleUpdateUser,
   handleDeleteUsers,
+  handleSuspendUsers,
+  handleUnsuspendUsers,
   handleLogout,
   handleUploadProfilePhoto,
   handleDeleteProfilePhoto,
@@ -36,6 +38,10 @@ app.get("/getuser", authenticateUser, handleGetUserById);
 app.put("/updateuser", authenticateUser, handleUpdateUser);
 
 app.delete("/delete", authenticateUser, handleDeleteUsers);
+
+app.post("/suspend", authenticateUser, authorizeAdmin, handleSuspendUsers);
+
+app.post("/unsuspend", authenticateUser, authorizeAdmin, handleUnsuspendUsers);
 
 app.post("/logout", authenticateUser, handleLogout);
 

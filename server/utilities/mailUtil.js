@@ -152,9 +152,110 @@ const sendMail = async ({
   }
 };
 
+const sendSuspensionEmail = async (email, fullName, reason) => {
+  const ADMIN_MAIL = process.env.ADMIN_MAIL;
+  const ADMIN_MAIL_PASSWORD = process.env.ADMIN_MAIL_PASSWORD;
+  const ADMIN_MAIL_FROM = process.env.ADMIN_MAIL_FROM || 'MailStorm';
+  
+  const transporter = nodemailer.createTransport({
+    host: process.env.ADMIN_SMTP_HOST || 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    auth: {
+      user: ADMIN_MAIL,
+      pass: ADMIN_MAIL_PASSWORD,
+    },
+  });
+
+  const mailOptions = {
+    from: `${ADMIN_MAIL_FROM} <${ADMIN_MAIL}>`,
+    to: email,
+    subject: 'Account Suspension Notice - MailStorm',
+    html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background: linear-gradient(to right, #ef4444, #dc2626); padding: 20px; border-radius: 10px;">
+                <h1 style="color: white; margin: 0;">Account Suspended</h1>
+            </div>
+            <div style="padding: 20px; background: #f9fafb; border-radius: 10px; margin-top: 20px;">
+                <p>Dear ${fullName},</p>
+                <p>We regret to inform you that your MailStorm account has been <strong>suspended</strong>.</p>
+                <div style="background: #fee2e2; padding: 15px; border-radius: 5px; margin: 15px 0;">
+                    <strong style="color: #dc2626;">Reason for suspension:</strong>
+                    <p style="margin: 5px 0 0 0;">${reason}</p>
+                </div>
+                <p>This action was taken because you were found emailing recipients without their consent or violating our Privacy Policy or Terms of Service.</p>
+                <p>If you believe this suspension is a mistake or would like to appeal, please contact our support team.</p>
+                <p style="margin-top: 30px;">Best regards,<br/>MailStorm Team</p>
+            </div>
+            <div style="text-align: center; margin-top: 20px; color: #6b7280; font-size: 12px;">
+                <p>This is an automated message. Please do not reply to this email.</p>
+            </div>
+        </div>
+    `
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`Suspension email sent to ${email}`);
+    return { success: true };
+  } catch (error) {
+    console.error(`Failed to send suspension email to ${email}:`, error);
+    return { success: false, error: error.message };
+  }
+};
+
+const sendUnsuspensionEmail = async (email, fullName) => {
+  const ADMIN_MAIL = process.env.ADMIN_MAIL;
+  const ADMIN_MAIL_PASSWORD = process.env.ADMIN_MAIL_PASSWORD;
+  const ADMIN_MAIL_FROM = process.env.ADMIN_MAIL_FROM || 'MailStorm';
+  
+  const transporter = nodemailer.createTransport({
+    host: process.env.ADMIN_SMTP_HOST || 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    auth: {
+      user: ADMIN_MAIL,
+      pass: ADMIN_MAIL_PASSWORD,
+    },
+  });
+
+  const mailOptions = {
+    from: `${ADMIN_MAIL_FROM} <${ADMIN_MAIL}>`,
+    to: email,
+    subject: 'Account Reactivated - MailStorm',
+    html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background: linear-gradient(to right, #22c55e, #16a34a); padding: 20px; border-radius: 10px;">
+                <h1 style="color: white; margin: 0;">Account Reactivated</h1>
+            </div>
+            <div style="padding: 20px; background: #f9fafb; border-radius: 10px; margin-top: 20px;">
+                <p>Dear ${fullName},</p>
+                <p>Great news! Your MailStorm account has been <strong>reactivated</strong> and you can now access all features again.</p>
+                <p>Please ensure to comply with our Terms of Service and Privacy Policy when using the platform.</p>
+                <p>If you have any questions, feel free to contact our support team.</p>
+                <p style="margin-top: 30px;">Best regards,<br/>MailStorm Team</p>
+            </div>
+            <div style="text-align: center; margin-top: 20px; color: #6b7280; font-size: 12px;">
+                <p>This is an automated message. Please do not reply to this email.</p>
+            </div>
+        </div>
+    `
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    return { success: true };
+  } catch (error) {
+    console.error(`Failed to send unsuspension email to ${email}:`, error);
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = {
   sendOTP,
   verifyOTP,
   sendScheduledMail,
-  sendMail
+  sendMail,
+  sendSuspensionEmail,
+  sendUnsuspensionEmail
 }

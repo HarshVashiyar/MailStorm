@@ -48,6 +48,7 @@ const EmailModal = ({
   const [enhancingSubject, setEnhancingSubject] = useState(false);
   const [generatingHTML, setGeneratingHTML] = useState(false);
   const [editorKey, setEditorKey] = useState(0);
+  const [consentConfirmed, setConsentConfirmed] = useState(false);
 
   // Resizer refs/state for left/right columns
   const containerRef = useRef(null);
@@ -783,7 +784,22 @@ ${selectedSlot === slotNum
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-between gap-3 pt-4 border-t border-white/10">
+        <div className="space-y-3 pt-4 border-t border-white/10">
+          {/* Consent Checkbox */}
+          <div className="flex items-start space-x-2">
+            <input
+              type="checkbox"
+              id="consent-checkbox"
+              checked={consentConfirmed}
+              onChange={(e) => setConsentConfirmed(e.target.checked)}
+              className="w-4 h-4 mt-0.5 rounded border-2 border-white/30 bg-white/10 text-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 focus:ring-offset-transparent cursor-pointer"
+            />
+            <label htmlFor="consent-checkbox" className="text-xs text-gray-300 leading-tight cursor-pointer">
+              I confirm that all selected recipients have explicitly consented to receive communication.
+            </label>
+          </div>
+          
+          <div className="flex justify-between gap-3">
           <button
             onClick={resetEmailForm}
             className="flex-1 bg-white/10 hover:bg-white/20 text-white py-2 px-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 backdrop-blur-sm border border-white/20 flex items-center justify-center space-x-2 text-sm"
@@ -795,7 +811,8 @@ ${selectedSlot === slotNum
           {schedule ? (
             <button
               onClick={postScheduledEmail}
-              className="flex-1 bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700 text-white py-2 px-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow flex items-center justify-center space-x-2 text-sm"
+              disabled={!consentConfirmed}
+              className="flex-1 bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700 text-white py-2 px-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow flex items-center justify-center space-x-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
               <FaCalendarAlt />
               <span>Schedule</span>
@@ -803,11 +820,13 @@ ${selectedSlot === slotNum
           ) : (
             <button
               onClick={handleSendMail}
-              className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white py-2 px-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow flex items-center justify-center space-x-2 text-sm"
+              disabled={!consentConfirmed}
+              className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white py-2 px-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow flex items-center justify-center space-x-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
               <span>Send</span>
             </button>
           )}
+        </div>
         </div>
       </div>
     </div>
