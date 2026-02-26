@@ -3,10 +3,18 @@ const SelectedItemsActionBar = ({
   show,
   handleUpdateCompany,
   deleteSelectedUsers,
+  suspendSelectedUsers,
+  unsuspendSelectedUsers,
   mailSelectedUsers,
   handleScheduleEmail,
   handleSaveList,
+  users = [],
 }) => {
+  const hasSuspendedUser = selectedUsers.some(id => {
+    const user = users.find(u => u._id === id);
+    return user?.suspended === true;
+  });
+
   return (
     <div className="bg-gradient-to-r from-primary-600/90 via-accent-600/90 to-primary-600/90 backdrop-blur-lg px-2 rounded-md shadow-sm border border-white/10 h-9 flex items-center">
       <div className="flex flex-wrap gap-2 items-center">
@@ -29,15 +37,41 @@ const SelectedItemsActionBar = ({
           </button>
         )}
 
-        <button
-          onClick={deleteSelectedUsers}
-          className="group bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white w-20 h-full rounded-md text-xs font-medium transition-colors duration-150 shadow-sm border border-red-400/20 flex items-center justify-center"
-        >
-          <span className="inline-flex items-center gap-1">
-            <span className="text-sm">🗑️</span>
-            <span>Delete</span>
-          </span>
-        </button>
+        {show && (
+          hasSuspendedUser ? (
+            <button
+              onClick={unsuspendSelectedUsers}
+              className="group bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white w-20 h-full rounded-md text-xs font-medium transition-colors duration-150 shadow-sm border border-green-400/20 flex items-center justify-center"
+            >
+              <span className="inline-flex items-center gap-1">
+                <span className="text-sm">✓</span>
+                <span>Unsuspend</span>
+              </span>
+            </button>
+          ) : (
+            <button
+              onClick={suspendSelectedUsers}
+              className="group bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white w-20 h-full rounded-md text-xs font-medium transition-colors duration-150 shadow-sm border border-red-400/20 flex items-center justify-center"
+            >
+              <span className="inline-flex items-center gap-1">
+                <span className="text-sm">🚫</span>
+                <span>Suspend</span>
+              </span>
+            </button>
+          )
+        )}
+
+        {!show && (
+          <button
+            onClick={deleteSelectedUsers}
+            className="group bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white w-20 h-full rounded-md text-xs font-medium transition-colors duration-150 shadow-sm border border-red-400/20 flex items-center justify-center"
+          >
+            <span className="inline-flex items-center gap-1">
+              <span className="text-sm">🗑️</span>
+              <span>Delete</span>
+            </span>
+          </button>
+        )}
 
         <button
           onClick={mailSelectedUsers}

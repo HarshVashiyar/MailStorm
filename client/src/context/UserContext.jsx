@@ -97,6 +97,44 @@ export const UserProvider = ({ children }) => {
         }));
     }, []);
 
+    const deleteUsers = useCallback((ids) => {
+        setUsers(prev =>
+            prev.filter(u => !ids.includes(u._id))
+        );
+        setUsersPagination(prev => ({
+            ...prev,
+            totalItems: Math.max(0, prev.totalItems - ids.length)
+        }));
+    }, []);
+
+    const suspendUsers = useCallback(async (userIds, reason) => {
+        try {
+            const response = await api.users.suspend(userIds, reason);
+            if (response.data?.success) {
+                await refresh();
+                return { success: true, message: response.data.message };
+            }
+            return { success: false, message: response.data?.message || 'Suspension failed' };
+        } catch (error) {
+            console.error('Error suspending users:', error);
+            return { success: false, message: error.response?.data?.message || 'Something went wrong' };
+        }
+    }, [refresh]);
+
+    const unsuspendUsers = useCallback(async (userIds) => {
+        try {
+            const response = await api.users.unsuspend(userIds);
+            if (response.data?.success) {
+                await refresh();
+                return { success: true, message: response.data.message };
+            }
+            return { success: false, message: response.data?.message || 'Unsuspension failed' };
+        } catch (error) {
+            console.error('Error unsuspending users:', error);
+            return { success: false, message: error.response?.data?.message || 'Something went wrong' };
+        }
+    }, [refresh]);
+
     const value = useMemo(() => ({
         users,
         companies,
@@ -110,6 +148,9 @@ export const UserProvider = ({ children }) => {
         addCompany,
         updateCompany,
         deleteCompanies,
+        deleteUsers,
+        suspendUsers,
+        unsuspendUsers,
         // Pagination
         companiesPagination,
         usersPagination,
@@ -128,6 +169,9 @@ export const UserProvider = ({ children }) => {
         addCompany,
         updateCompany,
         deleteCompanies,
+        deleteUsers,
+        suspendUsers,
+        unsuspendUsers,
         companiesPagination,
         usersPagination,
         goToCompaniesPage,
