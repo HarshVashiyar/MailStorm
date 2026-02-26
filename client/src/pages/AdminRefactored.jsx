@@ -1,6 +1,6 @@
-import { useState, useMemo, useRef, useCallback, useDeferredValue, lazy, Suspense, useEffect } from 'react';
+import { useState, useMemo, useRef, useCallback, lazy, Suspense, useEffect } from 'react';
 import { toast } from 'react-toastify';
-import axios from 'axios';
+import { api } from '../services/api';
 
 // 🚀 PERFORMANCE: Lazy load modals to reduce initial bundle size
 const AddCompanyModal = lazy(() => import('../components/modals/AddCompanyModal'));
@@ -39,6 +39,9 @@ const AdminContent = () => {
     fetchUsers,
     currentPagination,
     goToPage,
+    deleteCompanies,
+    suspendUsers,
+    unsuspendUsers,
   } = useUserContext();
 
   // ✅ Fetch companies on mount
@@ -52,8 +55,6 @@ const AdminContent = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterProcurement, setFilterProcurement] = useState(false);
 
-  // 🚀 PERFORMANCE: Debounce search to prevent filtering on every keystroke
-  const debouncedSearchTerm = useDeferredValue(searchTerm);
 
   // Derived state
   const show = currentView === 'users';
@@ -85,11 +86,11 @@ const AdminContent = () => {
           ...(user.companyProductGroup || []),
         ];
 
-      const keywords = Array.isArray(debouncedSearchTerm)
-        ? debouncedSearchTerm.map(k => String(k).trim().toLowerCase()).filter(Boolean)
-        : String(debouncedSearchTerm || '').split(/\s+/).map(k => k.trim().toLowerCase()).filter(Boolean);
+      const keywords = Array.isArray(searchTerm)
+        ? searchTerm.map(k => String(k).trim().toLowerCase()).filter(Boolean)
+        : String(searchTerm || '').split(/\s+/).map(k => k.trim().toLowerCase()).filter(Boolean);
 
-      if (!debouncedSearchTerm && !filterProcurement) return true;
+      if (!searchTerm && !filterProcurement) return true;
 
       if (!show && filterProcurement) {
         const hasProcurement = Boolean(
@@ -105,7 +106,7 @@ const AdminContent = () => {
 
       return keywords.every(k => haystack.includes(k));
     });
-  }, [users, debouncedSearchTerm, show, filterProcurement]);
+  }, [users, searchTerm, show, filterProcurement]);
 
   // Actions
   // Track if we've fetched users at least once (local to this component)
@@ -143,32 +144,58 @@ const AdminContent = () => {
   }, []);
 
   const deleteSelectedUsers = useCallback(async () => {
-    const selectedUsersData = show
-      ? { userIds: selectedUsers }
-      : { companyIds: selectedUsers };
-
-    try {
-      const response = await axios.delete(
-        show
-          ? `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_REMOVE_USERS_ROUTE}`
-          : `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_REMOVE_COMPANIES_ROUTE}`,
-        {
-          data: selectedUsersData,
-          withCredentials: true
+    if (show) {
+      try {
+        const response = await api.users.delete(selectedUsers);
+        if (response.data?.success === true) {
+          await refresh();
+          setSelectedUsers([]);
+          toast.success(response.data.message);
+        } else {
+          toast.error(response.data?.message || "Update failed.");
         }
-      );
-
-      if (response.data?.success === true) {
-        await refresh();
-        setSelectedUsers([]);
-        toast.success(response.data.message);
-      } else {
-        toast.error(response.data?.message || "Update failed.");
+      } catch (error) {
+        toast.error(error.response?.data?.message || "Something went wrong");
       }
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Something went wrong");
+    } else {
+      deleteCompanies(selectedUsers);
+      await refresh();
+      setSelectedUsers([]);
+      toast.success("Company deleted successfully");
     }
-  }, [show, selectedUsers, refresh]);
+  }, [show, selectedUsers, refresh, deleteCompanies]);
+
+  const suspendSelectedUsers = useCallback(async () => {
+    if (!show) {
+      toast.error("Suspend is only available for users, not companies.");
+      return;
+    }
+
+    const reason = "Violation of Terms of Services or Privacy Policy";
+    const result = await suspendUsers(selectedUsers, reason);
+    
+    if (result.success) {
+      setSelectedUsers([]);
+      toast.success(result.message);
+    } else {
+      toast.error(result.message);
+    }
+  }, [show, selectedUsers, suspendUsers]);
+
+  const unsuspendSelectedUsers = useCallback(async () => {
+    if (!show) {
+      return;
+    }
+
+    const result = await unsuspendUsers(selectedUsers);
+    
+    if (result.success) {
+      setSelectedUsers([]);
+      toast.success(result.message);
+    } else {
+      toast.error(result.message);
+    }
+  }, [show, selectedUsers, unsuspendUsers]);
 
   const updateUserNote = useCallback(async () => {
     await refresh();
@@ -567,9 +594,12 @@ const AdminContent = () => {
                   show={show}
                   handleUpdateCompany={handleUpdateCompany}
                   deleteSelectedUsers={deleteSelectedUsers}
+                  suspendSelectedUsers={suspendSelectedUsers}
+                  unsuspendSelectedUsers={unsuspendSelectedUsers}
                   mailSelectedUsers={mailSelectedUsers}
                   handleScheduleEmail={handleScheduleEmail}
                   handleSaveList={handleSaveList}
+                  users={contextUsers}
                 />
               )}
             </div>
