@@ -135,7 +135,10 @@ const handleSuspendUsers = async (req, res) => {
                 }
             );
 
-            await sendSuspensionEmail(user.email, user.fullName, suspensionReason);
+            const emailResult = await sendSuspensionEmail(user.email, user.fullName, suspensionReason);
+            if (!emailResult.success) {
+                console.warn(`⚠️  Suspension email FAILED for ${user.email}:`, emailResult.error);
+            }
         }
 
         return res.status(200).json({

@@ -1,6 +1,7 @@
 .env
 *.xlsx
 server/public
+/MailStorm Demo
 
 # Logs
 logs

@@ -9,7 +9,16 @@ const Verifyotp = () => {
   const navigate = useNavigate();
   const email = location.state?.email || "";
   const isNew = location.state?.isNew ?? null;
-  
+  const expirationTime = location.state?.expirationTime ?? null;
+
+  // Compute initial seconds from real expiry timestamp, fallback to 150s
+  const getInitialTimeLeft = () => {
+    if (expirationTime) {
+      return Math.max(0, Math.round((expirationTime - Date.now()) / 1000));
+    }
+    return 150;
+  };
+
   // Security: Redirect if no email or isNew flag is missing
   useEffect(() => {
     if (!email || isNew === null) {
@@ -30,7 +39,7 @@ const Verifyotp = () => {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(150);
+  const [timeLeft, setTimeLeft] = useState(getInitialTimeLeft);
   const inputRefs = useRef([]);
 
   // Don't render if security check fails
@@ -40,19 +49,25 @@ const Verifyotp = () => {
 
   useEffect(() => {
     const timer = setInterval(() => {
+      // Always compute from the real expiry timestamp so tab throttling / sleep can't drift the display
+      const remaining = expirationTime
+        ? Math.max(0, Math.round((expirationTime - Date.now()) / 1000))
+        : null;
+
       setTimeLeft((prevTime) => {
-        if (prevTime <= 1) {
+        const next = remaining !== null ? remaining : prevTime - 1;
+        if (next <= 0) {
           clearInterval(timer);
           toast.error("OTP expired! Redirecting to sign in...");
           setTimeout(() => navigate("/signin"), 700);
           return 0;
         }
-        return prevTime - 1;
+        return next;
       });
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [navigate]);
+  }, [navigate, expirationTime]);
 
   const handleOtpChange = (index, value) => {
     // Only allow digits
@@ -86,7 +101,7 @@ const Verifyotp = () => {
       if (idx < 6) newOtp[idx] = char;
     });
     setOtp(newOtp);
-    
+
     // Focus last filled input or last input
     const nextIndex = Math.min(pastedData.length, 5);
     inputRefs.current[nextIndex]?.focus();
@@ -95,16 +110,16 @@ const Verifyotp = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const otpString = otp.join("");
-    
+
     // if (otpString.length < 6) {
     //   setError("Please enter all 6 digits.");
     //   return;
     // }
-    
+
     setError("");
     setIsLoading(true);
     const toastId = toast.loading("Verifying OTP...");
-    
+
     try {
       const response = await axios.post(
         `${import.meta.env.VITE_BASE_URL}${import.meta.env.VITE_VERIFY_OTP_ROUTE}`,
@@ -208,7 +223,7 @@ const Verifyotp = () => {
             </form>
 
             <div className="text-sm text-gray-400 text-center mt-4 bg-dark-800/30 p-3 rounded-lg border border-white/5">
-              {isNew 
+              {isNew
                 ? "Please enter the OTP sent to your email to verify your account."
                 : "Please enter the OTP sent to your email to continue."
               }

@@ -8,7 +8,7 @@ const SendOTP = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const isNew = location.state?.isNew ?? null;
-  
+
   // Security: Redirect if isNew flag is missing (must come from proper flow)
   useEffect(() => {
     if (isNew === null) {
@@ -54,7 +54,10 @@ const SendOTP = () => {
         setIsLoading(false);
         toast.success("OTP sent successfully!");
         setTimeout(() => {
-          navigate("/verifyotp", { state: { email, isNew }, replace: true });
+          navigate("/verifyotp", {
+            state: { email, isNew, expirationTime: response.data.data?.expirationTime },
+            replace: true,
+          });
         }, 700);
       } else {
         toast.dismiss(toastId);
@@ -108,8 +111,8 @@ const SendOTP = () => {
                 <button
                   type="submit"
                   className={`w-full bg-gradient-to-r from-primary-500 to-accent-500 text-white py-2 px-4 rounded-lg transition-all duration-300 shadow-md flex items-center justify-center min-h-[42px] ${isLoading
-                      ? 'opacity-75 cursor-not-allowed'
-                      : 'hover:from-primary-600 hover:to-accent-600 hover:shadow-glow'
+                    ? 'opacity-75 cursor-not-allowed'
+                    : 'hover:from-primary-600 hover:to-accent-600 hover:shadow-glow'
                     }`}
                   disabled={isLoading}
                 >
