@@ -1,23 +1,9 @@
 require('dotenv').config();
 const Queue = require('bull');
 
-// Redis configuration
-const redisConfig = {
-  host: process.env.REDIS_HOST || 'localhost',
-  port: process.env.REDIS_PORT || 6379,
-  password: process.env.REDIS_PASSWORD || undefined,
-  maxRetriesPerRequest: null,
-  enableReadyCheck: false,
-};
-// Redis configuration for Upstash
-// const redisConfig = {
-//   host: process.env.REDIS_HOST,
-//   port: Number(process.env.REDIS_PORT),
-//   password: process.env.REDIS_PASSWORD,
-//   tls: process.env.REDIS_TLS === 'true' ? {} : undefined,
-//   maxRetriesPerRequest: null,
-//   enableReadyCheck: false,
-// };
+// Centralized Redis client for Bull queues
+const redisClient = require('./redisClient');
+const redisConfig = redisClient.options;
 
 // Create email queue with optimized settings
 const emailQueue = new Queue('emailQueue', {
@@ -32,13 +18,13 @@ const emailQueue = new Queue('emailQueue', {
     removeOnFail: 50, // ✅ OPTIMIZED: Keep only last 50 failed jobs for debugging
   },
   limiter: {
-    max: 100, // Max 100 jobs
-    duration: 60000, // Per 60 seconds
+    max: 1500,    // 25 workers × ~60 jobs/min each = ~1500/min theoretical max
+    duration: 60000,
   },
   settings: {
-    stalledInterval: 60000, // ✅ OPTIMIZED: Check for stalled jobs every 60 seconds (was 30s)
-    maxStalledCount: 2, // Max number of times a job can be stalled before being failed
-    lockDuration: 30000, // Job lock duration
+    stalledInterval: 60000,
+    maxStalledCount: 2,
+    lockDuration: 60000, // Increased: slow SMTP servers can take >30s; prevents false stalls
   },
 });
 
@@ -58,6 +44,22 @@ const scheduledEmailQueue = new Queue('scheduledEmailQueue', {
     stalledInterval: 60000, // ✅ OPTIMIZED: Check for stalled jobs every 60 seconds
     maxStalledCount: 2,
   },
+});
+
+// High-priority queue for transactional emails (OTP, suspension, unsuspension).
+// Kept separate from the bulk queue so a large send never delays an OTP.
+const transactionalQueue = new Queue('transactionalQueue', {
+  redis: redisConfig,
+  defaultJobOptions: {
+    attempts: 3,
+    backoff: {
+      type: 'exponential',
+      delay: 2000, // Start at 2s — faster than bulk email retries
+    },
+    removeOnComplete: true,
+    removeOnFail: 25,
+  },
+  // No limiter — transactional mail must never be rate-throttled
 });
 
 // ========================================
@@ -99,7 +101,7 @@ scheduledEmailQueue.on('failed', (job, err) => {
 
 if (process.env.ENABLE_QUEUE_LOGGING === 'true') {
   console.log('⚠️ Queue logging enabled (debug mode)');
-  
+
   emailQueue.on('completed', (job, result) => {
     console.log(`✅ Email job ${job.id} completed:`, result.message || result.to);
   });
@@ -135,5 +137,6 @@ process.on('SIGINT', async () => {
 module.exports = {
   emailQueue,
   scheduledEmailQueue,
+  transactionalQueue,
   redisConfig,
 };

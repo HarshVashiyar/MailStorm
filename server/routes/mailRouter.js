@@ -5,13 +5,10 @@ const {
   handleVerifyOTP,
   handleResetPassword,
   handleSendMail,
-  // handleGetQueueStats,
-  // handleGetJobStatus,
-  // handleGetJobHistory,
-  // handleRetryJob,
   handleEnhanceSubject,
   handleGenerateHTMLBody
 } = require("../controllers/mailController");
+const { handleGetBulkJobs, handleGetBulkJobLog } = require("../controllers/bulkJobController");
 const { authenticateUser } = require("../utilities/userUtil");
 const { upload } = require("../middlewares/storeFiles");
 
@@ -20,23 +17,15 @@ app.get("/", (req, res) => {
 });
 
 app.post("/sendotp", handleSendOTP);
-
 app.post("/verifyotp", handleVerifyOTP);
-
 app.post("/resetpassword", handleResetPassword);
-
 app.post("/sendmail", authenticateUser, upload.array("files"), handleSendMail);
 
-// app.get("/stats", authenticateUser, handleGetQueueStats);
-
-// app.get("/job/:jobId", authenticateUser, handleGetJobStatus);
-
-// app.get("/jobs", authenticateUser, handleGetJobHistory);
-
-// app.post("/job/:jobId/retry", authenticateUser, handleRetryJob);
+// Bulk email job tracking — delivery log dashboard
+app.get("/bulk/jobs", authenticateUser, handleGetBulkJobs);
+app.get("/bulk/jobs/:id/log", authenticateUser, handleGetBulkJobLog);
 
 app.post("/enhance", authenticateUser, handleEnhanceSubject);
-
 app.post("/generate", authenticateUser, handleGenerateHTMLBody);
 
 module.exports = app;

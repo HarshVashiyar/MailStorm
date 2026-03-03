@@ -6,6 +6,8 @@ const SmtpAccount = require("../models/SmtpAccount");
 const smtpUtil = require("./smtpUtil");
 const { processHtmlForEmail } = require("./emailImageUtil");
 const Company = require("../models/companyDB");
+const redisClient = require("../config/redisClient");
+const { transactionalQueue } = require("../config/queue");
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Branding footer appended to every outgoing user email
@@ -17,15 +19,12 @@ const brandingFooter = `<div style="margin-top: 30px; padding-top: 15px; border-
 // ─────────────────────────────────────────────────────────────────────────────
 // OTP helpers
 // ─────────────────────────────────────────────────────────────────────────────
-const otpStorage = {};
+const OTP_TTL_SECONDS = 152; // matches the 152s expiration shown to the user
 
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000);
 
-const sendOTP = async (mail) => {
-  const otp = generateOTP();
-  const expirationTime = Date.now() + 152 * 1000;
-  otpStorage[mail] = { otp, expirationTime };
-
+// ── Internal: actual SMTP send — called only by the transactional worker ──
+const _doSendOTPEmail = async (mail, otp) => {
   const content = {
     from: process.env.ADMIN_MAIL,
     to: mail,
@@ -41,27 +40,40 @@ const sendOTP = async (mail) => {
       </div>
     `,
   };
-
   const transporter = nodemailer.createTransport({
     host: process.env.ADMIN_SMTP_HOST,
     port: 465,
     secure: true,
-    auth: {
-      user: process.env.ADMIN_MAIL,
-      pass: process.env.ADMIN_MAIL_PASSWORD,
-    },
+    auth: { user: process.env.ADMIN_MAIL, pass: process.env.ADMIN_MAIL_PASSWORD },
   });
-
-  try {
-    await transporter.sendMail(content);
-    return { expirationTime };
-  } catch (error) {
-    console.error(`Error sending OTP to ${mail}:`, error);
-    throw new Error("Failed to send OTP");
-  }
+  await transporter.sendMail(content);
 };
 
-const verifyOTP = (mail, otp) => {
+// ── Public: generate + store OTP, then queue the email send (non-blocking) ──
+const sendOTP = async (mail) => {
+  const otp = generateOTP();
+  const expirationTime = Date.now() + OTP_TTL_SECONDS * 1000;
+
+  // Store synchronously — must complete before we return expirationTime to caller
+  await redisClient.set(`otp:${mail}`, otp, "EX", OTP_TTL_SECONDS);
+
+  try {
+    await transactionalQueue.add(
+      "transactional-email",
+      { type: "otp", mail, otp },
+      { priority: 1 } // Highest priority in the queue
+    );
+  } catch (err) {
+    // If we can't even queue the job, clean up Redis so the OTP isn't orphaned
+    await redisClient.del(`otp:${mail}`);
+    throw new Error("Failed to queue OTP email");
+  }
+
+  // Return immediately — email delivery happens asynchronously via the worker
+  return { expirationTime };
+};
+
+const verifyOTP = async (mail, otp) => {
   if (!otp || (typeof otp !== "string" && typeof otp !== "number")) {
     return { success: false, message: "OTP is required!" };
   }
@@ -72,33 +84,32 @@ const verifyOTP = (mail, otp) => {
   if (!/^\d{6}$/.test(otpString)) {
     return { success: false, message: "OTP must contain only digits!" };
   }
-  const otpData = otpStorage[mail];
-  if (!otpData) return { success: false, message: "OTP not found!" };
-  if (Date.now() > otpData.expirationTime) {
-    delete otpStorage[mail];
-    return { success: false, message: "OTP expired!" };
-  }
-  if (otpData.otp != otp) return { success: false, message: "Invalid OTP!" };
-  delete otpStorage[mail];
+
+  // Fetch stored OTP from Redis (returns null if expired or not set)
+  const storedOtp = await redisClient.get(`otp:${mail}`);
+  if (!storedOtp) return { success: false, message: "OTP not found or expired!" };
+
+  if (storedOtp != otpString) return { success: false, message: "Invalid OTP!" };
+
+  // Delete after successful verification so it can't be reused
+  await redisClient.del(`otp:${mail}`);
   return { success: true, message: "OTP verified successfully" };
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Admin notification emails (suspension / unsuspension)
 // ─────────────────────────────────────────────────────────────────────────────
-const sendSuspensionEmail = async (email, fullName, reason) => {
+// ── Internal: actual SMTP senders — called only by the transactional worker ──
+const _doSendSuspensionEmail = async (email, fullName, reason) => {
   const ADMIN_MAIL = process.env.ADMIN_MAIL;
-  const ADMIN_MAIL_PASSWORD = process.env.ADMIN_MAIL_PASSWORD;
   const ADMIN_MAIL_FROM = process.env.ADMIN_MAIL_FROM || "MailStorm";
-
   const transporter = nodemailer.createTransport({
     host: process.env.ADMIN_SMTP_HOST || "smtp.gmail.com",
     port: 465,
     secure: true,
-    auth: { user: ADMIN_MAIL, pass: ADMIN_MAIL_PASSWORD },
+    auth: { user: ADMIN_MAIL, pass: process.env.ADMIN_MAIL_PASSWORD },
   });
-
-  const mailOptions = {
+  await transporter.sendMail({
     from: `${ADMIN_MAIL_FROM} <${ADMIN_MAIL}>`,
     to: email,
     subject: "Account Suspension Notice - MailStorm",
@@ -123,31 +134,19 @@ const sendSuspensionEmail = async (email, fullName, reason) => {
         </div>
       </div>
     `,
-  };
-
-  try {
-    await transporter.sendMail(mailOptions);
-    console.log(`Suspension email sent to ${email}`);
-    return { success: true };
-  } catch (error) {
-    console.error(`Failed to send suspension email to ${email}:`, error);
-    return { success: false, error: error.message };
-  }
+  });
 };
 
-const sendUnsuspensionEmail = async (email, fullName) => {
+const _doSendUnsuspensionEmail = async (email, fullName) => {
   const ADMIN_MAIL = process.env.ADMIN_MAIL;
-  const ADMIN_MAIL_PASSWORD = process.env.ADMIN_MAIL_PASSWORD;
   const ADMIN_MAIL_FROM = process.env.ADMIN_MAIL_FROM || "MailStorm";
-
   const transporter = nodemailer.createTransport({
     host: process.env.ADMIN_SMTP_HOST || "smtp.gmail.com",
     port: 465,
     secure: true,
-    auth: { user: ADMIN_MAIL, pass: ADMIN_MAIL_PASSWORD },
+    auth: { user: ADMIN_MAIL, pass: process.env.ADMIN_MAIL_PASSWORD },
   });
-
-  const mailOptions = {
+  await transporter.sendMail({
     from: `${ADMIN_MAIL_FROM} <${ADMIN_MAIL}>`,
     to: email,
     subject: "Account Reactivated - MailStorm",
@@ -168,15 +167,26 @@ const sendUnsuspensionEmail = async (email, fullName) => {
         </div>
       </div>
     `,
-  };
+  });
+};
 
-  try {
-    await transporter.sendMail(mailOptions);
-    return { success: true };
-  } catch (error) {
-    console.error(`Failed to send unsuspension email to ${email}:`, error);
-    return { success: false, error: error.message };
-  }
+// ── Public: enqueue — controllers call these, respond immediately ──
+const sendSuspensionEmail = async (email, fullName, reason) => {
+  await transactionalQueue.add(
+    "transactional-email",
+    { type: "suspension", email, fullName, reason },
+    { priority: 2 }
+  );
+  return { success: true, queued: true };
+};
+
+const sendUnsuspensionEmail = async (email, fullName) => {
+  await transactionalQueue.add(
+    "transactional-email",
+    { type: "unsuspension", email, fullName },
+    { priority: 2 }
+  );
+  return { success: true, queued: true };
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -412,11 +422,12 @@ const processAttachments = async (attachments) => {
 
 /**
  * Send a single email using the SMTP account identified by smtpAccountId.
+ * Accepts an optional pre-fetched `smtpAccount` to skip the DB lookup (used by the worker cache).
  * Handles attachment resolution, CID image embedding, and branding footer.
  * Throws on failure — callers should catch and handle queue/retry logic.
  */
-const sendSingleEmail = async ({ to, subject, html, recipientName, attachments, smtpAccountId }) => {
-  const smtpAccount = await SmtpAccount.findById(smtpAccountId);
+const sendSingleEmail = async ({ to, subject, html, recipientName, attachments, smtpAccountId, smtpAccount: preloadedAccount }) => {
+  const smtpAccount = preloadedAccount ?? await SmtpAccount.findById(smtpAccountId);
   if (!smtpAccount) throw new Error("SMTP account not found");
 
   if (!smtpUtil.canSendEmail(smtpAccount)) {
@@ -471,4 +482,8 @@ module.exports = {
   createTransporter,
   processAttachments,
   sendSingleEmail,
+  // Internal senders — used exclusively by the transactional email worker
+  _doSendOTPEmail,
+  _doSendSuspensionEmail,
+  _doSendUnsuspensionEmail,
 };

@@ -4,9 +4,9 @@ const {
 } = require("../utilities/mailUtil");
 const { emailQueue } = require("../config/queue");
 const User = require("../models/userDB");
+const BulkEmailJob = require('../models/bulkEmailJobDB');
 const { GoogleGenAI } = require("@google/genai");
 const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
-// Get and validate SMTP account
 const SmtpAccount = require('../models/SmtpAccount');
 const smtpUtil = require('../utilities/smtpUtil');
 const { uploadMultipleToCloudinary } = require('../utilities/cloudinary');
@@ -38,12 +38,12 @@ const handleSendOTP = async (req, res) => {
   }
 }
 
-const handleVerifyOTP = (req, res) => {
+const handleVerifyOTP = async (req, res) => {
   const { email, otp } = req.body;
   if (!email || !otp) {
     return res.status(400).json({ success: false, message: "Email and OTP are required." });
   }
-  const response = verifyOTP(email, otp);
+  const response = await verifyOTP(email, otp);
   return res.status(response.success ? 200 : 400).json(response);
 };
 
@@ -172,42 +172,49 @@ const handleSendMail = async (req, res) => {
       finalHtml = `${html}<br/><br/>--<br/>${smtpAccount.signature}`;
     }
 
+    // Create BulkEmailJob document so the worker can track per-recipient outcomes
+    const bulkJob = await BulkEmailJob.create({
+      userId: user.id,
+      subject,
+      from: smtpAccount.email,
+      smtpAccountId: smtpAccount._id,
+      totalRecipients: emailAddresses.length,
+      status: 'queued',
+    });
+
     // Add bulk email job to queue
     const job = await emailQueue.add(
       'bulk-email',
       {
         emails,
         subject,
-        html: finalHtml, // Use html with signature appended
-        attachments, // Either base64 (redis) or URLs (cloudinary)
+        html: finalHtml,
+        attachments,
         userId: user.id,
-        smtpAccountId: smtpAccount._id.toString(), // Pass SMTP account ID
+        smtpAccountId: smtpAccount._id.toString(),
+        bulkJobId: bulkJob._id.toString(), // ← tracked for delivery log
       },
       {
-        priority: 1, // High priority for direct sends
+        priority: 1,
         attempts: 3,
-        removeOnComplete: true, // ✅ Auto-cleanup completed jobs
-        removeOnFail: false, // Keep failed jobs for debugging
+        removeOnComplete: true,
+        removeOnFail: false,
       }
     );
 
-    // REMOVED: Queue position calculation (saves 3-4 Redis reads)
-    // REMOVED: queuePosition from response
-
+    // If queuing fails the catch block below will mark the job as failed
     return res.status(200).json({
       success: true,
       message: `${emailAddresses.length} email(s) queued successfully from ${smtpAccount.email}.`,
-      // jobId: job.id, // COMMENTED OUT - not used by frontend
       totalEmails: emailAddresses.length,
       smtpAccount: {
         email: smtpAccount.email,
         provider: smtpAccount.provider,
       },
-      // ✅ INFO: Include storage method for debugging
       attachmentInfo: attachments.length > 0 ? {
         count: attachments.length,
         totalSize: `${(totalAttachmentSize / 1024 / 1024).toFixed(2)}MB`,
-        storageMethod, // 'redis', 'cloudinary', or 'none'
+        storageMethod,
       } : null,
     });
   } catch (error) {

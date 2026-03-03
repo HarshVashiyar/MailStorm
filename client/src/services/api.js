@@ -57,5 +57,14 @@ export const api = {
     scheduledEmails: {
         // Returns all scheduled emails at once; frontend handles client-side pagination
         getAll: () => axios.get(`${BASE_URL}${import.meta.env.VITE_ALL_SCHEDULED_EMAILS_ROUTE}`, { withCredentials: true }),
+        getLog: (id) => axios.get(`${BASE_URL}scheduled/${id}/log`, { withCredentials: true }),
+        delete: (ids) => axios.delete(`${BASE_URL}${import.meta.env.VITE_REMOVE_SCHEDULED_EMAILS_ROUTE}`, {
+            data: { ids },
+            withCredentials: true
+        })
+    },
+    bulkJobs: {
+        getAll: () => axios.get(`${BASE_URL}mail/bulk/jobs`, { withCredentials: true }),
+        getLog: (id) => axios.get(`${BASE_URL}mail/bulk/jobs/${id}/log`, { withCredentials: true }),
     },
 };

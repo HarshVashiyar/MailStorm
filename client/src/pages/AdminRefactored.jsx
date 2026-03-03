@@ -5,6 +5,7 @@ import { api } from '../services/api';
 // 🚀 PERFORMANCE: Lazy load modals to reduce initial bundle size
 const AddCompanyModal = lazy(() => import('../components/modals/AddCompanyModal'));
 const EmailModal = lazy(() => import('../components/modals/EmailModal'));
+const DeliveryLogModal = lazy(() => import('../components/modals/DeliveryLogModal'));
 const ManualListFormModal = lazy(() => import('../components/admin/modals/ManualListFormModal'));
 const SavedListsModal = lazy(() => import('../components/admin/modals/SavedListsModal'));
 const SavedTemplatesModal = lazy(() => import('../components/admin/modals/SavedTemplatesModal'));
@@ -283,6 +284,7 @@ const AdminContent = () => {
   const [showManualListForm, setShowManualListForm] = useState(false);
   const [showManualTemplateForm, setShowManualTemplateForm] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
+  const [showDeliveryLog, setShowDeliveryLog] = useState(false);
 
   const [prefilledEmails, setPrefilledEmails] = useState('');
   const [prefilledListName, setPrefilledListName] = useState('');
@@ -605,6 +607,7 @@ const AdminContent = () => {
               toggleView={toggleView}
               fetchSavedLists={fetchSavedLists}
               onScheduledClick={openScheduledModal}
+              onDeliveryLogClick={() => setShowDeliveryLog(true)}
               fetchSavedTemplates={fetchSavedTemplates}
               searchTerm={searchTerm}
               setSearchTerm={setSearchTerm}
@@ -764,6 +767,10 @@ const AdminContent = () => {
           isOpen={isScheduledModalOpen}
           onClose={closeScheduledModal}
         />
+
+        {showDeliveryLog && (
+          <DeliveryLogModal onClose={() => setShowDeliveryLog(false)} />
+        )}
       </Suspense>
     </div>
   );

@@ -8,7 +8,7 @@ const SmtpAccount = require('../models/SmtpAccount');
 const getAvailableSlotNumbers = async (userId) => {
   const usedSlots = await SmtpAccount.find({ userId }).select('slotNumber');
   const usedNumbers = usedSlots.map(slot => slot.slotNumber);
-  
+
   const allSlots = [1, 2, 3, 4, 5];
   return allSlots.filter(num => !usedNumbers.includes(num));
 };
@@ -22,18 +22,18 @@ const canSendEmail = (smtpAccount) => {
   // Reset daily counter if needed
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  
+
   const lastReset = new Date(smtpAccount.lastResetDate);
   lastReset.setHours(0, 0, 0, 0);
-  
+
   let emailsSentToday = smtpAccount.emailsSentToday;
   if (today > lastReset) {
     emailsSentToday = 0;
   }
-  
-  return smtpAccount.status === 'active' && 
-         smtpAccount.isVerified && 
-         emailsSentToday < smtpAccount.dailyLimit;
+
+  return smtpAccount.status === 'active' &&
+    smtpAccount.isVerified &&
+    emailsSentToday < smtpAccount.dailyLimit;
 };
 
 /**
@@ -43,23 +43,31 @@ const canSendEmail = (smtpAccount) => {
  * @returns {Promise<Object>} Updated account
  */
 const incrementEmailCount = async (smtpAccount, count = 1) => {
-  // Check if we need to reset daily counter
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  
+
   const lastReset = new Date(smtpAccount.lastResetDate);
   lastReset.setHours(0, 0, 0, 0);
-  
-  if (today > lastReset) {
-    smtpAccount.emailsSentToday = 0;
-    smtpAccount.lastResetDate = new Date();
+
+  const isNewDay = today > lastReset;
+
+  if (isNewDay) {
+    // New day: reset the counter and set it directly to `count` (not $inc from stale value)
+    return await SmtpAccount.findByIdAndUpdate(smtpAccount._id, {
+      $set: {
+        emailsSentToday: count,
+        lastResetDate: new Date(),
+        lastUsedAt: new Date(),
+      },
+      $inc: { totalEmailsSent: count },
+    });
   }
-  
-  smtpAccount.emailsSentToday += count;
-  smtpAccount.totalEmailsSent += count;
-  smtpAccount.lastUsedAt = new Date();
-  
-  return await smtpAccount.save();
+
+  // Same day: atomically increment — race-condition safe
+  return await SmtpAccount.findByIdAndUpdate(smtpAccount._id, {
+    $inc: { emailsSentToday: count, totalEmailsSent: count },
+    $set: { lastUsedAt: new Date() },
+  });
 };
 
 module.exports = {

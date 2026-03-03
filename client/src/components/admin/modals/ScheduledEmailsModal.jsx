@@ -7,7 +7,7 @@ import {
   MdSchedule,
   MdEmail,
   MdAccessTime,
-  MdCheckCircle
+  MdCheckCircle,
 } from 'react-icons/md';
 import InlinePagination from '../../common/InlinePagination';
 
@@ -375,14 +375,25 @@ const ScheduledEmailsModal = ({ isOpen, onClose }) => {
                             {new Date(email.sendAt).toLocaleString()}
                           </td>
                           <td className="py-4 px-6 text-center">
+                            {/* Status badge */}
                             <span className={`px-3 py-1 rounded-full text-xs font-semibold inline-block ${email.status === 'Pending'
                               ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
-                              : email.status === 'Sent'
-                                ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                                : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                              : email.status === 'Processing'
+                                ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                                : email.status === 'Sent'
+                                  ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                                  : email.status === 'Partially Sent'
+                                    ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
+                                    : 'bg-red-500/20 text-red-400 border border-red-500/30'
                               }`}>
                               {email.status}
                             </span>
+                            {/* Mini failure pill from deliverySummary */}
+                            {email.deliverySummary?.failed > 0 && (
+                              <span className="ml-1 px-2 py-0.5 rounded-full text-xs bg-red-500/15 text-red-400 border border-red-500/25">
+                                {email.deliverySummary.failed} failed
+                              </span>
+                            )}
                           </td>
                           <td className="py-4 px-6 text-center">
                             <input
@@ -421,6 +432,14 @@ const ScheduledEmailsModal = ({ isOpen, onClose }) => {
           </button>
         </div>
       </div>
+
+      {/* Delivery log modal — overlaid above this modal */}
+      {selectedLogId && (
+        <DeliveryLogModal
+          scheduledMailId={selectedLogId}
+          onClose={() => setSelectedLogId(null)}
+        />
+      )}
     </div>
   );
 };

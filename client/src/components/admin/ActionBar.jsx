@@ -7,6 +7,7 @@ const ActionBar = ({
   toggleView,
   fetchSavedLists,
   onScheduledClick,
+  onDeliveryLogClick,
   fetchSavedTemplates,
   searchTerm,
   setSearchTerm,
@@ -76,12 +77,20 @@ const ActionBar = ({
           </button>
         )}
 
-        <button
+        {/* <button
           onClick={onScheduledClick}
           className="group bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white inline-flex items-center gap-2 px-3 py-1 rounded-md transition-all duration-200 transform hover:scale-105 border border-purple-400/20 text-sm"
         >
           <span className="text-sm">⏰</span>
           <span className="font-medium whitespace-nowrap">Scheduled</span>
+        </button> */}
+
+        <button
+          onClick={onDeliveryLogClick}
+          className="group bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white inline-flex items-center gap-2 px-3 py-1 rounded-md transition-all duration-200 transform hover:scale-105 border border-rose-400/20 text-sm"
+        >
+          <span className="text-sm">📊</span>
+          <span className="font-medium whitespace-nowrap">Delivery Log</span>
         </button>
 
         <button

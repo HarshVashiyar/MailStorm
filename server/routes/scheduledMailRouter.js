@@ -4,7 +4,7 @@ const {
   handleAddScheduledMail,
   handleGetScheduledMails,
   handleDeleteScheduledMails,
-  // handleUpdateScheduledMail
+  handleGetDeliveryLog,
 } = require("../controllers/scheduledMailController");
 const { scheduledUpload, processFiles } = require("../middlewares/storeFiles");
 const { authenticateUser } = require("../utilities/userUtil");
@@ -14,6 +14,7 @@ app.get("/", (req, res) => {
 });
 
 app.get("/getall", authenticateUser, handleGetScheduledMails);
+app.get("/:id/log", authenticateUser, handleGetDeliveryLog);
 
 const multerErrorHandler = (err, req, res, next) => {
   console.log('=== Multer Error ===');

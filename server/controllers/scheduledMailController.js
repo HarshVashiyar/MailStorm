@@ -2,6 +2,7 @@ const ScheduledMail = require("../models/scheduledMailDB");
 const { scheduledEmailQueue } = require("../config/queue");
 const moment = require("moment-timezone");
 const { uploadMultipleToCloudinary } = require('../utilities/cloudinary');
+const mongoose = require('mongoose');
 
 // ✅ DYNAMIC STORAGE: Threshold for Cloudinary upload (7MB)
 const REDIS_SIZE_THRESHOLD = 7 * 1024 * 1024; // 7MB
@@ -224,11 +225,29 @@ const handleGetScheduledMails = async (req, res) => {
   const user = req.user;
 
   try {
-    // ⚡ OPTIMIZED: Sorting + projection; all records returned at once (frontend paginates client-side)
-    const scheduledMails = await ScheduledMail.find({ createdBy: user.id })
-      .select('-attachments.content') // Exclude base64 content
-      .sort({ sendAt: -1 }) // Newest scheduled emails first
-      .lean();
+    // ⚡ Aggregation pipeline: compute deliverySummary counts in MongoDB,
+    // exclude the raw deliveryLog array from the wire → fast lean plain objects
+    const scheduledMails = await ScheduledMail.aggregate([
+      { $match: { createdBy: new mongoose.Types.ObjectId(user.id) } },
+      { $sort: { sendAt: -1 } },
+      {
+        $addFields: {
+          deliverySummary: {
+            total: { $size: { $ifNull: ['$deliveryLog', []] } },
+            sent: { $size: { $filter: { input: { $ifNull: ['$deliveryLog', []] }, cond: { $eq: ['$$this.status', 'sent'] } } } },
+            failed: { $size: { $filter: { input: { $ifNull: ['$deliveryLog', []] }, cond: { $eq: ['$$this.status', 'failed'] } } } },
+            pending: { $size: { $filter: { input: { $ifNull: ['$deliveryLog', []] }, cond: { $eq: ['$$this.status', 'pending'] } } } },
+          },
+        },
+      },
+      {
+        // Exclude fields that are heavy or internal-only
+        $project: {
+          deliveryLog: 0,          // full array stays in DB, summary is above
+          'attachments.content': 0, // no base64 content
+        },
+      },
+    ]);
 
     res.status(200).json({
       success: true,
@@ -302,8 +321,53 @@ const handleDeleteScheduledMails = async (req, res) => {
 // 2. Use removeOnComplete: true for new jobs
 // 3. Update database record without querying Redis
 
+const handleGetDeliveryLog = async (req, res) => {
+  const user = req.user;
+  const { id } = req.params;
+
+  try {
+    const doc = await ScheduledMail.findOne({ _id: id, createdBy: user.id })
+      .select('subject sendAt status from to deliveryLog')
+      .lean();
+
+    if (!doc) {
+      return res.status(404).json({ success: false, message: 'Scheduled mail not found' });
+    }
+
+    const log = doc.deliveryLog || [];
+
+    // Sort: failed first, then pending, then sent
+    const ORDER = { failed: 0, pending: 1, sent: 2 };
+    log.sort((a, b) => (ORDER[a.status] ?? 3) - (ORDER[b.status] ?? 3));
+
+    const summary = {
+      total: log.length,
+      sent: log.filter(e => e.status === 'sent').length,
+      failed: log.filter(e => e.status === 'failed').length,
+      pending: log.filter(e => e.status === 'pending').length,
+    };
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        _id: doc._id,
+        subject: doc.subject,
+        sendAt: doc.sendAt,
+        status: doc.status,
+        from: doc.from,
+        summary,
+        deliveryLog: log,
+      },
+    });
+  } catch (error) {
+    console.error('handleGetDeliveryLog error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   handleAddScheduledMail,
   handleGetScheduledMails,
   handleDeleteScheduledMails,
+  handleGetDeliveryLog,
 };

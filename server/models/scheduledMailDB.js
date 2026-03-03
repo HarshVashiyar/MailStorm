@@ -110,7 +110,7 @@ const scheduledMailSchema = new mongoose.Schema(
         },
         status: {
             type: String,
-            enum: ['Pending', 'Sent', 'Failed'],
+            enum: ['Pending', 'Processing', 'Sent', 'Partially Sent', 'Failed'],
             default: 'Pending',
             required: true
         },
@@ -119,18 +119,57 @@ const scheduledMailSchema = new mongoose.Schema(
             type: String,
             index: true,
         },
+        // Per-recipient delivery outcomes — seeded by the worker when the job fires
+        deliveryLog: [
+            {
+                email: {
+                    type: String,
+                    required: true,
+                    trim: true,
+                },
+                name: {
+                    type: String,
+                    default: 'User',
+                },
+                status: {
+                    type: String,
+                    enum: ['pending', 'sent', 'failed'],
+                    default: 'pending',
+                },
+                sentAt: {
+                    type: Date,
+                    default: null,
+                },
+                error: {
+                    type: String,
+                    default: null,
+                },
+            }
+        ],
         createdBy: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
             required: true,
         }
     },
-    { timestamps: true }
+    { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
 // Index for efficient querying
 scheduledMailSchema.index({ sendAt: 1, status: 1 });
 scheduledMailSchema.index({ createdBy: 1, status: 1 });
+scheduledMailSchema.index({ 'deliveryLog.status': 1 }); // for delivery aggregation
+
+// Virtual: delivery summary counts — computed on read, zero extra DB writes
+scheduledMailSchema.virtual('deliverySummary').get(function () {
+    const log = this.deliveryLog || [];
+    return {
+        total: log.length,
+        sent: log.filter(e => e.status === 'sent').length,
+        failed: log.filter(e => e.status === 'failed').length,
+        pending: log.filter(e => e.status === 'pending').length,
+    };
+});
 
 const ScheduledMail = mongoose.model("ScheduledMail", scheduledMailSchema);
 module.exports = ScheduledMail;

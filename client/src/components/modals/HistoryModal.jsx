@@ -1,13 +1,28 @@
 import { useEffect, useState } from 'react'
-import { MdClose, MdEmail } from 'react-icons/md';
+import { MdClose, MdEmail, MdRefresh } from 'react-icons/md';
 import axios from "axios";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { useUserContext } from "../../context/UserContext";
 
 const HistoryModal = ({ user, show, close, id }) => {
     const [history, setHistory] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const { refresh } = useUserContext();
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
+    const handleRefresh = async () => {
+        setIsRefreshing(true);
+        try {
+            await refresh();
+            // toast.success("History refreshed successfully!");
+        } catch (error) {
+            toast.error("Failed to refresh history");
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
 
     // Combined effect for initialization and keyboard handling
     useEffect(() => {
@@ -70,13 +85,10 @@ const HistoryModal = ({ user, show, close, id }) => {
                         <p className="text-gray-300 text-sm mb-2">
                             View all sent emails for {user?.companyName || user?.fullName}
                         </p>
-                        <p className="text-yellow-400 text-xs bg-yellow-400/10 border border-yellow-400/30 rounded-lg px-3 py-2 inline-block">
-                            💡 Always refresh the page to see updated history
-                        </p>
                     </div>
-                    {/* Search Bar - Top Right */}
-                    <div className="w-80">
-                        <div className="relative">
+                    {/* Search Bar & Refresh - Top Right */}
+                    <div className="flex items-center gap-2 w-96">
+                        <div className="relative flex-1">
                             <input
                                 type="text"
                                 value={searchTerm}
@@ -94,6 +106,14 @@ const HistoryModal = ({ user, show, close, id }) => {
                                 </button>
                             )}
                         </div>
+                        <button
+                            onClick={handleRefresh}
+                            disabled={isRefreshing}
+                            title="Refresh"
+                            className={`p-2 rounded-xl text-gray-400 hover:text-orange-400 hover:bg-orange-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+                        >
+                            <MdRefresh className={`text-xl ${isRefreshing ? 'animate-spin text-orange-400' : ''}`} />
+                        </button>
                     </div>
                 </div>
 
