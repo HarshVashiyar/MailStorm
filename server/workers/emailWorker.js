@@ -235,10 +235,15 @@ const processScheduledEmail = async (job) => {
         name: recipientPeople[i] || 'User',
         status: 'pending',
       }));
-      await ScheduledMail.findByIdAndUpdate(scheduledMailId, {
+      const updatedMail = await ScheduledMail.findByIdAndUpdate(scheduledMailId, {
         status: 'Processing',
         deliveryLog: seedLog,
       });
+
+      if (!updatedMail) {
+        console.log(`⚠️ Scheduled mail ${scheduledMailId} deleted before execution. Aborting.`);
+        return { skipped: true, reason: 'Scheduled mail was deleted' };
+      }
     }
 
     // Fan out — each job carries scheduledMailId so it can write back its outcome
