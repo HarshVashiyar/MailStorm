@@ -248,6 +248,7 @@ const getUserSmtpSlots = async (req, res) => {
       createdAt: slot.createdAt,
       errorLog: slot.errorLog,
       signature: slot.signature, // Include signature in response
+      unsubscribeCount: slot.unsubscribeCount ?? 0, // Include unsubscribe count
     }));
 
     return res.status(200).json({

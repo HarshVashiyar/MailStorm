@@ -145,6 +145,25 @@ export const UserProvider = ({ children }) => {
         }
     }, [fetchUsers]);
 
+    const toggleSkipUnsubscribed = useCallback(async (userId, skipUnsubscribed) => {
+        // Optimistic update
+        setAllUsers(prev => prev.map(u => u._id === userId ? { ...u, skipUnsubscribed } : u));
+        try {
+            const response = await api.users.toggleSkipUnsubscribed(userId, skipUnsubscribed);
+            if (!response.data?.success) {
+                // Revert on failure
+                setAllUsers(prev => prev.map(u => u._id === userId ? { ...u, skipUnsubscribed: !skipUnsubscribed } : u));
+                return { success: false, message: response.data?.message || 'Toggle failed' };
+            }
+            return { success: true, message: response.data.message };
+        } catch (error) {
+            // Revert on error
+            setAllUsers(prev => prev.map(u => u._id === userId ? { ...u, skipUnsubscribed: !skipUnsubscribed } : u));
+            console.error('Error toggling skipUnsubscribed:', error);
+            return { success: false, message: error.response?.data?.message || 'Something went wrong' };
+        }
+    }, []);
+
     // Compute paged slices client-side
     const companiesPagination = useMemo(() =>
         buildPagination(allCompanies.length, companiesPage, COMPANIES_LIMIT),
@@ -186,6 +205,7 @@ export const UserProvider = ({ children }) => {
         deleteUsers,
         suspendUsers,
         unsuspendUsers,
+        toggleSkipUnsubscribed,
         // Pagination
         companiesPagination,
         usersPagination,
@@ -209,6 +229,7 @@ export const UserProvider = ({ children }) => {
         deleteUsers,
         suspendUsers,
         unsuspendUsers,
+        toggleSkipUnsubscribed,
         companiesPagination,
         usersPagination,
         goToCompaniesPage,

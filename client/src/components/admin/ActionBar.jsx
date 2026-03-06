@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { MdClose } from 'react-icons/md';
 import { exportCompaniesToExcel } from '../../services/exportCompanies';
+import { useAuth } from '../../context/authContext';
 
 const ActionBar = ({
   show,
@@ -56,16 +57,21 @@ const ActionBar = ({
     };
   }, []);
 
+  const { userRole } = useAuth();
+  const isAdmin = userRole === 'Admin';
+
   return (
     <div className="flex items-center gap-2">
       <div className="flex items-center gap-1">
-        <button
-          onClick={toggleView}
-          className="group bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white inline-flex items-center gap-2 px-3 py-1 rounded-md transition-all duration-200 transform hover:scale-105 border border-primary-400/20 text-sm"
-        >
-          <span className="text-sm">{show ? '🏢' : '👥'}</span>
-          <span className="font-medium whitespace-nowrap">{show ? 'Companies' : 'Users'}</span>
-        </button>
+        {isAdmin && (
+          <button
+            onClick={toggleView}
+            className="group bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white inline-flex items-center gap-2 px-3 py-1 rounded-md transition-all duration-200 transform hover:scale-105 border border-primary-400/20 text-sm"
+          >
+            <span className="text-sm">{show ? '🏢' : '👥'}</span>
+            <span className="font-medium whitespace-nowrap">{show ? 'Companies' : 'Users'}</span>
+          </button>
+        )}
 
         {!show && (
           <button
@@ -136,7 +142,7 @@ const ActionBar = ({
 
           <button
             onClick={() => setFilterProcurement && setFilterProcurement((v) => !v)}
-            title={filterProcurement ? 'Filter: Procurement only' : 'Show all companies'}
+            title={show ? (filterProcurement ? 'Filter: Admins only' : 'Show all users') : (filterProcurement ? 'Filter: Procurement only' : 'Show all companies')}
             className={`w-10 h-10 flex items-center justify-center rounded-md transition-colors duration-200 text-lg ${filterProcurement ? 'bg-amber-400 text-gray-900' : 'bg-gray-800 text-amber-300'} border border-amber-400/20 ml-2`}
           >
             {filterProcurement ? '★' : '☆'}

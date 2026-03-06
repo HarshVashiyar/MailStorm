@@ -94,6 +94,10 @@ const companySchema = new mongoose.Schema(
       required: true,
       default: false
     },
+    unsubscribed: {
+      type: Boolean,
+      default: false,
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -107,6 +111,9 @@ companySchema.pre("save", function (next) {
   this.history.sort((a, b) => new Date(b.lastSent) - new Date(a.lastSent));
   next();
 });
+
+// Compound index for the unsubscribe skip check (runs on every email send)
+companySchema.index({ companyEmail: 1, createdBy: 1, unsubscribed: 1 });
 
 const Company = mongoose.model("Company", companySchema);
 module.exports = Company;

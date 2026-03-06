@@ -17,6 +17,7 @@ export const api = {
         }),
         suspend: (userIds, reason) => axios.post(`${BASE_URL}user/suspend`, { userIds, reason }, { withCredentials: true }),
         unsuspend: (userIds) => axios.post(`${BASE_URL}user/unsuspend`, { userIds }, { withCredentials: true }),
+        toggleSkipUnsubscribed: (userId, skipUnsubscribed) => axios.put(`${BASE_URL}user/skip-unsubscribed`, { userId, skipUnsubscribed }, { withCredentials: true }),
     },
 
     companies: {

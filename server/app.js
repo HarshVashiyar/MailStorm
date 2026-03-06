@@ -6,6 +6,7 @@ const express = require("express");
 const app = express();
 const mongoose = require("mongoose");
 const cors = require("cors");
+const cron = require("node-cron");
 const staticRouter = require("./routes/staticRouter");
 const path = require("path");
 const cookieParser = require("cookie-parser");
@@ -63,6 +64,21 @@ mongoose
     console.log("✅ Connected to database successfully");
     // console.log("Starting email workers...");
     require('./workers/emailWorker');
+
+    // Weekly cron: reset unsubscribeCount on all SMTP slots every Sunday at midnight
+    const SmtpAccount = require('./models/SmtpAccount');
+    cron.schedule('0 0 * * 0', async () => {
+      try {
+        const result = await SmtpAccount.updateMany(
+          { unsubscribeCount: { $gt: 0 } },
+          { $set: { unsubscribeCount: 0 } }
+        );
+        console.log(`♻️  Weekly unsubscribeCount reset: ${result.modifiedCount} SMTP slot(s) reset.`);
+      } catch (err) {
+        console.error('❌ Weekly unsubscribeCount reset failed:', err.message);
+      }
+    }, { timezone: 'UTC' });
+
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
     });

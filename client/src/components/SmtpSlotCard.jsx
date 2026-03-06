@@ -147,14 +147,21 @@ const SmtpSlotCard = ({ slot, onToggleStatus, onDelete, onVerify, getProviderIco
 
         <div className="flex items-center justify-between text-xs text-gray-400 mb-3">
           <span>{slot.emailsSentToday}/{slot.dailyLimit}</span>
-          <span className={`px-2 py-1 rounded ${slot.status === 'active'
-            ? 'bg-green-500/20 text-green-400'
-            : slot.status === 'error'
-              ? 'bg-red-500/20 text-red-400'
-              : 'bg-gray-500/20 text-gray-400'
-            }`}>
-            {slot.status}
-          </span>
+          <div className="flex items-center gap-2">
+            {(slot.unsubscribeCount ?? 0) > 0 && (
+              <span className="bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full text-xs font-medium" title="Unsubscribe count (weekly)">
+                🚫 {slot.unsubscribeCount}
+              </span>
+            )}
+            <span className={`px-2 py-1 rounded ${slot.status === 'active'
+              ? 'bg-green-500/20 text-green-400'
+              : slot.status === 'error'
+                ? 'bg-red-500/20 text-red-400'
+                : 'bg-gray-500/20 text-gray-400'
+              }`}>
+              {slot.status}
+            </span>
+          </div>
         </div>
 
         {/* Show error message if exists */}

@@ -77,6 +77,10 @@ const userSchema = new mongoose.Schema(
         default: ""
       }
     },
+    skipUnsubscribed: {
+      type: Boolean,
+      default: false,
+    },
   }, { timestamps: true }
 );
 
@@ -103,7 +107,7 @@ userSchema.static(
       error.statusCode = 404;
       throw error;
     }
-    
+
     if (user.suspended) {
       const error = new Error("Account Suspended");
       error.statusCode = 403;
@@ -111,7 +115,7 @@ userSchema.static(
       error.suspensionReason = user.suspensionReason || "Account suspended for violating terms of service";
       throw error;
     }
-    
+
     const isPasswordMatch = await bcrypt.compare(
       password,
       user.password

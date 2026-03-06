@@ -8,6 +8,7 @@ const scheduledMailRouter = require("./scheduledMailRouter");
 const templateRouter = require("./templateRouter");
 const smtpRouter = require("./smtpRouter");
 const oAuthRouter = require("./oAuthRouter");
+const unsubscribeRouter = require("./unsubscribeRouter");
 
 app.get("/", (req, res) => {
   res.send("Welcome to Static Router!");
@@ -28,5 +29,7 @@ app.use("/template", templateRouter);
 app.use("/smtp", smtpRouter);
 
 app.use("/oauth", oAuthRouter);
+
+app.use("/unsubscribe", unsubscribeRouter);
 
 module.exports = app;

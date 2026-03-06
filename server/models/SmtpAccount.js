@@ -129,6 +129,12 @@ const smtpAccountSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    // Unsubscribe tracking per slot
+    unsubscribeCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     errorLog: {
       lastError: {
         type: String,

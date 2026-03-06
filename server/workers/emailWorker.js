@@ -11,6 +11,8 @@ const {
   _doSendUnsuspensionEmail,
 } = require("../utilities/mailUtil");
 const smtpUtil = require("../utilities/smtpUtil");
+const Company = require("../models/companyDB");
+const User = require("../models/userDB");
 
 // ─────────────────────────────────────────────────────────────────────────────
 // In-process SmtpAccount cache
@@ -44,13 +46,15 @@ const writeDeliveryOutcome = async (modelType, jobId, recipientEmail, outcome) =
 
   try {
     // Atomically update the matching log entry
+    const newStatus = outcome.skipped ? 'skipped'
+      : outcome.success ? 'sent' : 'failed';
     await Model.updateOne(
       { _id: jobId, 'deliveryLog.email': recipientEmail },
       {
         $set: {
-          'deliveryLog.$.status': outcome.success ? 'sent' : 'failed',
+          'deliveryLog.$.status': newStatus,
           'deliveryLog.$.sentAt': outcome.success ? new Date() : null,
-          'deliveryLog.$.error': outcome.error || null,
+          'deliveryLog.$.error': outcome.skipped ? 'Recipient unsubscribed' : (outcome.error || null),
         },
       }
     );
@@ -63,11 +67,12 @@ const writeDeliveryOutcome = async (modelType, jobId, recipientEmail, outcome) =
     const total = log.length;
     const sent = log.filter(e => e.status === 'sent').length;
     const failed = log.filter(e => e.status === 'failed').length;
+    const skipped = log.filter(e => e.status === 'skipped').length;
     const pending = log.filter(e => e.status === 'pending').length;
 
     if (pending > 0) return; // still waiting on other recipients
 
-    const topStatus = failed === 0 ? statusMap.sent
+    const topStatus = (failed === 0 && skipped === 0) ? statusMap.sent
       : sent === 0 ? statusMap.failed
         : statusMap.partial;
 
@@ -82,11 +87,26 @@ const writeDeliveryOutcome = async (modelType, jobId, recipientEmail, outcome) =
 // single-email: send one email using mailUtil.sendSingleEmail
 // ─────────────────────────────────────────────────────────────────────────────
 const processSingleEmail = async (job) => {
-  const { to, subject, html, recipientName, attachments, smtpAccountId, scheduledMailId, bulkJobId } = job.data;
+  const { to, subject, html, recipientName, attachments, smtpAccountId, scheduledMailId, bulkJobId, userId, skipUnsubscribed } = job.data;
+
+  // ── Check if recipient has unsubscribed from this sender (only when skip is NOT enabled) ──
+  if (userId && !skipUnsubscribed) {
+    const isUnsubscribed = await Company.exists({
+      companyEmail: to.toLowerCase().trim(),
+      createdBy: userId,
+      unsubscribed: true,
+    });
+    if (isUnsubscribed) {
+      console.log(`⚠️  Skipping ${to} — unsubscribed from sender ${userId}`);
+      if (scheduledMailId) await writeDeliveryOutcome('scheduled', scheduledMailId, to, { skipped: true });
+      if (bulkJobId) await writeDeliveryOutcome('bulk', bulkJobId, to, { skipped: true });
+      return { skipped: true, to };
+    }
+  }
 
   try {
     const smtpAccount = await getCachedSmtpAccount(smtpAccountId);
-    const result = await sendSingleEmail({ to, subject, html, recipientName, attachments, smtpAccountId, smtpAccount });
+    const result = await sendSingleEmail({ to, subject, html, recipientName, attachments, smtpAccountId, smtpAccount, senderId: userId, skipUnsubscribed });
 
     // Write success to whichever parent job originated this send
     if (scheduledMailId) await writeDeliveryOutcome('scheduled', scheduledMailId, to, { success: true });
@@ -97,14 +117,14 @@ const processSingleEmail = async (job) => {
 
     if (smtpAccountId) {
       try {
-        const smtpAccount = await SmtpAccount.findById(smtpAccountId);
-        if (smtpAccount) {
-          smtpAccount.errorLog.lastError = error.message;
-          smtpAccount.errorLog.lastErrorAt = new Date();
-          smtpAccount.status = "error";
-          await smtpAccount.save();
-          smtpCache.delete(smtpAccountId);
-        }
+        await SmtpAccount.findByIdAndUpdate(smtpAccountId, {
+          $set: {
+            'errorLog.lastError': error.message,
+            'errorLog.lastErrorAt': new Date(),
+            status: 'error',
+          },
+        });
+        smtpCache.delete(smtpAccountId);
       } catch (logError) {
         console.error("Failed to log error to SMTP account:", logError);
       }
@@ -124,7 +144,7 @@ const processSingleEmail = async (job) => {
 // bulk-email: seed BulkEmailJob deliveryLog, then fan-out to single-email jobs
 // ─────────────────────────────────────────────────────────────────────────────
 const processBulkEmail = async (job) => {
-  const { emails, subject, html, attachments, smtpAccountId, userId, bulkJobId } = job.data;
+  const { emails, subject, html, attachments, smtpAccountId, userId, bulkJobId, skipUnsubscribed } = job.data;
 
   try {
     const smtpAccount = await getCachedSmtpAccount(smtpAccountId);
@@ -159,6 +179,7 @@ const processBulkEmail = async (job) => {
             smtpAccountId,
             userId,
             bulkJobId: bulkJobId || null, // ← passed through so processSingleEmail can write back
+            skipUnsubscribed,
           },
           { priority: 5, attempts: 3, removeOnComplete: true, removeOnFail: false }
         )
@@ -184,7 +205,18 @@ const processBulkEmail = async (job) => {
 // scheduled-email: resolve attachments, append signature, seed deliveryLog, fan-out
 // ─────────────────────────────────────────────────────────────────────────────
 const processScheduledEmail = async (job) => {
-  const { to, recipientPeople, subject, html, attachments, scheduledMailId, smtpAccountId } = job.data;
+  const { to, recipientPeople, subject, html, attachments, scheduledMailId, smtpAccountId, userId } = job.data;
+
+  // Look up the sender's skipUnsubscribed preference once for the whole fan-out
+  let skipUnsubscribed = false; // default
+  if (userId) {
+    try {
+      const sender = await User.findById(userId).select('skipUnsubscribed').lean();
+      if (sender) skipUnsubscribed = sender.skipUnsubscribed ?? false;
+    } catch (err) {
+      console.error('Failed to fetch sender skipUnsubscribed:', err.message);
+    }
+  }
 
   try {
     const processedAttachments = await processAttachments(attachments);
@@ -221,7 +253,9 @@ const processScheduledEmail = async (job) => {
             html: finalHtml,
             attachments: processedAttachments,
             smtpAccountId,
+            userId: userId || null,
             scheduledMailId: scheduledMailId || null,
+            skipUnsubscribed,
           },
           { priority: 3, attempts: 3, removeOnComplete: true, removeOnFail: false }
         )

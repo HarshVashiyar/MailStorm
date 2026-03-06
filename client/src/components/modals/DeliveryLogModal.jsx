@@ -45,19 +45,22 @@ const StatusBadge = ({ status, type }) => {
 // ─── Mini delivery bar for a single row ──────────────────────────────────────
 
 const DeliveryBar = ({ summary }) => {
-    const { total = 0, sent = 0, failed = 0, pending = 0 } = summary ?? {};
+    const { total = 0, sent = 0, failed = 0, pending = 0, skipped = 0 } = summary ?? {};
     if (total === 0) return <span className="text-gray-600 text-xs">—</span>;
     const sentPct = Math.round((sent / total) * 100);
     const failedPct = Math.round((failed / total) * 100);
+    const skippedPct = Math.round((skipped / total) * 100);
     return (
         <div className="flex flex-col gap-1 min-w-[100px]">
             <div className="w-full h-1 rounded-full bg-gray-700/60 overflow-hidden flex">
                 <div className="h-full bg-green-500" style={{ width: `${sentPct}%` }} />
                 <div className="h-full bg-red-500" style={{ width: `${failedPct}%` }} />
+                <div className="h-full bg-amber-500" style={{ width: `${skippedPct}%` }} />
             </div>
             <div className="flex items-center gap-2 text-xs flex-wrap">
                 {sent > 0 && <span className="inline-flex items-center gap-0.5 text-green-400"><MdCheckCircle className="text-xs" />{sent}</span>}
                 {failed > 0 && <span className="inline-flex items-center gap-0.5 text-red-400"><MdCancel className="text-xs" />{failed}</span>}
+                {skipped > 0 && <span className="inline-flex items-center gap-0.5 text-amber-400">⚠️{skipped}</span>}
                 {pending > 0 && <span className="inline-flex items-center gap-0.5 text-yellow-400"><MdHourglassEmpty className="text-xs" />{pending}</span>}
                 <span className="text-gray-500">/ {total}</span>
             </div>

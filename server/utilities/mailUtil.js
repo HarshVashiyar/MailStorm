@@ -1,8 +1,10 @@
 require("dotenv").config();
+const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 const { google } = require("googleapis");
 const axios = require("axios");
 const SmtpAccount = require("../models/SmtpAccount");
+const UnsubscribeToken = require("../models/unsubscribeTokenDB");
 const smtpUtil = require("./smtpUtil");
 const { processHtmlForEmail } = require("./emailImageUtil");
 const Company = require("../models/companyDB");
@@ -10,12 +12,40 @@ const redisClient = require("../config/redisClient");
 const { transactionalQueue } = require("../config/queue");
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Branding footer appended to every outgoing user email
+// Branding footer builder — generates a unique unsubscribe link per send
 // ─────────────────────────────────────────────────────────────────────────────
-const brandingFooter = `<div style="margin-top: 30px; padding-top: 15px; border-top: 1px solid #e5e7eb; text-align: center;">
-    <p style="font-size: 10px; color: #9ca3af; margin: 0;">Sent via <a href="https://mailstorm.keshavturnomatics.com" style="color: #6b7280; text-decoration: underline;">MailStorm</a>, <a href="https://mailstorm.keshavturnomatics.com/unsubscribe" style="color: #6b7280; text-decoration: underline;">click here to unsubscribe</a></p>
+const buildBrandingFooter = (unsubscribeToken, skipUnsubscribed = false) => {
+  const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8080';
+  if (skipUnsubscribed || !unsubscribeToken || unsubscribeToken === 'unsubscribe') {
+    // skipUnsubscribed is ON or no valid token — simple branding only
+    return `<div style="margin-top: 30px; padding-top: 15px; border-top: 1px solid #e5e7eb; text-align: center;">
+    <p style="font-size: 10px; color: #9ca3af; margin: 0;">Sent via <a href="https://mailstorm.keshavturnomatics.com" style="color: #6b7280; text-decoration: underline;">MailStorm</a></p>
 </div>`;
+  }
+  const unsubscribeUrl = `${BACKEND_URL}/api/unsubscribe/${unsubscribeToken}`;
+  return `<div style="margin-top: 30px; padding-top: 15px; border-top: 1px solid #e5e7eb; text-align: center;">
+    <p style="font-size: 10px; color: #9ca3af; margin: 0;">Sent via <a href="https://mailstorm.keshavturnomatics.com" style="color: #6b7280; text-decoration: underline;">MailStorm</a>, <a href="${unsubscribeUrl}" style="color: #6b7280; text-decoration: underline;">click here to unsubscribe</a></p>
+</div>`;
+};
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Get or create a unique unsubscribe token for a sender–recipient pair
+// ─────────────────────────────────────────────────────────────────────────────
+const getOrCreateUnsubscribeToken = async (senderId, recipientEmail, smtpAccountId) => {
+  if (!senderId || !smtpAccountId) {
+    // No sender/slot context (e.g. system emails) — return a placeholder
+    return 'unsubscribe';
+  }
+  const normalizedEmail = recipientEmail.toLowerCase().trim();
+
+  // Atomic upsert: avoids TOCTOU race when concurrent sends target the same recipient
+  const doc = await UnsubscribeToken.findOneAndUpdate(
+    { senderId, recipientEmail: normalizedEmail, smtpAccountId },
+    { $setOnInsert: { token: crypto.randomBytes(32).toString('hex') } },
+    { upsert: true, new: true }
+  );
+  return doc.token;
+};
 // ─────────────────────────────────────────────────────────────────────────────
 // OTP helpers
 // ─────────────────────────────────────────────────────────────────────────────
@@ -426,7 +456,7 @@ const processAttachments = async (attachments) => {
  * Handles attachment resolution, CID image embedding, and branding footer.
  * Throws on failure — callers should catch and handle queue/retry logic.
  */
-const sendSingleEmail = async ({ to, subject, html, recipientName, attachments, smtpAccountId, smtpAccount: preloadedAccount }) => {
+const sendSingleEmail = async ({ to, subject, html, recipientName, attachments, smtpAccountId, smtpAccount: preloadedAccount, senderId, skipUnsubscribed = false }) => {
   const smtpAccount = preloadedAccount ?? await SmtpAccount.findById(smtpAccountId);
   if (!smtpAccount) throw new Error("SMTP account not found");
 
@@ -437,8 +467,12 @@ const sendSingleEmail = async ({ to, subject, html, recipientName, attachments, 
   const transporter = await createTransporter(smtpAccount);
   const processedAttachments = await processAttachments(attachments);
 
+  // Build personalized unsubscribe footer for this sender–recipient pair + slot
+  const unsubToken = await getOrCreateUnsubscribeToken(senderId, to, smtpAccount._id);
+  const footer = buildBrandingFooter(unsubToken, skipUnsubscribed);
+
   // Build full HTML: greeting + body + branding footer
-  const fullHtml = `<p>Dear ${recipientName || "Sir/Madam"},</p>${html}<br>${brandingFooter}`;
+  const fullHtml = `<p>Dear ${recipientName || "Sir/Madam"},</p>${html}<br>${footer}`;
 
   // Convert base64 inline images to CID attachments for email client compatibility
   const { html: processedHtml, inlineAttachments } = await processHtmlForEmail(fullHtml);
@@ -455,13 +489,19 @@ const sendSingleEmail = async ({ to, subject, html, recipientName, attachments, 
   await smtpUtil.incrementEmailCount(smtpAccount, 1);
 
   // Log send to company history if recipient is a known company
-  const companies = await Company.find({ companyEmail: { $in: to } });
-  await Promise.all(
-    companies.map((company) => {
-      company.history.push({ lastSent: new Date(), subject });
-      return company.save();
-    })
-  );
+  if (senderId) {
+    const toArray = Array.isArray(to) ? to : to.split(',').map(e => e.trim());
+    const companies = await Company.find({ 
+      companyEmail: { $in: toArray },
+      createdBy: senderId 
+    });
+    await Promise.all(
+      companies.map((company) => {
+        company.history.push({ lastSent: new Date(), subject });
+        return company.save();
+      })
+    );
+  }
 
   return {
     success: true,
@@ -474,7 +514,8 @@ const sendSingleEmail = async ({ to, subject, html, recipientName, attachments, 
 
 // ─────────────────────────────────────────────────────────────────────────────
 module.exports = {
-  brandingFooter,
+  buildBrandingFooter,
+  getOrCreateUnsubscribeToken,
   sendOTP,
   verifyOTP,
   sendSuspensionEmail,

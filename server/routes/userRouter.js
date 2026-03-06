@@ -13,6 +13,7 @@ const {
   handleLogout,
   handleUploadProfilePhoto,
   handleDeleteProfilePhoto,
+  handleToggleSkipUnsubscribed,
 } = require("../controllers/userController");
 const {
   authenticateUser,
@@ -54,5 +55,7 @@ app.post(
 );
 
 app.delete("/deletepp", authenticateUser, handleDeleteProfilePhoto);
+
+app.put("/skip-unsubscribed", authenticateUser, authorizeAdmin, handleToggleSkipUnsubscribed);
 
 module.exports = app;

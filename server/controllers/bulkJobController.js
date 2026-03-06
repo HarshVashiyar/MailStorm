@@ -18,6 +18,7 @@ const handleGetBulkJobs = async (req, res) => {
                         sent: { $size: { $filter: { input: { $ifNull: ['$deliveryLog', []] }, cond: { $eq: ['$$this.status', 'sent'] } } } },
                         failed: { $size: { $filter: { input: { $ifNull: ['$deliveryLog', []] }, cond: { $eq: ['$$this.status', 'failed'] } } } },
                         pending: { $size: { $filter: { input: { $ifNull: ['$deliveryLog', []] }, cond: { $eq: ['$$this.status', 'pending'] } } } },
+                        skipped: { $size: { $filter: { input: { $ifNull: ['$deliveryLog', []] }, cond: { $eq: ['$$this.status', 'skipped'] } } } },
                     },
                 },
             },
@@ -47,15 +48,16 @@ const handleGetBulkJobLog = async (req, res) => {
 
         const log = doc.deliveryLog || [];
 
-        // Sort: failed first, then pending, then sent — easiest triage order
-        const ORDER = { failed: 0, pending: 1, sent: 2 };
-        log.sort((a, b) => (ORDER[a.status] ?? 3) - (ORDER[b.status] ?? 3));
+        // Sort: failed first, then skipped, then pending, then sent — easiest triage order
+        const ORDER = { failed: 0, skipped: 1, pending: 2, sent: 3 };
+        log.sort((a, b) => (ORDER[a.status] ?? 4) - (ORDER[b.status] ?? 4));
 
         const summary = {
             total: log.length,
             sent: log.filter(e => e.status === 'sent').length,
             failed: log.filter(e => e.status === 'failed').length,
             pending: log.filter(e => e.status === 'pending').length,
+            skipped: log.filter(e => e.status === 'skipped').length,
         };
 
         return res.status(200).json({

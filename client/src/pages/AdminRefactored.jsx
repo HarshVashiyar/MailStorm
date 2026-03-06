@@ -45,6 +45,7 @@ const AdminContent = () => {
     deleteCompanies,
     suspendUsers,
     unsuspendUsers,
+    toggleSkipUnsubscribed,
   } = useUserContext();
 
   // ✅ Fetch companies on mount
@@ -103,6 +104,10 @@ const AdminContent = () => {
           user.hasProcurementTeam ?? user.procurementTeam ?? user.procurement ?? user.hasProcurement
         );
         if (!hasProcurement) return false;
+      }
+
+      if (show && filterProcurement) {
+        if (user.role !== 'Admin') return false;
       }
 
       const haystack = searchFields
@@ -666,6 +671,7 @@ const AdminContent = () => {
             searchTerm={searchTerm}
             pagination={filteredPagination}
             onPageChange={goToPage}
+            onToggleSkipUnsubscribed={toggleSkipUnsubscribed}
           />
         </div>
       </div>

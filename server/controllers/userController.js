@@ -8,7 +8,7 @@ const handleCheckAuthStatus = async (req, res) => {
         if (!user) {
             return res.status(401).json({ success: false, isAuthenticated: false });
         }
-        return res.status(200).json({ success: true, isAuthenticated: true });
+        return res.status(200).json({ success: true, isAuthenticated: true, role: user.role });
     }
     catch (error) {
         console.error("Error checking authentication status:", error);
@@ -76,9 +76,18 @@ const handleUserSignIn = async (req, res) => {
 const handleGetAllUsers = async (req, res) => {
     try {
         // All records returned at once; frontend paginates client-side
-        const users = await User.find({ role: 'User' })
+        const users = await User.find({})
             .sort({ createdAt: -1 })
             .lean();
+
+        // Aggregate unsubscribeCount from all SMTP slots per user in one query
+        const SmtpAccount = require('../models/SmtpAccount');
+        const unsubAgg = await SmtpAccount.aggregate([
+            { $match: { userId: { $in: users.map(u => u._id) } } },
+            { $group: { _id: '$userId', totalUnsubs: { $sum: '$unsubscribeCount' } } },
+        ]);
+        const unsubMap = {};
+        unsubAgg.forEach(row => { unsubMap[row._id.toString()] = row.totalUnsubs; });
 
         const data = users.map(user => ({
             _id: user._id,
@@ -90,8 +99,10 @@ const handleGetAllUsers = async (req, res) => {
             suspended: user.suspended,
             suspendedAt: user.suspendedAt,
             suspensionReason: user.suspensionReason,
+            skipUnsubscribed: user.skipUnsubscribed ?? false,
             createdAt: user.createdAt,
             updatedAt: user.updatedAt,
+            unsubscribeCount: unsubMap[user._id.toString()] || 0,
         }));
 
         return res.status(200).json({
@@ -378,6 +389,21 @@ const handleDeleteProfilePhoto = async (req, res) => {
     }
 }
 
+const handleToggleSkipUnsubscribed = async (req, res) => {
+    try {
+        const { userId, skipUnsubscribed } = req.body;
+        if (!userId || typeof skipUnsubscribed !== 'boolean') {
+            return res.status(400).json({ success: false, message: 'userId and skipUnsubscribed (boolean) are required.' });
+        }
+        const user = await User.findByIdAndUpdate(userId, { skipUnsubscribed }, { new: true }).lean();
+        if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+        return res.status(200).json({ success: true, message: `Skip-unsubscribed ${skipUnsubscribed ? 'enabled' : 'disabled'} for ${user.fullName}.`, skipUnsubscribed: user.skipUnsubscribed });
+    } catch (error) {
+        console.error('Error toggling skipUnsubscribed:', error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 module.exports = {
     handleCheckAuthStatus,
     handleUserSignUp,
@@ -391,4 +417,5 @@ module.exports = {
     handleLogout,
     handleUploadProfilePhoto,
     handleDeleteProfilePhoto,
+    handleToggleSkipUnsubscribed,
 };

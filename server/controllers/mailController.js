@@ -117,6 +117,10 @@ const handleSendMail = async (req, res) => {
       });
     }
 
+    // Look up caller's skipUnsubscribed preference
+    const userDoc = await User.findById(user.id).select('skipUnsubscribed').lean();
+    const skipUnsubscribed = userDoc?.skipUnsubscribed ?? false;
+
     // ✅ DYNAMIC STORAGE: Calculate total attachment size
     let totalAttachmentSize = 0;
     req.files?.forEach(file => {
@@ -193,6 +197,7 @@ const handleSendMail = async (req, res) => {
         userId: user.id,
         smtpAccountId: smtpAccount._id.toString(),
         bulkJobId: bulkJob._id.toString(), // ← tracked for delivery log
+        skipUnsubscribed,
       },
       {
         priority: 1,
@@ -244,7 +249,7 @@ const handleEnhanceSubject = async (req, res) => {
       res.status(400).send({ success: false, message: "Please provide the subject to be enhanced!" });
     }
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-2.5-flash",
       contents: [
         {
           role: "user", parts: [
@@ -290,7 +295,7 @@ const handleGenerateHTMLBody = async (req, res) => {
       res.status(400).send({ success: false, message: "Please provide the subject for which the content has to be generated!" });
     }
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-2.5-flash",
       contents: [
         {
           role: "user", parts: [
