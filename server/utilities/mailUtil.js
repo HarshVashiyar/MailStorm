@@ -456,7 +456,7 @@ const processAttachments = async (attachments) => {
  * Handles attachment resolution, CID image embedding, and branding footer.
  * Throws on failure — callers should catch and handle queue/retry logic.
  */
-const sendSingleEmail = async ({ to, subject, html, recipientName, attachments, smtpAccountId, smtpAccount: preloadedAccount, senderId, skipUnsubscribed = false }) => {
+const sendSingleEmail = async ({ to, subject, html, recipientName, attachments, smtpAccountId, smtpAccount: preloadedAccount, senderId, skipUnsubscribed = false, prefix, suffix }) => {
   const smtpAccount = preloadedAccount ?? await SmtpAccount.findById(smtpAccountId);
   if (!smtpAccount) throw new Error("SMTP account not found");
 
@@ -472,7 +472,10 @@ const sendSingleEmail = async ({ to, subject, html, recipientName, attachments, 
   const footer = buildBrandingFooter(unsubToken, skipUnsubscribed);
 
   // Build full HTML: greeting + body + branding footer
-  const fullHtml = `<p>Dear ${recipientName || "Sir/Madam"},</p>${html}<br>${footer}`;
+  const greetingPrefix = prefix ? prefix.trim() + " " : "";
+  const greetingSuffix = suffix ? " " + suffix.trim() : "";
+  const finalRecipient = recipientName || "Sir/Madam";
+  const fullHtml = `<p>${greetingPrefix}${finalRecipient}${greetingSuffix},</p>${html}<br>${footer}`;
 
   // Convert base64 inline images to CID attachments for email client compatibility
   const { html: processedHtml, inlineAttachments } = await processHtmlForEmail(fullHtml);

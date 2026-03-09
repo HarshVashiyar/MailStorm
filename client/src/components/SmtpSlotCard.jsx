@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { FaTrash, FaCheckCircle, FaSignature, FaEdit, FaTimes, FaSave } from "react-icons/fa";
+import { FaTrash, FaCheckCircle, FaSignature, FaEdit, FaTimes, FaSave, FaLightbulb } from "react-icons/fa";
 import axios from "axios";
 import { toast } from "react-toastify";
 import NewPost from "./NewPost";
@@ -129,21 +129,41 @@ const SmtpSlotCard = ({ slot, onToggleStatus, onDelete, onVerify, getProviderIco
 
   return (
     <>
-      <div className="bg-dark-900/40 border border-white/5 rounded-xl p-4 hover:border-primary-500/30 transition-all">
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">{getProviderIcon(slot.provider)}</span>
-            <div>
-              <p className="text-white font-medium text-sm">Slot {slot.slotNumber}</p>
-              <p className="text-xs text-gray-400 capitalize">{slot.provider}</p>
+      <div className="relative bg-dark-900/40 border border-white/5 rounded-xl p-4 hover:border-primary-500/30 transition-all">
+        <div className="flex items-start justify-between mb-3 gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <span className="text-2xl shrink-0">{getProviderIcon(slot.provider)}</span>
+            <div className="min-w-0">
+              <p className="text-white font-medium text-sm truncate" title={slot.email}>{slot.email}</p>
+              <p className="text-xs text-gray-400 capitalize">{slot.provider} (Slot {slot.slotNumber})</p>
             </div>
           </div>
-          <span className="text-xl">{getStatusIcon(slot.status, slot.isVerified)}</span>
+          <div className="flex items-center gap-2 shrink-0">
+            {slot.provider === 'gmail' && (
+              <div className="group/bulb flex items-center justify-center cursor-help bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 px-2 py-0.5 rounded-full transition-all">
+                <FaLightbulb className="text-amber-500 text-xs mr-1 animate-pulse" />
+                <span className="text-[10px] text-amber-500/90 font-medium">Tip</span>
+                <div className="absolute inset-0 bg-gray-900/95 backdrop-blur-sm p-4 rounded-xl flex items-center justify-center opacity-0 group-hover/bulb:opacity-100 transition-opacity duration-300 z-[50] pointer-events-none">
+                  <div className="text-sm text-amber-500/90 italic border border-amber-500/20 bg-amber-500/10 p-3 rounded-lg text-center w-full shadow-lg">
+                    If error sending emails, try deleting and re-adding the email address
+                  </div>
+                </div>
+              </div>
+            )}
+            {slot.provider === 'custom' && (
+              <div className="group/bulb flex items-center justify-center cursor-help bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 px-2 py-0.5 rounded-full transition-all">
+                <FaLightbulb className="text-blue-400 text-xs mr-1 animate-pulse" />
+                <span className="text-[10px] text-blue-400/90 font-medium">Tip</span>
+                <div className="absolute inset-0 bg-gray-900/95 backdrop-blur-sm p-4 rounded-xl flex items-center justify-center opacity-0 group-hover/bulb:opacity-100 transition-opacity duration-300 z-[50] pointer-events-none">
+                  <div className="text-sm text-blue-400/90 italic border border-blue-500/20 bg-blue-500/10 p-3 rounded-lg text-center w-full shadow-lg">
+                    May give a delay of few 10 seconds varying based on your provider
+                  </div>
+                </div>
+              </div>
+            )}
+            <span className="text-xl">{getStatusIcon(slot.status, slot.isVerified)}</span>
+          </div>
         </div>
-
-        <p className="text-gray-300 text-sm mb-2 truncate" title={slot.email}>
-          {slot.email}
-        </p>
 
         <div className="flex items-center justify-between text-xs text-gray-400 mb-3">
           <span>{slot.emailsSentToday}/{slot.dailyLimit}</span>

@@ -40,6 +40,16 @@ const scheduledMailSchema = new mongoose.Schema(
             minlength: [3, 'Subject must be at least 3 characters long!'],
             maxlength: [500, 'Subject cannot exceed 500 characters!']
         },
+        prefix: {
+            type: String,
+            default: "",
+            trim: true
+        },
+        suffix: {
+            type: String,
+            default: "",
+            trim: true
+        },
         recipientPeople: {
             type: [String],
             required: [true, "Recipient names are required!"],

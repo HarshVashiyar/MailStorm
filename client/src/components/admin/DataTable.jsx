@@ -89,7 +89,7 @@ const CompanyRow = memo(({ user, index, isSelected, onToggleSelection, onNote, o
       <td className="py-4 px-3 text-center">{lists.length > 0 ? <span className="cursor-pointer" title={lists.map(l => l.listName || l.name || l).join(', ')}>{lists.length}</span> : <span className="opacity-50">0</span>}</td>
       <td className="py-4 px-2 text-center">
         {isUnsubscribed ? (
-          <span className="bg-red-500/20 text-red-400 px-2 py-1 rounded-full text-xs font-bold" title="This company has unsubscribed">⚠️</span>
+          <span className="bg-red-500/20 text-red-400 px-2 py-1 rounded-full text-xs font-bold" title="This recipient has unsubscribed from you">⚠️</span>
         ) : (
           <span className="text-gray-500 text-xs">—</span>
         )}

@@ -49,6 +49,8 @@ const EmailModal = ({
   const [generatingHTML, setGeneratingHTML] = useState(false);
   const [editorKey, setEditorKey] = useState(0);
   const [consentConfirmed, setConsentConfirmed] = useState(false);
+  const [prefix, setPrefix] = useState("");
+  const [suffix, setSuffix] = useState("");
 
   // Resizer refs/state for left/right columns
   const containerRef = useRef(null);
@@ -374,6 +376,8 @@ const EmailModal = ({
     formData.append("html", html);
     formData.append("signature", signature);
     formData.append("mState", mState);
+    formData.append("prefix", prefix);
+    formData.append("suffix", suffix);
 
     if (selectedSlot) {
       const slot = smtpSlots.find(s => s.slotNumber === selectedSlot);
@@ -438,6 +442,8 @@ const EmailModal = ({
     formData.append("status", "Pending");
     formData.append("mState", mState);
     formData.append("timeZone", timeZone);
+    formData.append("prefix", prefix);
+    formData.append("suffix", suffix);
 
     attachments.forEach((file) => formData.append("files", file));
 
@@ -485,6 +491,8 @@ const EmailModal = ({
     setSignature("");
     setAttachments([]);
     setScheduledDateTime("");
+    setPrefix("");
+    setSuffix("");
     closeForm();
   };
 
@@ -550,6 +558,50 @@ const EmailModal = ({
           <div className="flex flex-col md:flex-row gap-3" ref={containerRef}>
             {/* Left column: Subject + Content */}
             <div className="flex-1 space-y-3 min-w-0">
+              {/* Prefix and Suffix Selection */}
+              <div className="flex items-center space-x-4 bg-white/5 p-2 rounded-lg border border-white/10">
+                <div className="flex flex-col flex-1">
+                  <label className="text-white font-medium text-xs mb-1 flex items-center space-x-1">
+                    <span className="text-orange-400">#</span>
+                    <span>Prefix</span>
+                  </label>
+                  <select
+                    value={prefix}
+                    onChange={(e) => setPrefix(e.target.value)}
+                    className="px-2 py-1.5 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
+                  >
+                    <option value="" className="bg-gray-800">None</option>
+                    <option value="Dear" className="bg-gray-800">Dear</option>
+                    <option value="Hello" className="bg-gray-800">Hello</option>
+                    <option value="Hi" className="bg-gray-800">Hi</option>
+                    <option value="Respected" className="bg-gray-800">Respected</option>
+                  </select>
+                </div>
+
+                <div className="flex flex-col flex-1">
+                  <label className="text-white font-medium text-xs mb-1 flex items-center space-x-1">
+                    <span className="text-cyan-400">#</span>
+                    <span>Suffix</span>
+                  </label>
+                  <select
+                    value={suffix}
+                    onChange={(e) => setSuffix(e.target.value)}
+                    className="px-2 py-1.5 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
+                  >
+                    <option value="" className="bg-gray-800">None</option>
+                    <option value="Sir" className="bg-gray-800">Sir</option>
+                    <option value="Madam" className="bg-gray-800">Madam</option>
+                    <option value="Sir / Madam" className="bg-gray-800">Sir / Madam</option>
+                    <option value="Ji" className="bg-gray-800">Ji</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Dynamic Example Display */}
+              <div className="text-xs text-gray-300 italic mb-2 bg-white/5 rounded-md p-1.5 text-center border border-white/10">
+                Your email starts with: <span className="font-medium text-white">{prefix ? prefix + " " : ""}RecipientName{suffix ? " " + suffix : ""}</span>,
+              </div>
+
               {/* Subject Input */}
               <div>
                 <div className="flex items-center justify-between mb-2">
@@ -798,35 +850,35 @@ ${selectedSlot === slotNum
               I confirm that all selected recipients have explicitly consented to receive communication.
             </label>
           </div>
-          
-          <div className="flex justify-between gap-3">
-          <button
-            onClick={resetEmailForm}
-            className="flex-1 bg-white/10 hover:bg-white/20 text-white py-2 px-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 backdrop-blur-sm border border-white/20 flex items-center justify-center space-x-2 text-sm"
-          >
-            <FaTimes />
-            <span>Cancel</span>
-          </button>
 
-          {schedule ? (
+          <div className="flex justify-between gap-3">
             <button
-              onClick={postScheduledEmail}
-              disabled={!consentConfirmed}
-              className="flex-1 bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700 text-white py-2 px-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow flex items-center justify-center space-x-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              onClick={resetEmailForm}
+              className="flex-1 bg-white/10 hover:bg-white/20 text-white py-2 px-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 backdrop-blur-sm border border-white/20 flex items-center justify-center space-x-2 text-sm"
             >
-              <FaCalendarAlt />
-              <span>Schedule</span>
+              <FaTimes />
+              <span>Cancel</span>
             </button>
-          ) : (
-            <button
-              onClick={handleSendMail}
-              disabled={!consentConfirmed}
-              className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white py-2 px-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow flex items-center justify-center space-x-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-            >
-              <span>Send</span>
-            </button>
-          )}
-        </div>
+
+            {schedule ? (
+              <button
+                onClick={postScheduledEmail}
+                disabled={!consentConfirmed}
+                className="flex-1 bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700 text-white py-2 px-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow flex items-center justify-center space-x-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              >
+                <FaCalendarAlt />
+                <span>Schedule</span>
+              </button>
+            ) : (
+              <button
+                onClick={handleSendMail}
+                disabled={!consentConfirmed}
+                className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white py-2 px-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow flex items-center justify-center space-x-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              >
+                <span>Send</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

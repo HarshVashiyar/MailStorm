@@ -2,6 +2,9 @@
 *.xlsx
 server/public
 /MailStorm Demo
+/postman
+.postman
+/docs
 
 # Logs
 logs

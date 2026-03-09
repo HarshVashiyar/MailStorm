@@ -87,7 +87,7 @@ const writeDeliveryOutcome = async (modelType, jobId, recipientEmail, outcome) =
 // single-email: send one email using mailUtil.sendSingleEmail
 // ─────────────────────────────────────────────────────────────────────────────
 const processSingleEmail = async (job) => {
-  const { to, subject, html, recipientName, attachments, smtpAccountId, scheduledMailId, bulkJobId, userId, skipUnsubscribed } = job.data;
+  const { to, subject, html, recipientName, attachments, smtpAccountId, scheduledMailId, bulkJobId, userId, skipUnsubscribed, prefix, suffix } = job.data;
 
   // ── Check if recipient has unsubscribed from this sender (only when skip is NOT enabled) ──
   if (userId && !skipUnsubscribed) {
@@ -106,7 +106,7 @@ const processSingleEmail = async (job) => {
 
   try {
     const smtpAccount = await getCachedSmtpAccount(smtpAccountId);
-    const result = await sendSingleEmail({ to, subject, html, recipientName, attachments, smtpAccountId, smtpAccount, senderId: userId, skipUnsubscribed });
+    const result = await sendSingleEmail({ to, subject, html, recipientName, attachments, smtpAccountId, smtpAccount, senderId: userId, skipUnsubscribed, prefix, suffix });
 
     // Write success to whichever parent job originated this send
     if (scheduledMailId) await writeDeliveryOutcome('scheduled', scheduledMailId, to, { success: true });
@@ -144,7 +144,7 @@ const processSingleEmail = async (job) => {
 // bulk-email: seed BulkEmailJob deliveryLog, then fan-out to single-email jobs
 // ─────────────────────────────────────────────────────────────────────────────
 const processBulkEmail = async (job) => {
-  const { emails, subject, html, attachments, smtpAccountId, userId, bulkJobId, skipUnsubscribed } = job.data;
+  const { emails, subject, html, attachments, smtpAccountId, userId, bulkJobId, skipUnsubscribed, prefix, suffix } = job.data;
 
   try {
     const smtpAccount = await getCachedSmtpAccount(smtpAccountId);
@@ -180,6 +180,8 @@ const processBulkEmail = async (job) => {
             userId,
             bulkJobId: bulkJobId || null, // ← passed through so processSingleEmail can write back
             skipUnsubscribed,
+            prefix,
+            suffix,
           },
           { priority: 5, attempts: 3, removeOnComplete: true, removeOnFail: false }
         )
@@ -205,7 +207,7 @@ const processBulkEmail = async (job) => {
 // scheduled-email: resolve attachments, append signature, seed deliveryLog, fan-out
 // ─────────────────────────────────────────────────────────────────────────────
 const processScheduledEmail = async (job) => {
-  const { to, recipientPeople, subject, html, attachments, scheduledMailId, smtpAccountId, userId } = job.data;
+  const { to, recipientPeople, subject, html, attachments, scheduledMailId, smtpAccountId, userId, prefix, suffix } = job.data;
 
   // Look up the sender's skipUnsubscribed preference once for the whole fan-out
   let skipUnsubscribed = false; // default
@@ -261,6 +263,8 @@ const processScheduledEmail = async (job) => {
             userId: userId || null,
             scheduledMailId: scheduledMailId || null,
             skipUnsubscribed,
+            prefix,
+            suffix,
           },
           { priority: 3, attempts: 3, removeOnComplete: true, removeOnFail: false }
         )

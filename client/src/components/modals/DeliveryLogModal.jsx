@@ -60,7 +60,7 @@ const DeliveryBar = ({ summary }) => {
             <div className="flex items-center gap-2 text-xs flex-wrap">
                 {sent > 0 && <span className="inline-flex items-center gap-0.5 text-green-400"><MdCheckCircle className="text-xs" />{sent}</span>}
                 {failed > 0 && <span className="inline-flex items-center gap-0.5 text-red-400"><MdCancel className="text-xs" />{failed}</span>}
-                {skipped > 0 && <span className="inline-flex items-center gap-0.5 text-amber-400">⚠️{skipped}</span>}
+                {skipped > 0 && <span className="inline-flex items-center gap-0.5 text-amber-400" title="This recipient has unsubscribed from you">⚠️{skipped}</span>}
                 {pending > 0 && <span className="inline-flex items-center gap-0.5 text-yellow-400"><MdHourglassEmpty className="text-xs" />{pending}</span>}
                 <span className="text-gray-500">/ {total}</span>
             </div>
@@ -115,6 +115,15 @@ const JobListView = ({ type }) => {
     }, [isScheduled]);
 
     useEffect(() => { fetchAll(); }, [fetchAll]);
+
+    useEffect(() => {
+        if (isScheduled && selectedJobId) {
+            const selected = jobs.find(j => j._id === selectedJobId);
+            if (!selected || selected.status !== 'Pending') {
+                setSelectedJobId(null);
+            }
+        }
+    }, [jobs, isScheduled, selectedJobId]);
 
     const filtered = jobs.filter(j => {
         const q = search.toLowerCase();
@@ -247,7 +256,7 @@ const JobListView = ({ type }) => {
                                             type="checkbox"
                                             checked={selectedJobId === job._id}
                                             disabled={job.status !== 'Pending'}
-                                            onChange={() => setSelectedJobId(job._id)}
+                                            onChange={() => setSelectedJobId(selectedJobId === job._id ? null : job._id)}
                                             className="w-4 h-4 mt-1 accent-orange-500 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                                             onClick={(e) => e.stopPropagation()}
                                         />

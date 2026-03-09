@@ -70,7 +70,7 @@ const handleResetPassword = async (req, res) => {
 }
 
 const handleSendMail = async (req, res) => {
-  const { to, subject, recipientPeople, html, smtpSlotId } = req.body;
+  const { to, subject, recipientPeople, html, smtpSlotId, prefix, suffix } = req.body;
   const user = req.user;
   try {
     if (!to || !subject || !html) {
@@ -198,6 +198,8 @@ const handleSendMail = async (req, res) => {
         smtpAccountId: smtpAccount._id.toString(),
         bulkJobId: bulkJob._id.toString(), // ← tracked for delivery log
         skipUnsubscribed,
+        prefix,
+        suffix,
       },
       {
         priority: 1,

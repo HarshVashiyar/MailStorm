@@ -51,6 +51,8 @@ const handleAddScheduledMail = async (req, res) => {
       status,
       timeZone,
       smtpSlotId,
+      prefix,
+      suffix,
     } = req.body;
 
     // Validate SMTP slot
@@ -165,6 +167,8 @@ const handleAddScheduledMail = async (req, res) => {
       html,
       attachments, // Either base64 or Cloudinary URLs
       signature,
+      prefix,
+      suffix,
       sendAt: utcSendAt,
       status: 'Pending',
       createdBy: user.id,
@@ -188,6 +192,8 @@ const handleAddScheduledMail = async (req, res) => {
         attachments: newScheduledMail.attachments, // Pass as-is (URLs or base64)
         smtpAccountId: smtpAccount._id.toString(),
         userId: user.id,
+        prefix,
+        suffix,
       },
       {
         delay, // Schedule the job
