@@ -609,7 +609,7 @@ const EmailModal = ({
                     <FaEdit className="text-blue-400" />
                     <span>Subject:</span>
                   </label>
-                  <div className="flex items-center space-x-2">
+                  {/* <div className="flex items-center space-x-2">
                     <select
                       value={formalityLevel}
                       onChange={(e) => setFormalityLevel(e.target.value)}
@@ -628,7 +628,7 @@ const EmailModal = ({
                       <FaMagic className={enhancingSubject ? "animate-spin" : ""} />
                       <span className="text-xs">{enhancingSubject ? "Enhancing" : "Enhance"}</span>
                     </button>
-                  </div>
+                  </div> */}
                 </div>
                 <input
                   type="text"
@@ -646,7 +646,7 @@ const EmailModal = ({
                     <FaEdit className="text-green-400" />
                     <span>Content:</span>
                   </label>
-                  <div className="flex items-center space-x-2">
+                  {/* <div className="flex items-center space-x-2">
                     <select
                       value={formalityLevelForContent}
                       onChange={(e) => setFormalityLevelForContent(e.target.value)}
@@ -665,7 +665,7 @@ const EmailModal = ({
                       <FaMagic className={generatingHTML ? "animate-spin" : ""} />
                       <span className="text-xs">{generatingHTML ? "Generating" : "Generate"}</span>
                     </button>
-                  </div>
+                  </div> */}
                 </div>
                 <div className="bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 overflow-hidden">
                   <NewPost key={editorKey} setHtml={setHtml} initialContent={html} />
