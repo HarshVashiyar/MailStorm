@@ -1,134 +1,98 @@
 export default function Privacy() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-dark-900 via-dark-800 to-dark-900 text-zinc-100 px-6 py-12 relative overflow-hidden">
-      {/* Background glow effects */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary-500/10 via-accent-500/5 to-primary-600/10 animate-pulse-slow pointer-events-none"></div>
       <div className="absolute inset-0 bg-gradient-radial from-primary-400/20 via-transparent to-transparent pointer-events-none"></div>
 
-      {/* Floating orbs for extra ambiance */}
       <div className="absolute top-20 left-10 w-64 h-64 bg-primary-500/20 rounded-full blur-3xl animate-pulse-slow"></div>
       <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent-500/20 rounded-full blur-3xl animate-pulse-slow" style={{ animationDelay: '1s' }}></div>
 
       <div className="max-w-4xl mx-auto relative z-10">
-        {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-5xl font-bold bg-gradient-to-r from-primary-400 via-accent-400 to-primary-500 bg-clip-text text-transparent mb-4">
             🔒 Privacy Policy
           </h1>
-          <div className="flex items-center justify-center gap-2 text-gray-400 text-sm">
-            <span className="bg-glass-dark backdrop-blur-lg px-4 py-2 rounded-full border border-primary-500/30 shadow-glow">
-              Last updated: {new Date().toLocaleDateString()}
-            </span>
-          </div>
         </div>
 
-        {/* Main Content Card */}
         <div className="bg-glass-dark backdrop-blur-lg border border-primary-500/30 rounded-2xl p-8 shadow-glow">
-          <Section title="Purpose of the Application" icon="🎯">
-            This application allows users to connect and use their own email accounts
-            (including Google Gmail, Microsoft Outlook, and custom SMTP providers)
-            to send emails after explicit user action.
-          </Section>
 
-          <Section title="Email Provider Integrations" icon="🔐">
-            Users may connect supported email providers such as:
-            <ul className="list-none pl-0 space-y-3 mt-4">
-              <li className="flex items-start gap-3 bg-dark-800/50 p-3 rounded-lg border border-primary-500/20">
-                <span className="text-primary-400 mt-0.5">✓</span>
-                <span>Google (Gmail) via OAuth</span>
-              </li>
-              <li className="flex items-start gap-3 bg-dark-800/50 p-3 rounded-lg border border-primary-500/20">
-                <span className="text-primary-400 mt-0.5">✓</span>
-                <span>Microsoft Outlook via OAuth</span>
-              </li>
-              <li className="flex items-start gap-3 bg-dark-800/50 p-3 rounded-lg border border-primary-500/20">
-                <span className="text-primary-400 mt-0.5">✓</span>
-                <span>Custom SMTP servers provided by the user</span>
-              </li>
-            </ul>
-            <p className="mt-4">
-              Access to these providers is granted only after explicit user authorization.
-              The application uses only the minimum required permissions to send emails
-              on behalf of the user.
-            </p>
+          <Section title="Purpose of the Application" icon="🎯">
+            MailStorm allows users to connect their own email accounts (Google Gmail, Microsoft Outlook, or custom SMTP providers) to send emails after explicit user action.
           </Section>
 
           <Section title="Data Accessed" icon="📊">
-            <ul className="list-none pl-0 space-y-3">
-              <li className="flex items-start gap-3 bg-dark-800/50 p-3 rounded-lg border border-primary-500/20">
-                <span className="text-primary-400 mt-0.5">✓</span>
-                <span>Email address (account identification)</span>
-              </li>
-              <li className="flex items-start gap-3 bg-dark-800/50 p-3 rounded-lg border border-primary-500/20">
-                <span className="text-primary-400 mt-0.5">✓</span>
-                <span>Authorization tokens for connected providers</span>
-              </li>
-              <li className="flex items-start gap-3 bg-dark-800/50 p-3 rounded-lg border border-primary-500/20">
-                <span className="text-primary-400 mt-0.5">✓</span>
-                <span>SMTP credentials (if provided by the user)</span>
-              </li>
-              <li className="flex items-start gap-3 bg-dark-800/50 p-3 rounded-lg border border-primary-500/20">
-                <span className="text-primary-400 mt-0.5">✓</span>
-                <span>Permission to send emails via the connected provider</span>
-              </li>
+            We may access the following data:
+            <ul className="mt-4 space-y-2">
+              <li>• Email address (account identification)</li>
+              <li>• OAuth authorization tokens (Google / Outlook)</li>
+              <li>• SMTP credentials provided by the user</li>
+              <li>• Email content created by the user</li>
+              <li>• Recipient email addresses provided by the user</li>
+            </ul>
+          </Section>
+
+          <Section title="Data Usage" icon="⚙️">
+            The collected data is used only to:
+            <ul className="mt-4 space-y-2">
+              <li>• Send emails on behalf of the user</li>
+              <li>• Authenticate connected email accounts</li>
+              <li>• Process scheduled email delivery</li>
+              <li>• Maintain suppression lists (unsubscribe handling)</li>
+            </ul>
+            We do not use data for advertising or profiling.
+          </Section>
+
+          <Section title="Data Sharing" icon="🔗">
+            We do not sell or share user data with third parties.
+            Data is only transmitted to:
+            <ul className="mt-4 space-y-2">
+              <li>• Google Gmail API (for sending emails)</li>
+              <li>• Microsoft Outlook API (if connected)</li>
+              <li>• SMTP servers configured by the user</li>
+            </ul>
+          </Section>
+
+          <Section title="Data Storage & Protection" icon="🛡️">
+            We implement industry-standard security practices:
+            <ul className="mt-4 space-y-2">
+              <li>• Secure storage of tokens and credentials</li>
+              <li>• Encrypted transmission (HTTPS)</li>
+              <li>• Access control to prevent unauthorized access</li>
+            </ul>
+          </Section>
+
+          <Section title="Data Retention & Deletion" icon="🗑️">
+            <ul className="mt-4 space-y-2">
+              <li>• Data is retained only as long as the account is active</li>
+              <li>• Users can delete their data by deleting their account</li>
+              <li>• Users may request deletion by contacting support</li>
             </ul>
           </Section>
 
           <Section title="What We Do NOT Do" icon="🚫">
-            <ul className="list-none pl-0 space-y-3">
-              <li className="flex items-start gap-3 bg-dark-800/50 p-3 rounded-lg border border-red-500/20">
-                <span className="text-red-400 mt-0.5">✗</span>
-                <span>Do not read inbox emails</span>
-              </li>
-              <li className="flex items-start gap-3 bg-dark-800/50 p-3 rounded-lg border border-red-500/20">
-                <span className="text-red-400 mt-0.5">✗</span>
-                <span>Do not modify existing emails</span>
-              </li>
-              <li className="flex items-start gap-3 bg-dark-800/50 p-3 rounded-lg border border-red-500/20">
-                <span className="text-red-400 mt-0.5">✗</span>
-                <span>Do not send emails automatically without user action</span>
-              </li>
-              <li className="flex items-start gap-3 bg-dark-800/50 p-3 rounded-lg border border-red-500/20">
-                <span className="text-red-400 mt-0.5">✗</span>
-                <span>Do not sell or share user data</span>
-              </li>
+            <ul className="mt-4 space-y-2">
+              <li>• Do not read inbox emails</li>
+              <li>• Do not modify existing emails</li>
+              <li>• Do not send emails without user action</li>
+              <li>• Do not sell or share user data</li>
             </ul>
           </Section>
 
           <Section title="User Control" icon="🎮">
-            Users decide the email content, recipients, selected sending account,
-            and scheduling time. All email activity is initiated by user action.
+            Users fully control:
+            <ul className="mt-4 space-y-2">
+              <li>• Email content</li>
+              <li>• Recipients</li>
+              <li>• Sending account</li>
+              <li>• Scheduling</li>
+            </ul>
           </Section>
 
           <Section title="Compliance & Enforcement" icon="⚖️">
-            <div className="bg-dark-800/50 p-4 rounded-lg border border-amber-500/30">
-              <p>The platform may suspend accounts that violate email consent requirements.</p>
-            </div>
+            Users must only send emails to recipients who have consented.
+            Accounts violating this may be suspended.
           </Section>
 
-          <Section title="Revoking Access" icon="🔓">
-            <div className="bg-dark-800/50 p-4 rounded-lg border border-accent-500/30">
-              Connected providers can be removed at any time from the profile settings.
-              Google access can also be revoked from{" "}
-              <a
-                className="text-accent-400 hover:text-accent-300 underline font-semibold transition-colors duration-200"
-                href="https://myaccount.google.com/permissions"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Google Account Permissions
-              </a>.
-            </div>
-          </Section>
-        </div>
-
-        {/* Footer Note */}
-        <div className="mt-8 text-center">
-          <div className="bg-glass-dark backdrop-blur-lg border border-primary-500/20 rounded-xl p-4 shadow-glow inline-block">
-            <p className="text-gray-400 text-sm">
-              💡 Your privacy and security are our top priorities
-            </p>
-          </div>
         </div>
       </div>
     </div>
@@ -137,12 +101,12 @@ export default function Privacy() {
 
 function Section({ title, icon, children }) {
   return (
-    <section className="mb-8 last:mb-0">
-      <h2 className="text-2xl font-semibold bg-gradient-to-r from-primary-400 to-accent-400 bg-clip-text text-transparent mb-4 flex items-center gap-2">
+    <section className="mb-8">
+      <h2 className="text-2xl font-semibold mb-3 flex items-center gap-2">
         <span>{icon}</span>
         <span>{title}</span>
       </h2>
-      <div className="text-gray-200 leading-relaxed">{children}</div>
+      <div>{children}</div>
     </section>
   );
 }

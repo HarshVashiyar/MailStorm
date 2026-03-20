@@ -59,6 +59,7 @@ export default function App() {
                   <Route path="/Terms" element={<Terms />} />
                 </Routes>
               </main>
+              <Footer />
             </div>
           </TemplatesProvider>
         </SmtpProvider>

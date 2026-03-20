@@ -41,73 +41,25 @@ export default function Terms() {
 
           <Section title="User Responsibility" icon="⚖️" number="3">
             <div className="space-y-3">
-              <p className="bg-dark-800/50 p-4 rounded-lg border border-amber-500/20">
-                Users are solely responsible for:
-              </p>
-              <ul className="list-none pl-0 space-y-2">
-                <li className="flex items-start gap-3 bg-dark-800/50 p-3 rounded-lg border border-primary-500/20">
-                  <span className="text-accent-400 mt-0.5 font-bold">•</span>
-                  <span>The content of all emails sent through this service</span>
-                </li>
-                <li className="flex items-start gap-3 bg-dark-800/50 p-3 rounded-lg border border-primary-500/20">
-                  <span className="text-accent-400 mt-0.5 font-bold">•</span>
-                  <span>Selecting appropriate recipients for your emails</span>
-                </li>
-                <li className="flex items-start gap-3 bg-dark-800/50 p-3 rounded-lg border border-primary-500/20">
-                  <span className="text-accent-400 mt-0.5 font-bold">•</span>
-                  <span>Compliance with all applicable laws and regulations</span>
-                </li>
-                <li className="flex items-start gap-3 bg-dark-800/50 p-3 rounded-lg border border-primary-500/20">
-                  <span className="text-accent-400 mt-0.5 font-bold">•</span>
-                  <span>Anti-spam and email marketing regulations</span>
-                </li>
+              <p>Users are responsible for:</p>
+              <ul className="space-y-2">
+                <li>• Email content</li>
+                <li>• Selecting recipients</li>
+                <li>• Ensuring recipient consent</li>
+                <li>• Compliance with laws (CAN-SPAM, GDPR, etc.)</li>
               </ul>
             </div>
           </Section>
 
-          <Section title="No Automated Messaging" icon="🤖" number="4">
-            <div className="bg-dark-800/50 p-4 rounded-lg border border-green-500/20">
-              <div className="flex items-start gap-3">
-                <span className="text-green-400 text-2xl">✓</span>
-                <div>
-                  <p className="font-semibold text-green-400 mb-2">User-Initiated Only</p>
-                  <p>Emails are sent only after explicit user action. No automated
-                    or unsolicited messaging occurs without your direct instruction.</p>
-                </div>
-              </div>
+          <Section title="Anti-Spam Policy" icon="🚫" number="4">
+            <div className="bg-dark-800/50 p-4 rounded-lg border border-red-500/30">
+              Users must not send unsolicited emails. Sending emails to recipients without consent is strictly prohibited.
             </div>
           </Section>
 
-          <Section title="Limitation of Liability" icon="⚠️" number="5">
-            <div className="bg-dark-800/50 p-4 rounded-lg border border-red-500/20">
-              <div className="flex items-start gap-3">
-                <span className="text-red-400 text-2xl">!</span>
-                <div>
-                  <p className="font-semibold text-red-400 mb-2">As-Is Service</p>
-                  <p>The service is provided "as is" without warranties of any kind,
-                    either express or implied. We are not liable for any damages arising
-                    from the use or inability to use this service.</p>
-                </div>
-              </div>
-            </div>
-          </Section>
-
-          <Section title="Service Modifications" icon="🔄" number="6">
-            <div className="bg-dark-800/50 p-4 rounded-lg border border-primary-500/20">
-              We reserve the right to modify or discontinue the service at any time
-              without prior notice. Continued use of the service after changes
-              constitutes acceptance of those changes.
-            </div>
-          </Section>
-
-          <Section title="Account Termination" icon="🚪" number="7">
-            <div className="bg-dark-800/50 p-4 rounded-lg border border-primary-500/20">
-              We reserve the right to terminate or suspend access to the service
-              immediately, without prior notice, for conduct that we believe
-              violates these Terms of Service or is harmful to other users.
-            </div>
-            <div className="mt-4 bg-dark-800/50 p-4 rounded-lg border border-red-500/30">
-              <p className="text-red-400 font-semibold">Accounts found sending unsolicited or non-consensual emails may be terminated immediately.</p>
+          <Section title="Account Termination" icon="🚪" number="5">
+            <div className="bg-dark-800/50 p-4 rounded-lg border border-red-500/30">
+              Accounts violating email consent rules may be suspended or terminated immediately.
             </div>
           </Section>
         </div>
