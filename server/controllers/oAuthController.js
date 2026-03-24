@@ -60,8 +60,9 @@ const initiateGoogleOAuth = async (req, res) => {
 
     const scopes = [
       'https://www.googleapis.com/auth/gmail.send',
-      'https://www.googleapis.com/auth/gmail.compose', // ✅ Added for scheduled emails
-      'https://www.googleapis.com/auth/userinfo.email',
+      // 'https://www.googleapis.com/auth/gmail.compose', // ✅ Added for scheduled emails
+      'openid',
+      'email',
     ];
 
     let authUrl = oauth2Client.generateAuthUrl({
@@ -117,10 +118,10 @@ const handleGoogleCallback = async (req, res) => {
     // Exchange code for tokens
     const { tokens } = await oauth2Client.getToken(code);
 
-    // Get user email
-    oauth2Client.setCredentials(tokens);
-    const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client });
-    const userInfo = await oauth2.userinfo.get();
+    // Extract email from the id_token JWT payload (no extra API call needed)
+    const idTokenPayload = JSON.parse(
+      Buffer.from(tokens.id_token.split('.')[1], 'base64').toString()
+    );
 
     // Create SMTP account - only include refreshToken if it exists
     const oauthTokens = {
@@ -137,7 +138,7 @@ const handleGoogleCallback = async (req, res) => {
       userId: oauthData.userId,
       slotNumber: oauthData.slotNumber,
       provider: 'gmail',
-      email: userInfo.data.email,
+      email: idTokenPayload.email,
       authType: 'oauth',
       oauthTokens: oauthTokens,
       status: 'active',
