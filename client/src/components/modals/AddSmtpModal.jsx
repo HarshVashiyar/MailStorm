@@ -45,9 +45,9 @@ const AddSmtpModal = ({ show, onClose, selectedSlot, onConnectOAuth, onSmtpAdded
             </button>
 
             <button
-              // onClick={() => onConnectOAuth('microsoft')}
               onClick={() => {
-                onConnectOAuth('microsoft');
+                // onConnectOAuth('microsoft');
+                toast.info("Coming Soon");
               }}
               className="w-full flex items-center gap-3 px-6 py-4 rounded-xl bg-blue-600 hover:bg-blue-700 transition-all text-white font-medium"
             >

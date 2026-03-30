@@ -40,7 +40,7 @@ const UserRow = memo(({ user, index, isSelected, onToggleSelection, onToggleSkip
           <span className="text-gray-500 text-xs">0</span>
         )}
       </td>
-      {/* <td className="py-4 px-3 text-center">
+      <td className="py-4 px-3 text-center">
         {(
           <button
             onClick={() => onToggleSkipUnsubscribed(user._id, !skipUnsub)}
@@ -54,7 +54,7 @@ const UserRow = memo(({ user, index, isSelected, onToggleSelection, onToggleSkip
             />
           </button>
         )}
-      </td> */}
+      </td>
       <td className="py-4 px-4 text-center">
         {role !== 'Admin' && (
           <input type="checkbox" className={`w-5 h-5 rounded border-2 transition-all duration-300 ${isSelected ? 'bg-primary-500 border-primary-500 text-white' : 'border-gray-400 hover:border-primary-400'}`} checked={isSelected} onChange={() => onToggleSelection(user._id)} title={isSelected ? 'Deselect' : 'Select'} />
@@ -171,7 +171,7 @@ const DataTable = ({ filteredUsers = [], allFilteredUsers = [], show, selectedUs
       <th className="py-2 px-4 text-center w-1/8">Status</th>
       <th className="py-2 px-4 text-center w-1/8">Role</th>
       <th className="py-2 px-4 text-center w-1/8">🚫Unsubs</th>
-      {/* <th className="py-2 px-3 text-center w-1/8" title="Skip unsubscribed companies">⏭️Skip</th> */}
+      <th className="py-2 px-3 text-center w-1/8" title="Skip unsubscribed companies">⏭️Skip</th>
       <th className="py-2 px-4 text-center w-16"><input ref={userSelectAllRef} type="checkbox" className="w-5 h-5" onChange={() => selectedUsers.length > 0 ? selectAllUsers([]) : selectAllUsers(sortedUsersList.filter(u => u.role !== 'Admin'))} /></th>
     </tr>
   );
